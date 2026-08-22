@@ -240,7 +240,6 @@ const aulas = AULAS10.map((a) => ({
     if (!id) chavesOrfas.push(k)
     return id
   }),
-  correcoes: [],
 }))
 if (chavesOrfas.length) throw new Error(`chaves de aula sem item: ${chavesOrfas.join(', ')}`)
 
@@ -253,9 +252,13 @@ writeFileSync(
  * por contagem), do jeito que uma aula particular flui: a cadeia de ataques de
  * uma guarda inteira em vez de tecnicas isoladas.
  *
- * Cada aula traz os itens a cobrir. As correcoes do professor registradas apos
- * a aula movem o \`validationStatus\` do item de "sugestao nao validada" para
- * "validado pelo professor" — e essa e a unica forma de um item chegar la.
+ * Cada aula traz os itens a cobrir. As correcoes do professor sao registradas
+ * fora daqui, em \`ValidacaoDoProfessor\` (src/domain/validacao.ts) — a unica
+ * forma de um item chegar a "validado pelo professor".
+ *
+ * Estas 10 aulas cobrem apenas as Secoes 4 e 5. Os 25 itens de Fundamentos,
+ * Defesa Pessoal e Quedas sao validados na aula regular de segunda e quarta
+ * (origem 'aula_regular'), por decisao de planejamento.
  */
 
 import type { AulaParticular } from '../domain/types'

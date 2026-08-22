@@ -198,17 +198,36 @@ export interface AulaParticular {
   itemIds: string[]
   /** Data realizada; ausente = ainda nao aconteceu. */
   realizadaEm?: string
-  /** Correcoes ditas pelo professor, por item. */
-  correcoes: CorrecaoDoProfessor[]
   notas?: string
 }
 
-export interface CorrecaoDoProfessor {
+/**
+ * De onde veio a correcao do professor.
+ *
+ * As 10 aulas particulares cobrem as Secoes 4 e 5 (guardas e saidas). Os 25
+ * itens de Fundamentos, Defesa Pessoal e Quedas ficam fora delas por decisao:
+ * o canal deles e a aula regular de segunda e quarta. Sem esta distincao o
+ * modelo nao teria como registrar a validacao desses 25 itens — em especial os
+ * 11 de Defesa Pessoal, que nao tem passo a passo no app (ADR-012) e portanto
+ * dependem inteiramente do professor.
+ */
+export type OrigemValidacao = 'aula_particular' | 'aula_regular'
+
+/**
+ * Registro append-only de uma correcao ou confirmacao do professor. E a UNICA
+ * forma de um item chegar a `validado_pelo_professor`.
+ */
+export interface ValidacaoDoProfessor {
+  id: string
   itemId: string
-  /** O que o professor corrigiu ou confirmou. */
+  /** O que o professor corrigiu ou confirmou, nas palavras dele. */
   texto: string
-  /** Para onde o status do item foi movido apos a aula. */
   novoStatus: ValidationStatus
+  origem: OrigemValidacao
+  /** Numero da aula (1-10) quando a origem e aula particular. */
+  aulaNumero?: number
+  /** Sessao de treino quando a origem e aula regular. */
+  sessionId?: string
   registradaEm: string
 }
 

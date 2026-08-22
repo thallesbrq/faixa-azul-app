@@ -115,7 +115,21 @@ describe('10 aulas particulares', () => {
 
   it('nenhuma aula nasce marcada como realizada', () => {
     expect(AULAS.every((a) => a.realizadaEm === undefined)).toBe(true)
-    expect(AULAS.every((a) => a.correcoes.length === 0)).toBe(true)
+  })
+
+  it('as 10 aulas cobrem Secoes 4 e 5; Secoes 1-3 ficam para a aula regular', () => {
+    // Decisao de planejamento: hora paga 1:1 vai para as guardas, que sao a
+    // parte tecnicamente mais dificil. Fundamentos, Defesa Pessoal e Quedas
+    // sao validados nas aulas de segunda e quarta (origem 'aula_regular').
+    const nasAulas = new Set(AULAS.flatMap((a) => a.itemIds))
+    const modulosCobertos = new Set(ITENS.filter((i) => nasAulas.has(i.id)).map((i) => i.moduloId))
+    expect(modulosCobertos).toEqual(new Set(['mod-guardas', 'mod-saidas']))
+
+    const foraDasAulas = ITENS.filter((i) => !nasAulas.has(i.id))
+    expect(foraDasAulas).toHaveLength(25)
+    expect(new Set(foraDasAulas.map((i) => i.moduloId))).toEqual(
+      new Set(['mod-fundamentos', 'mod-defesa-pessoal', 'mod-quedas']),
+    )
   })
 })
 

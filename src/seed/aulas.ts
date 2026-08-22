@@ -5,9 +5,13 @@
  * por contagem), do jeito que uma aula particular flui: a cadeia de ataques de
  * uma guarda inteira em vez de tecnicas isoladas.
  *
- * Cada aula traz os itens a cobrir. As correcoes do professor registradas apos
- * a aula movem o `validationStatus` do item de "sugestao nao validada" para
- * "validado pelo professor" — e essa e a unica forma de um item chegar la.
+ * Cada aula traz os itens a cobrir. As correcoes do professor sao registradas
+ * fora daqui, em `ValidacaoDoProfessor` (src/domain/validacao.ts) — a unica
+ * forma de um item chegar a "validado pelo professor".
+ *
+ * Estas 10 aulas cobrem apenas as Secoes 4 e 5. Os 25 itens de Fundamentos,
+ * Defesa Pessoal e Quedas sao validados na aula regular de segunda e quarta
+ * (origem 'aula_regular'), por decisao de planejamento.
  */
 
 import type { AulaParticular } from '../domain/types'
@@ -22,8 +26,7 @@ export const AULAS: AulaParticular[] = [
       "guarda-fechada--raspada-2",
       "guarda-fechada--passagem-simples",
       "guarda-fechada--passagem-quebrando-o-joelho"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 2,
@@ -37,8 +40,7 @@ export const AULAS: AulaParticular[] = [
       "guarda-fechada--estrangulamento-2",
       "guarda-fechada--estrangulamento-3",
       "guarda-fechada--esgrima-com-ida-para-as-costas"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 3,
@@ -53,8 +55,7 @@ export const AULAS: AulaParticular[] = [
       "meia-guarda-tradicional-e-escudo--triangulo",
       "meia-guarda-tradicional-e-escudo--estrangulamento",
       "meia-guarda-tradicional-e-escudo--esgrima-com-ida-para-as-costas"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 4,
@@ -68,8 +69,7 @@ export const AULAS: AulaParticular[] = [
       "guarda-laco--raspada-1",
       "guarda-laco--raspada-2",
       "guarda-laco--passagem"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 5,
@@ -81,8 +81,7 @@ export const AULAS: AulaParticular[] = [
       "guarda-aranha--passagem",
       "guarda-aranha--finalizacao-omoplata",
       "guarda-aranha--finalizacao-triangulo"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 6,
@@ -94,8 +93,7 @@ export const AULAS: AulaParticular[] = [
       "guarda-de-la-riva--passagem",
       "guarda-de-la-riva--finalizacao-1",
       "guarda-de-la-riva--finalizacao-2"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 7,
@@ -106,8 +104,7 @@ export const AULAS: AulaParticular[] = [
       "guarda-aberta--raspada-2",
       "guarda-aberta--passagem-simples",
       "guarda-aberta--passagem-emborcando"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 8,
@@ -122,8 +119,7 @@ export const AULAS: AulaParticular[] = [
       "guarda-one-leg-50-50-x-berimbolo--guarda-x-passagem",
       "guarda-one-leg-50-50-x-berimbolo--berimbolo-execucao",
       "guarda-one-leg-50-50-x-berimbolo--berimbolo-passagem-defesa"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 9,
@@ -134,8 +130,7 @@ export const AULAS: AulaParticular[] = [
       "saidas--saida-da-montada-2",
       "saidas--saida-das-costas",
       "saidas--saida-dos-100-kg-1"
-    ],
-    "correcoes": []
+    ]
   },
   {
     "numero": 10,
@@ -146,7 +141,6 @@ export const AULAS: AulaParticular[] = [
       "saidas--norte-sul",
       "saidas--armlock",
       "saidas--triangulo"
-    ],
-    "correcoes": []
+    ]
   }
 ]
