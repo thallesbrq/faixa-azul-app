@@ -252,3 +252,303 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* ------------------------------------------------------------- navegacao */
+
+.navegacao {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--cor-superficie);
+  border-top: 1px solid var(--cor-borda);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item {
+  flex: 1;
+  min-height: calc(var(--alvo-toque-min) + 8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.68rem;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.nav-item--ativo {
+  color: var(--azul-faixa);
+  font-weight: 700;
+  box-shadow: inset 0 2px 0 var(--azul-faixa);
+}
+
+/* --------------------------------------------------------------- arvore */
+
+.grupo,
+.subgrupo {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  margin-bottom: var(--espacamento-base);
+  overflow: hidden;
+}
+
+.subgrupo {
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.grupo > summary,
+.subgrupo > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espacamento-base);
+  padding: calc(var(--espacamento-base) * 1.5);
+  cursor: pointer;
+  min-height: var(--alvo-toque-min);
+  font-size: 0.92rem;
+}
+
+.grupo > summary {
+  font-weight: 700;
+  color: var(--azul-faixa);
+}
+
+.grupo-contagem {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--cor-texto-suave);
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.grupo-corpo {
+  padding: 0 calc(var(--espacamento-base) * 1.5) calc(var(--espacamento-base) * 1.5);
+}
+
+.lista-tecnicas {
+  list-style: none;
+  margin: 0;
+  padding: 0 calc(var(--espacamento-base) * 1.5) var(--espacamento-base);
+}
+
+.linha-tecnica {
+  width: 100%;
+  min-height: var(--alvo-toque-min);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espacamento-base);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--cor-borda);
+  padding: var(--espacamento-base) 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--cor-texto);
+}
+
+.linha-nome {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.linha-nome small {
+  font-size: 0.68rem;
+  color: var(--cor-texto-suave);
+}
+
+/* ----------------------------------------------------------------- selos */
+
+.selo {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+
+.selo--sugestao {
+  background: #fdf4e7;
+  border-color: #f0d9b5;
+  color: #6d4c14;
+}
+.selo--aguardando {
+  background: var(--cor-fundo);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-suave);
+}
+.selo--validado {
+  background: #e6f2ea;
+  border-color: #bcddc8;
+  color: var(--verde-sucesso);
+}
+.selo--variante {
+  background: #eaf0f9;
+  border-color: #c3d3ea;
+  color: var(--azul-faixa);
+}
+.selo--descartado {
+  background: #f3f3f3;
+  border-color: #ddd;
+  color: #777;
+  text-decoration: line-through;
+}
+
+/* --------------------------------------------------------------- detalhe */
+
+.detalhe-posicao {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+
+.detalhe-nome {
+  font-size: 1.3rem;
+  margin: 4px 0 0;
+  text-wrap: balance;
+}
+
+.detalhe-slot {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  margin: 4px 0 0;
+}
+
+.detalhe-secao {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cor-texto-suave);
+  margin: 0 0 var(--espacamento-base);
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+}
+
+.historico {
+  list-style: none;
+  margin: 0 0 calc(var(--espacamento-base) * 2);
+  padding: 0;
+}
+
+.historico li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--espacamento-base) 0;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.88rem;
+}
+
+.historico-data {
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+}
+
+/* ------------------------------------------------------------- formulario */
+
+.form-validacao {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--espacamento-base) * 1.5);
+}
+
+.form-validacao label,
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.form-validacao textarea,
+.campo select,
+.form-validacao input[type='number'] {
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--cor-texto);
+  padding: var(--espacamento-base);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: var(--cor-superficie);
+  min-height: var(--alvo-toque-min);
+}
+
+.form-validacao fieldset {
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: var(--espacamento-base);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-validacao legend {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  padding: 0 4px;
+}
+
+.radio {
+  flex-direction: row !important;
+  align-items: center;
+  gap: var(--espacamento-base) !important;
+  color: var(--cor-texto) !important;
+  font-size: 0.9rem !important;
+  min-height: 32px;
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacamento-base);
+}
+
+/* --------------------------------------------------------------- duvidas */
+
+.lista-duvidas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lista-duvidas > li {
+  border-top: 1px solid var(--cor-borda);
+  padding: calc(var(--espacamento-base) * 1.5) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+}
+
+.duvida-pergunta {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.duvida-resposta {
+  margin: 0;
+  font-size: 0.88rem;
+  background: #e6f2ea;
+  border-left: 3px solid var(--verde-sucesso);
+  padding: var(--espacamento-base);
+  border-radius: 0 8px 8px 0;
+}

@@ -103,11 +103,11 @@ const MODULO_POR_GRUPO = {
 const moduloDe = (grupo) => MODULO_POR_GRUPO[grupo] ?? 'mod-guardas'
 
 const SECAO_POR_MODULO = {
-  'mod-fundamentos': 'Secao 1 — Fundamentos e movimentacao',
-  'mod-defesa-pessoal': 'Secao 2 — Defesa pessoal',
-  'mod-quedas': 'Secao 3 — Quedas',
-  'mod-guardas': 'Secao 4 — Complexo de guardas',
-  'mod-saidas': 'Secao 5 — Saidas e defesas',
+  'mod-fundamentos': 'Seção 1 — Fundamentos e movimentação',
+  'mod-defesa-pessoal': 'Seção 2 — Defesa pessoal',
+  'mod-quedas': 'Seção 3 — Quedas',
+  'mod-guardas': 'Seção 4 — Complexo de guardas',
+  'mod-saidas': 'Seção 5 — Saídas e defesas',
 }
 
 function safetyLevel(moduloId, tipo) {

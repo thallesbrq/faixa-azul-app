@@ -26,7 +26,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -41,7 +41,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -56,7 +56,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -71,7 +71,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -86,7 +86,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -101,7 +101,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -116,7 +116,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -131,7 +131,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -146,7 +146,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 1 — Fundamentos e movimentacao",
+    "sourceReference": "Seção 1 — Fundamentos e movimentação",
     "ativo": true
   },
   {
@@ -161,7 +161,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -176,7 +176,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -191,7 +191,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -206,7 +206,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -221,7 +221,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -236,7 +236,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -251,7 +251,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -266,7 +266,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -281,7 +281,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -296,7 +296,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -311,7 +311,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 2 — Defesa pessoal",
+    "sourceReference": "Seção 2 — Defesa pessoal",
     "ativo": true
   },
   {
@@ -326,7 +326,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 3 — Quedas",
+    "sourceReference": "Seção 3 — Quedas",
     "ativo": true
   },
   {
@@ -341,7 +341,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 3 — Quedas",
+    "sourceReference": "Seção 3 — Quedas",
     "ativo": true
   },
   {
@@ -356,7 +356,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 3 — Quedas",
+    "sourceReference": "Seção 3 — Quedas",
     "ativo": true
   },
   {
@@ -371,7 +371,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 3 — Quedas",
+    "sourceReference": "Seção 3 — Quedas",
     "ativo": true
   },
   {
@@ -386,7 +386,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "alto",
     "validationStatus": "aguardando_validacao",
-    "sourceReference": "Secao 3 — Quedas",
+    "sourceReference": "Seção 3 — Quedas",
     "ativo": true
   },
   {
@@ -403,7 +403,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -420,7 +420,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -437,7 +437,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -454,7 +454,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -471,7 +471,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -488,7 +488,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -505,7 +505,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -522,7 +522,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -539,7 +539,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -556,7 +556,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -573,7 +573,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -590,7 +590,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -607,7 +607,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -624,7 +624,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -641,7 +641,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -658,7 +658,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -675,7 +675,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -692,7 +692,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -709,7 +709,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -726,7 +726,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -743,7 +743,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -760,7 +760,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -777,7 +777,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -794,7 +794,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -811,7 +811,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -828,7 +828,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -845,7 +845,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -862,7 +862,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -879,7 +879,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -896,7 +896,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -913,7 +913,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -930,7 +930,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -947,7 +947,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "medio",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -964,7 +964,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -981,7 +981,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -998,7 +998,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1015,7 +1015,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1032,7 +1032,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1049,7 +1049,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1066,7 +1066,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1083,7 +1083,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1100,7 +1100,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1117,7 +1117,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1134,7 +1134,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1151,7 +1151,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1168,7 +1168,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1185,7 +1185,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1202,7 +1202,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 4 — Complexo de guardas",
+    "sourceReference": "Seção 4 — Complexo de guardas",
     "ativo": true
   },
   {
@@ -1219,7 +1219,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   },
   {
@@ -1236,7 +1236,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   },
   {
@@ -1253,7 +1253,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   },
   {
@@ -1270,7 +1270,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   },
   {
@@ -1287,7 +1287,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   },
   {
@@ -1304,7 +1304,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   },
   {
@@ -1321,7 +1321,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   },
   {
@@ -1338,7 +1338,7 @@ export const ITENS: TechniqueItem[] = [
     "sideMode": "nao_se_aplica",
     "safetyLevel": "baixo",
     "validationStatus": "sugestao_nao_validada",
-    "sourceReference": "Secao 5 — Saidas e defesas",
+    "sourceReference": "Seção 5 — Saídas e defesas",
     "ativo": true
   }
 ]
