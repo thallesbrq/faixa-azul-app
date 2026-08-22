@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navegacao } from './components/Navegacao'
 import type { Tela } from './components/Navegacao'
+import { Aulas } from './screens/Aulas'
 import { Curriculo } from './screens/Curriculo'
 import { Hoje } from './screens/Hoje'
 import { Progresso } from './screens/Progresso'
@@ -60,6 +61,17 @@ export function App() {
               requisitos={app.requisitos}
               validacoes={app.estado.validacoes}
               aoValidar={app.registrarValidacao}
+            />
+          )}
+
+          {tela === 'aulas' && (
+            <Aulas
+              itens={app.itens}
+              baralho={app.baralho}
+              revisoes={app.estado.revisoes}
+              aulas={app.aulas}
+              validacoes={app.estado.validacoes}
+              aoMarcarRealizada={app.marcarAulaRealizada}
             />
           )}
 

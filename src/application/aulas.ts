@@ -34,7 +34,7 @@
  */
 
 import { dividirEmPartes, paresDoCirculo } from '../domain/circulo'
-import type { AulaParticular, TechniqueItem } from '../domain/types'
+import type { AulaParticular, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
 import type { ProgressoDeItem } from './progresso'
 
 /** Duracao de uma aula do pacote. */
@@ -261,6 +261,31 @@ export interface LinhaDePauta {
 export interface Repescagem {
   itemId: string
   corrigidoNaAula: number
+}
+
+/**
+ * Deriva a fila de repescagem dos registros de validacao.
+ *
+ * Nao ha campo novo no schema para isso, de proposito: "o professor corrigiu e
+ * eu ainda nao executo a versao nova" e exatamente o que
+ * `novoStatus: 'aguardando_validacao'` vindo de uma aula ja significa. Inventar
+ * um segundo lugar para guardar a mesma informacao seria criar a chance de os
+ * dois discordarem.
+ *
+ * Vence o registro mais recente por item — o historico e append-only, entao um
+ * item pode ter varias passagens, e so a ultima diz onde ele esta hoje.
+ */
+export function repescagensPendentes(validacoes: ValidacaoDoProfessor[]): Repescagem[] {
+  const ultimaPorItem = new Map<string, ValidacaoDoProfessor>()
+  for (const v of validacoes) {
+    const atual = ultimaPorItem.get(v.itemId)
+    if (!atual || v.registradaEm > atual.registradaEm) ultimaPorItem.set(v.itemId, v)
+  }
+
+  return [...ultimaPorItem.values()]
+    .filter((v) => v.novoStatus === 'aguardando_validacao' && v.aulaNumero !== undefined)
+    .map((v) => ({ itemId: v.itemId, corrigidoNaAula: v.aulaNumero as number }))
+    .sort((a, b) => a.corrigidoNaAula - b.corrigidoNaAula)
 }
 
 /**

@@ -105,12 +105,43 @@ export function useApp() {
     [estado, atualizar],
   )
 
+  /**
+   * Marca uma aula do pacote como realizada (ou desfaz, se foi engano).
+   *
+   * As aulas vem do seed e as alteracoes do aluno ficam separadas em
+   * `estado.aulas` — mesmo padrao das validacoes: o seed nunca e reescrito, o
+   * que o aluno faz e sempre uma camada por cima.
+   */
+  const marcarAulaRealizada = useCallback(
+    (numero: number, realizada: boolean) => {
+      const outras = estado.aulas.filter((a) => a.numero !== numero)
+      const anterior = estado.aulas.find((a) => a.numero === numero)
+      atualizar({
+        ...estado,
+        aulas: [
+          ...outras,
+          { ...anterior, numero, realizadaEm: realizada ? new Date().toISOString() : undefined },
+        ].sort((a, b) => a.numero - b.numero),
+      })
+    },
+    [estado, atualizar],
+  )
+
+  /** Aulas do seed com as alteracoes do aluno aplicadas. */
+  const aulas = useMemo(() => {
+    const alteracoes = new Map(estado.aulas.map((a) => [a.numero, a]))
+    return AULAS.map((aula) => {
+      const alt = alteracoes.get(aula.numero)
+      return alt ? { ...aula, realizadaEm: alt.realizadaEm, notas: alt.notas ?? aula.notas } : aula
+    })
+  }, [estado.aulas])
+
   return {
     estado,
     itens,
     conteudos: CONTEUDOS,
     modulos: MODULOS,
-    aulas: AULAS,
+    aulas,
     requisitos: REQUISITOS,
     baralho,
     fila,
@@ -121,6 +152,7 @@ export function useApp() {
     registrar,
     definirDataAlvo,
     registrarValidacao,
+    marcarAulaRealizada,
   }
 }
 

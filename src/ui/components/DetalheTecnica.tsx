@@ -51,12 +51,21 @@ export function DetalheTecnica({
   const validado = item.validationStatus === 'validado_pelo_professor'
   const semPassos = (conteudo?.passos.length ?? 0) === 0
 
-  function salvar() {
+  /**
+   * Registra a correcao.
+   *
+   * `jaExecuto` e a diferenca entre ouvir a correcao e saber fazer o que foi
+   * pedido, e por decisao do aluno ela nao e presumida: o professor falar nao
+   * valida sozinho. Quando o aluno diz que ainda nao executa, o item fica em
+   * `aguardando_validacao` e volta ao topo da pauta da proxima aula particular
+   * (ver application/aulas.ts, repescagensPendentes).
+   */
+  function salvar(jaExecuto: boolean) {
     if (!texto.trim()) return
     aoValidar({
       itemId: item.id,
       texto: texto.trim(),
-      novoStatus: 'validado_pelo_professor',
+      novoStatus: jaExecuto ? 'validado_pelo_professor' : 'aguardando_validacao',
       origem,
       aulaNumero: origem === 'aula_particular' ? Number(numeroAula) : undefined,
     })
@@ -210,9 +219,24 @@ export function DetalheTecnica({
               )}
             </fieldset>
 
-            <div className="acoes">
-              <button className="botao botao--principal" onClick={salvar} disabled={!texto.trim()}>
-                Marcar como validado
+            <p className="instrucao">
+              Depois da correção, você já consegue executar assim?
+            </p>
+
+            <div className="acoes acoes--coluna">
+              <button
+                className="botao botao--principal"
+                onClick={() => salvar(true)}
+                disabled={!texto.trim()}
+              >
+                Já executo — validar
+              </button>
+              <button
+                className="botao botao--secundario"
+                onClick={() => salvar(false)}
+                disabled={!texto.trim()}
+              >
+                Ainda não — mostrar de novo na próxima aula
               </button>
               <button className="botao botao--secundario" onClick={() => setRegistrando(false)}>
                 Cancelar

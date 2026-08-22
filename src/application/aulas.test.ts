@@ -7,10 +7,11 @@ import {
   custoEmMinutos,
   gerarPlano,
   pautaDaAula,
+  repescagensPendentes,
   saldoDoPacote,
 } from './aulas'
 import type { ProgressoDeItem } from './progresso'
-import type { AulaParticular, TechniqueItem } from '../domain/types'
+import type { AulaParticular, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
 
 function item(over: Partial<TechniqueItem> = {}): TechniqueItem {
   return {
@@ -272,5 +273,61 @@ describe('corte por nivel de avanco', () => {
     expect(guardas.slice(primeiroAvancado).every((i) => i.posicao.startsWith('Complexo Moderno'))).toBe(
       true,
     )
+  })
+})
+
+describe('repescagensPendentes', () => {
+  function v(over: Partial<ValidacaoDoProfessor>): ValidacaoDoProfessor {
+    return {
+      id: 'v1',
+      itemId: 'i1',
+      texto: 'joelho mais alto',
+      novoStatus: 'aguardando_validacao',
+      origem: 'aula_particular',
+      aulaNumero: 2,
+      registradaEm: '2026-09-01T00:00:00.000Z',
+      ...over,
+    }
+  }
+
+  it('item corrigido e ainda nao executado entra na fila', () => {
+    const fila = repescagensPendentes([v({ itemId: 'a' })])
+    expect(fila).toEqual([{ itemId: 'a', corrigidoNaAula: 2 }])
+  })
+
+  it('item ja validado NAO entra', () => {
+    const fila = repescagensPendentes([v({ itemId: 'a', novoStatus: 'validado_pelo_professor' })])
+    expect(fila).toEqual([])
+  })
+
+  it('vence o registro mais recente do item', () => {
+    // Corrigido na aula 2, mostrado e aprovado na aula 3: sai da fila.
+    const fila = repescagensPendentes([
+      v({ id: 'v1', itemId: 'a', aulaNumero: 2, registradaEm: '2026-09-01T00:00:00.000Z' }),
+      v({
+        id: 'v2',
+        itemId: 'a',
+        aulaNumero: 3,
+        novoStatus: 'validado_pelo_professor',
+        registradaEm: '2026-09-08T00:00:00.000Z',
+      }),
+    ])
+    expect(fila).toEqual([])
+  })
+
+  it('ignora correcao de aula regular — repescagem e do pacote', () => {
+    // Sem aulaNumero nao ha aula particular onde reencaixar o item.
+    const fila = repescagensPendentes([
+      v({ itemId: 'a', origem: 'aula_regular', aulaNumero: undefined, sessionId: 's1' }),
+    ])
+    expect(fila).toEqual([])
+  })
+
+  it('ordena pela aula em que foi corrigido — o mais antigo espera menos', () => {
+    const fila = repescagensPendentes([
+      v({ id: 'v1', itemId: 'a', aulaNumero: 5 }),
+      v({ id: 'v2', itemId: 'b', aulaNumero: 2 }),
+    ])
+    expect(fila.map((r) => r.itemId)).toEqual(['b', 'a'])
   })
 })

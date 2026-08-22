@@ -682,3 +682,145 @@
 .escolhas .radio small {
   color: var(--cor-texto-suave);
 }
+
+/* ---------------------------------------------------------------------------
+   Aulas particulares
+   --------------------------------------------------------------------------- */
+
+/* Pauta da proxima aula. A repescagem se distingue por uma faixa lateral em
+   laranja, nao por cor de texto: a distincao precisa sobreviver a quem nao
+   diferencia cor bem (RNF-04). */
+.pauta {
+  list-style: none;
+  margin: calc(var(--espacamento-base) * 2) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+  counter-reset: pauta;
+}
+
+.pauta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+  padding: var(--espacamento-base);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  background: var(--cor-superficie);
+}
+
+.pauta-item--volta {
+  border-left: 4px solid var(--laranja);
+  background: var(--laranja-suave);
+}
+
+.pauta-botao {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pauta-botao:disabled {
+  cursor: default;
+}
+
+.pauta-nome {
+  font-weight: 600;
+}
+
+.pauta-meta {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.pauta-min {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  flex-shrink: 0;
+}
+
+/* Lista das 10 aulas */
+.lista-aulas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+}
+
+.aula-linha {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  overflow: hidden;
+}
+
+.aula-linha--feita .aula-numero {
+  background: var(--laranja);
+  color: #fff;
+  border-color: var(--laranja);
+}
+
+.aula-cabeca {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+  padding: var(--espacamento-base);
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aula-numero {
+  flex-shrink: 0;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--cor-borda);
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.aula-titulo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aula-titulo small {
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+}
+
+.aula-linha .resposta-lista,
+.aula-linha .botao {
+  margin: 0 var(--espacamento-base) var(--espacamento-base);
+}
+
+/* Acoes empilhadas: quando as opcoes tem rotulos longos e nao sao equivalentes
+   entre si, lado a lado encurta o texto e sugere simetria que nao existe. */
+.acoes--coluna {
+  flex-direction: column;
+}
+
+.acoes--coluna .botao {
+  width: 100%;
+}
