@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Navegacao } from './components/Navegacao'
 import type { Tela } from './components/Navegacao'
 import { Curriculo } from './screens/Curriculo'
-import { Duvidas } from './screens/Duvidas'
 import { Hoje } from './screens/Hoje'
 import { Revisao } from './screens/Revisao'
 import { armazenamentoPersistente, useApp } from './useApp'
@@ -16,8 +15,17 @@ export function App() {
   return (
     <div className="app">
       <header className="topo">
-        <h1>Faixa Azul</h1>
-        <span className="academia">Rilion Gracie Garopaba</span>
+        <img
+          className="topo-logo"
+          src={`${import.meta.env.BASE_URL}logo-rilion.png`}
+          alt="Rilion Gracie Garopaba"
+          width={125}
+          height={96}
+        />
+        <div className="topo-textos">
+          <h1>Faixa Azul</h1>
+          <span className="academia">Preparação para a graduação</span>
+        </div>
       </header>
 
       {revisando ? (
@@ -48,14 +56,9 @@ export function App() {
               conteudos={app.conteudos}
               modulos={app.modulos}
               requisitos={app.requisitos}
-              duvidas={app.duvidas}
               validacoes={app.estado.validacoes}
               aoValidar={app.registrarValidacao}
             />
-          )}
-
-          {tela === 'duvidas' && (
-            <Duvidas duvidas={app.duvidas} itens={app.itens} aulas={app.aulas} aoAlterar={app.alterarDuvida} />
           )}
 
           <Navegacao atual={tela} aoTrocar={setTela} />

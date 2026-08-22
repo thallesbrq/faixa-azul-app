@@ -64,9 +64,13 @@ levadas às 10 aulas particulares. **O app não inventa resposta para nenhuma.**
 | 8 | Qual a resposta esperada sobre Rilion Gracie e quem é seu pai? | criterio_de_prova |
 | 9 | Quais os limites, a sequência e os critérios da defesa pessoal? | execucao |
 | 10 | Qual forma de execução é considerada correta na avaliação? | execucao |
+| 11 | O que distingue a fuga de quadril "avançada" da tradicional? O app assumiu a versão contínua sem apoio das mãos, mas é suposição. | nomenclatura |
 
-Além dessas, **toda técnica sem `gatilho` ou `errosComuns`** gera automaticamente uma
-dúvida com `origem: 'lacuna_de_conteudo'` (decisão 5).
+> **Estas perguntas vivem aqui, não no app.** A tela de Dúvidas foi removida
+> (decisão 14): o fluxo real é o aluno escolher as posições e validar com o
+> Prof. João Eduardo, não percorrer uma lista de 173 perguntas geradas. A lista
+> acima é o que ainda precisa de confirmação; o registro da resposta acontece no
+> detalhe de cada técnica, como correção do professor.
 
 ## 5. Riscos conhecidos
 

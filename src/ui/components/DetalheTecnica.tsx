@@ -9,7 +9,6 @@
 import { useState } from 'react'
 import type {
   RequisitoProva,
-  TeacherQuestion,
   TechniqueContent,
   TechniqueItem,
   ValidacaoDoProfessor,
@@ -20,7 +19,6 @@ export interface DetalheTecnicaProps {
   item: TechniqueItem
   conteudo: TechniqueContent | undefined
   requisito: RequisitoProva | undefined
-  duvidas: TeacherQuestion[]
   validacoes: ValidacaoDoProfessor[]
   aoValidar: (entrada: {
     itemId: string
@@ -41,7 +39,6 @@ export function DetalheTecnica({
   item,
   conteudo,
   requisito,
-  duvidas,
   validacoes,
   aoValidar,
   aoVoltar,
@@ -53,7 +50,6 @@ export function DetalheTecnica({
 
   const validado = item.validationStatus === 'validado_pelo_professor'
   const semPassos = (conteudo?.passos.length ?? 0) === 0
-  const abertas = duvidas.filter((d) => d.status === 'aberta')
 
   function salvar() {
     if (!texto.trim()) return
@@ -140,23 +136,6 @@ export function DetalheTecnica({
         <a className="botao botao--secundario" href={urlDeBusca(conteudo, item)} target="_blank" rel="noopener">
           Buscar no YouTube
         </a>
-      </div>
-
-      <div className="card">
-        <h3 className="detalhe-secao">
-          Dúvidas para o professor {abertas.length > 0 && <span className="grupo-contagem">{abertas.length}</span>}
-        </h3>
-        {abertas.length === 0 ? (
-          <p className="instrucao" style={{ margin: 0 }}>
-            Nenhuma dúvida aberta desta técnica.
-          </p>
-        ) : (
-          <ul className="resposta-lista">
-            {abertas.map((d) => (
-              <li key={d.id}>{d.pergunta}</li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <div className="card">

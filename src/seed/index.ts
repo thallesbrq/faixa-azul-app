@@ -11,8 +11,20 @@ import { CONTEUDOS as CONTEUDOS_IMPORTADOS, ITENS as ITENS_IMPORTADOS, REQUISITO
 import { CONTEUDO_FUNDAMENTOS_QUEDAS } from './conteudo-fundamentos-quedas'
 import { AULAS } from './aulas'
 import { CARTOES_TEORIA } from './teoria'
-import { DUVIDAS_DO_SPEC, duvidasDeLacuna } from './duvidas'
 import { MODULOS } from './modulos'
+
+/**
+ * FOCO DECLARADO: Secoes 4 e 5 (guardas e saidas).
+ *
+ * As Secoes 1-3 (Fundamentos, Defesa Pessoal, Quedas) ficam DESATIVADAS, nao
+ * apagadas: o conteudo permanece no seed e volta trocando este conjunto. O
+ * motivo e que o trabalho atual e escolher e validar as posicoes das Secoes 4 e
+ * 5 com o professor — as demais entram depois, se entrarem.
+ *
+ * `ativo: false` ja e respeitado pelo gerador de cartoes e pela fila do dia,
+ * entao nada mais precisa saber desta decisao.
+ */
+const MODULOS_ATIVOS = new Set(['mod-guardas', 'mod-saidas'])
 
 /** Conteudo manual sobrescreve o importado (que estava vazio para estes itens). */
 const CONTEUDOS: TechniqueContent[] = (() => {
@@ -27,19 +39,21 @@ const CONTEUDOS: TechniqueContent[] = (() => {
 })()
 
 /**
- * Corrige o status dos 14 itens que ganharam passo a passo depois do import:
- * deixam de "aguardar o professor" e passam a ser sugestao nao validada — que e
- * a verdade sobre eles.
+ * Aplica duas correcoes sobre o import:
+ * 1. os 14 itens que ganharam passo a passo depois deixam de "aguardar o
+ *    professor" e passam a sugestao nao validada — que e a verdade sobre eles;
+ * 2. o foco declarado nas Secoes 4 e 5.
  */
 const ITENS: TechniqueItem[] = (() => {
   const comPassos = new Set(CONTEUDOS.filter((c) => c.passos.length > 0).map((c) => c.itemId))
-  return ITENS_IMPORTADOS.map((item) =>
-    comPassos.has(item.id) && item.validationStatus === 'aguardando_validacao'
-      ? { ...item, validationStatus: 'sugestao_nao_validada' as const }
-      : item,
-  )
+  return ITENS_IMPORTADOS.map((item) => ({
+    ...item,
+    validationStatus:
+      comPassos.has(item.id) && item.validationStatus === 'aguardando_validacao'
+        ? ('sugestao_nao_validada' as const)
+        : item.validationStatus,
+    ativo: item.ativo && MODULOS_ATIVOS.has(item.moduloId),
+  }))
 })()
 
-const DUVIDAS = [...DUVIDAS_DO_SPEC, ...duvidasDeLacuna(ITENS, CONTEUDOS)]
-
-export { AULAS, CARTOES_TEORIA, CONTEUDOS, DUVIDAS, ITENS, MODULOS, REQUISITOS }
+export { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS }

@@ -8,13 +8,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import type {
-  Modulo,
-  TeacherQuestion,
-  TechniqueContent,
-  TechniqueItem,
-  ValidationStatus,
-} from '../../domain/types'
+import type { Modulo, TechniqueContent, TechniqueItem, ValidationStatus } from '../../domain/types'
 import type { RequisitoProva } from '../../domain/types'
 import { DetalheTecnica } from '../components/DetalheTecnica'
 
@@ -39,7 +33,6 @@ export interface CurriculoProps {
   conteudos: TechniqueContent[]
   modulos: Modulo[]
   requisitos: RequisitoProva[]
-  duvidas: TeacherQuestion[]
   validacoes: import('../../domain/types').ValidacaoDoProfessor[]
   aoValidar: (entrada: {
     itemId: string
@@ -55,7 +48,6 @@ export function Curriculo({
   conteudos,
   modulos,
   requisitos,
-  duvidas,
   validacoes,
   aoValidar,
 }: CurriculoProps) {
@@ -79,7 +71,10 @@ export function Curriculo({
       .filter((m) => m.total > 0)
   }, [itens, modulos])
 
-  const validados = itens.filter((i) => i.validationStatus === 'validado_pelo_professor').length
+  // Conta somente os ativos: a arvore mostra 56 (Secoes 4 e 5), e dizer "81"
+  // no cabecalho contradiria o que esta na tela.
+  const ativos = useMemo(() => itens.filter((i) => i.ativo), [itens])
+  const validados = ativos.filter((i) => i.validationStatus === 'validado_pelo_professor').length
 
   const item = selecionado ? itens.find((i) => i.id === selecionado) : undefined
 
@@ -89,7 +84,6 @@ export function Curriculo({
         item={item}
         conteudo={conteudoPorItem.get(item.id)}
         requisito={requisitos.find((r) => r.posicao === item.posicao && r.categoria === item.categoria)}
-        duvidas={duvidas.filter((d) => d.itemId === item.id)}
         validacoes={validacoes.filter((v) => v.itemId === item.id)}
         aoValidar={aoValidar}
         aoVoltar={() => setSelecionado(null)}
@@ -101,7 +95,8 @@ export function Curriculo({
     <div>
       <div className="card">
         <p className="instrucao" style={{ margin: 0 }}>
-          <strong>{itens.length} itens</strong> da prova · <strong>{validados}</strong> validados pelo professor
+          <strong>{ativos.length} itens</strong> nas Seções 4 e 5 · <strong>{validados}</strong> validados pelo
+          professor
         </p>
         {validados === 0 && (
           <p className="aviso" style={{ marginTop: 'var(--espacamento-base)', marginBottom: 0 }}>

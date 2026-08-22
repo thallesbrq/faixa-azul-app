@@ -17,7 +17,7 @@
 
 .topo h1 {
   font-size: 1.25rem;
-  color: var(--azul-faixa);
+  color: var(--cor-texto);
   margin: 0;
 }
 
@@ -39,7 +39,7 @@
 .contagem {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--azul-faixa);
+  color: var(--cor-texto);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
@@ -86,19 +86,19 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  background: var(--cinza-grafite);
+  background: var(--preto);
   color: #fff;
 }
 
 .botao--principal {
-  background: var(--azul-faixa);
+  background: var(--preto);
   width: 100%;
   font-size: 1.05rem;
 }
 
 .botao--secundario {
   background: transparent;
-  color: var(--azul-faixa);
+  color: var(--cor-texto);
   border-color: var(--cor-borda);
 }
 
@@ -128,7 +128,7 @@
 
 .progresso-trilha > div {
   height: 100%;
-  background: var(--azul-faixa);
+  background: var(--laranja);
 }
 
 .etiqueta {
@@ -175,15 +175,15 @@
   padding: calc(var(--espacamento-base) * 1.5);
   border-radius: 10px;
   margin-bottom: calc(var(--espacamento-base) * 2);
-  background: #fdf4e7;
+  background: var(--amarelo-suave);
   border: 1px solid #f0d9b5;
-  color: #6d4c14;
+  color: var(--amarelo-atencao);
 }
 
 .aviso--risco {
-  background: #fbeaea;
+  background: var(--vermelho-suave);
   border-color: #e9c2c2;
-  color: #7d2b2b;
+  color: var(--vermelho-alerta);
 }
 
 /* Notas de avaliacao: cores + texto, nunca so cor (RNF-04). */
@@ -219,8 +219,8 @@
   color: var(--vermelho-alerta);
 }
 .nota--hard {
-  border-color: var(--laranja-acento);
-  color: #8a5310;
+  border-color: var(--laranja);
+  color: var(--laranja-texto);
 }
 .nota--good {
   border-color: var(--verde-sucesso);
@@ -283,9 +283,9 @@
 }
 
 .nav-item--ativo {
-  color: var(--azul-faixa);
+  color: var(--laranja-texto);
   font-weight: 700;
-  box-shadow: inset 0 2px 0 var(--azul-faixa);
+  box-shadow: inset 0 2px 0 var(--laranja);
 }
 
 /* --------------------------------------------------------------- arvore */
@@ -318,7 +318,7 @@
 
 .grupo > summary {
   font-weight: 700;
-  color: var(--azul-faixa);
+  color: var(--cor-texto);
 }
 
 .grupo-contagem {
@@ -384,9 +384,9 @@
 }
 
 .selo--sugestao {
-  background: #fdf4e7;
+  background: var(--amarelo-suave);
   border-color: #f0d9b5;
-  color: #6d4c14;
+  color: var(--amarelo-atencao);
 }
 .selo--aguardando {
   background: var(--cor-fundo);
@@ -394,14 +394,14 @@
   color: var(--cor-texto-suave);
 }
 .selo--validado {
-  background: #e6f2ea;
+  background: var(--verde-suave);
   border-color: #bcddc8;
   color: var(--verde-sucesso);
 }
 .selo--variante {
-  background: #eaf0f9;
-  border-color: #c3d3ea;
-  color: var(--azul-faixa);
+  background: var(--cor-fundo);
+  border-color: var(--cinza-marca);
+  color: var(--cor-texto-suave);
 }
 .selo--descartado {
   background: #f3f3f3;
@@ -547,8 +547,34 @@
 .duvida-resposta {
   margin: 0;
   font-size: 0.88rem;
-  background: #e6f2ea;
+  background: var(--verde-suave);
   border-left: 3px solid var(--verde-sucesso);
   padding: var(--espacamento-base);
   border-radius: 0 8px 8px 0;
+}
+
+/* ------------------------------------------------- cabecalho com a marca */
+
+.topo {
+  align-items: center;
+}
+
+.topo-logo {
+  height: 42px;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.topo-textos {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+/* O laranja da marca marca a palavra "Azul" — o objetivo — sem virar texto
+   colorido de baixo contraste: fica no sublinhado, nao na letra. */
+.topo h1 {
+  box-shadow: inset 0 -6px 0 var(--laranja-suave);
+  display: inline-block;
+  padding: 0 2px;
 }

@@ -8,8 +8,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { gerarBaralho } from '../domain/cards'
-import { duvidasParaAula } from './duvidas'
-import { AULAS, CARTOES_TEORIA, CONTEUDOS, DUVIDAS, ITENS, MODULOS, REQUISITOS } from './index'
+import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from './index'
 
 const idsDosItens = new Set(ITENS.map((i) => i.id))
 const idsDosModulos = new Set(MODULOS.map((m) => m.id))
@@ -80,6 +79,29 @@ describe('cobertura de passo a passo', () => {
   })
 })
 
+describe('foco declarado nas Secoes 4 e 5', () => {
+  const ativos = ITENS.filter((i) => i.ativo)
+
+  it('mantem os 81 itens no seed — desativar nao e apagar', () => {
+    // Se um dia o foco mudar, basta trocar MODULOS_ATIVOS: o conteudo continua aqui.
+    expect(ITENS).toHaveLength(81)
+  })
+
+  it('deixa ativos somente guardas e saidas', () => {
+    expect(new Set(ativos.map((i) => i.moduloId))).toEqual(new Set(['mod-guardas', 'mod-saidas']))
+  })
+
+  it('sao 56 itens ativos: 48 de guardas + 8 de saidas', () => {
+    expect(ativos).toHaveLength(56)
+  })
+
+  it('todo item ativo tem passo a passo', () => {
+    // Os 11 sem instrucao textual eram todos de defesa pessoal, agora inativa.
+    const semPassos = ativos.filter((i) => (conteudoPorItem.get(i.id)?.passos.length ?? 0) === 0)
+    expect(semPassos.map((i) => i.id)).toEqual([])
+  })
+})
+
 describe('bilateralidade desligada (ADR-006 revisado)', () => {
   it('nenhum item nasce exigindo lados', () => {
     expect(ITENS.every((i) => i.sideMode === 'nao_se_aplica')).toBe(true)
@@ -133,45 +155,6 @@ describe('10 aulas particulares', () => {
   })
 })
 
-describe('duvidas para o professor', () => {
-  it('inclui as 11 perguntas semeadas do spec', () => {
-    const doSpec = DUVIDAS.filter((d) => d.origem === 'spec')
-    expect(doSpec).toHaveLength(11)
-  })
-
-  it('gera duvida de lacuna para cada item ativo (gatilho e erro comum)', () => {
-    const deLacuna = DUVIDAS.filter((d) => d.origem === 'lacuna_de_conteudo')
-    // Nenhum item tem gatilho nem erro comum cadastrado ainda: 2 por item.
-    expect(deLacuna).toHaveLength(ITENS.filter((i) => i.ativo).length * 2)
-  })
-
-  it('toda duvida nasce aberta e sem resposta', () => {
-    expect(DUVIDAS.every((d) => d.status === 'aberta' && d.resposta === undefined)).toBe(true)
-  })
-
-  it('nao tem id duplicado', () => {
-    expect(new Set(DUVIDAS.map((d) => d.id)).size).toBe(DUVIDAS.length)
-  })
-
-  it('o recorte por aula reduz a lista a algo levavel numa aula', () => {
-    // A lista completa passa de 170 perguntas — inutil de levar a uma aula.
-    expect(DUVIDAS.length).toBeGreaterThan(150)
-
-    const daAula1 = duvidasParaAula(AULAS[0], DUVIDAS)
-    expect(daAula1.length).toBeLessThan(30)
-
-    // Toda pergunta do recorte e da aula ou geral, e nenhuma e de outra tecnica.
-    const itensDaAula = new Set(AULAS[0].itemIds)
-    expect(daAula1.every((d) => !d.itemId || itensDaAula.has(d.itemId))).toBe(true)
-  })
-
-  it('o recorte por aula ignora duvidas ja respondidas', () => {
-    const respondida = { ...DUVIDAS.find((d) => d.itemId === AULAS[0].itemIds[0])!, status: 'respondida' as const }
-    const comResposta = DUVIDAS.map((d) => (d.id === respondida.id ? respondida : d))
-    expect(duvidasParaAula(AULAS[0], comResposta).some((d) => d.id === respondida.id)).toBe(false)
-  })
-})
-
 describe('baralho gerado a partir do seed real', () => {
   const baralho = gerarBaralho({
     itens: ITENS,
@@ -196,8 +179,14 @@ describe('baralho gerado a partir do seed real', () => {
     expect(proibidos.map((c) => c.id)).toEqual([])
   })
 
-  it('inclui o cartao de reconhecimento de defesa pessoal', () => {
-    expect(baralho.some((c) => c.id === 'reconhecimento--mod-defesa-pessoal')).toBe(true)
+  it('nao gera cartao nenhum para modulo desativado (foco nas Secoes 4 e 5)', () => {
+    const inativos = new Set(ITENS.filter((i) => !i.ativo).map((i) => i.id))
+    const vazados = baralho.filter((c) => c.itemId && inativos.has(c.itemId))
+    expect(vazados.map((c) => c.id)).toEqual([])
+
+    // O cartao de reconhecimento de defesa pessoal tambem desaparece: o modulo
+    // esta desativado, e gerar cartao dele contradiria o foco declarado.
+    expect(baralho.some((c) => c.id === 'reconhecimento--mod-defesa-pessoal')).toBe(false)
   })
 
   it('cobre os 5 tipos de cartao decididos no planejamento', () => {

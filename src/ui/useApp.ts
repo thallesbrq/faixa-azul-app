@@ -6,18 +6,17 @@
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { mesclarDuvidas } from '../application/duvidas'
 import { montarFilaDoDia, moduloDeMaiorRisco } from '../application/fila'
 import { registrarRevisao, revisadosHoje, taxaDeAcertoSemDica } from '../application/revisar'
 import type { EntradaRevisao } from '../application/revisar'
 import { gerarBaralho } from '../domain/cards'
 import { diasAteProva as calcularDiasAteProva } from '../domain/scheduler'
 import { aplicarValidacoes, criarValidacao } from '../domain/validacao'
-import type { TeacherQuestion, ValidationStatus } from '../domain/types'
+import type { ValidationStatus } from '../domain/types'
 import { depositoEmMemoria, depositoLocalStorage } from '../persistence/deposito'
 import { carregar, salvar } from '../persistence/repositorio'
-import type { AlteracaoDuvida, EstadoPersistido } from '../persistence/repositorio'
-import { AULAS, CARTOES_TEORIA, CONTEUDOS, DUVIDAS, ITENS, MODULOS, REQUISITOS } from '../seed'
+import type { EstadoPersistido } from '../persistence/repositorio'
+import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from '../seed'
 
 /**
  * Sem localStorage o app segue funcionando na sessao, mas o progresso nao
@@ -82,17 +81,6 @@ export function useApp() {
     [estado, atualizar],
   )
 
-  const duvidas = useMemo(() => mesclarDuvidas(DUVIDAS, estado.duvidas), [estado.duvidas])
-
-  /** Guarda apenas a alteracao — a pergunta continua vindo do seed. */
-  const alterarDuvida = useCallback(
-    (id: string, mudanca: Omit<AlteracaoDuvida, 'id'>) => {
-      const semAnterior = estado.duvidas.filter((d) => d.id !== id)
-      atualizar({ ...estado, duvidas: [...semAnterior, { id, ...mudanca }] })
-    },
-    [estado, atualizar],
-  )
-
   /**
    * Registra o que o professor corrigiu. E o unico caminho para um item chegar a
    * `validado_pelo_professor` — e nao apaga nada: a validacao anterior fica no
@@ -126,17 +114,14 @@ export function useApp() {
     requisitos: REQUISITOS,
     baralho,
     fila,
-    duvidas,
     diasAteProva,
     revisadosHoje: revisadosHoje(estado.eventos, agora),
     taxaSemDica: taxaDeAcertoSemDica(estado.eventos),
     risco: moduloDeMaiorRisco(baralho, itens, estado.revisoes),
     registrar,
     definirDataAlvo,
-    alterarDuvida,
     registrarValidacao,
   }
 }
 
 export type AppEstado = ReturnType<typeof useApp>
-export type { TeacherQuestion }

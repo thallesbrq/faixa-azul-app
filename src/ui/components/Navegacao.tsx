@@ -1,11 +1,17 @@
-/** Navegacao principal — spec 8.1, reduzida as telas que existem hoje. */
+/**
+ * Navegacao principal.
+ *
+ * A tela de Duvidas foi removida por decisao do aluno: o fluxo real e ele
+ * escolher as posicoes e validar com o Prof. Joao Eduardo, nao percorrer uma
+ * lista de 173 perguntas. A validacao continua existindo — dentro do detalhe da
+ * tecnica, onde a correcao do professor e registrada.
+ */
 
-export type Tela = 'hoje' | 'curriculo' | 'duvidas'
+export type Tela = 'hoje' | 'curriculo'
 
 const ABAS: { id: Tela; rotulo: string; icone: string }[] = [
   { id: 'hoje', rotulo: 'Hoje', icone: '🎯' },
   { id: 'curriculo', rotulo: 'Currículo', icone: '📋' },
-  { id: 'duvidas', rotulo: 'Dúvidas', icone: '❓' },
 ]
 
 export function Navegacao({ atual, aoTrocar }: { atual: Tela; aoTrocar: (t: Tela) => void }) {

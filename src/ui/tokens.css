@@ -1,19 +1,44 @@
 /*
- * Tokens visuais — spec 8.6.
- * Mantidos como custom properties para que nenhum componente fixe cor no codigo.
+ * Identidade Rilion Gracie.
+ *
+ * As cores foram amostradas da propria logo da academia (preto #000, laranja
+ * #F39200, cinza do anel #7B8287, branco), nao escolhidas por gosto.
+ *
+ * Duas decisoes de contraste que valem registro:
+ *
+ * 1. O laranja da marca em texto sobre fundo claro nao alcanca contraste
+ *    acessivel (RNF-04). Por isso ele e usado como PREENCHIMENTO e como
+ *    destaque, e existe `--laranja-texto` (mais escuro) para quando precisa
+ *    virar texto ou borda.
+ * 2. O azul de faixa nao faz parte da marca — fica reservado para representar
+ *    o objetivo (a graduacao), nunca para a interface em geral.
  */
 
 :root {
-  --cor-fundo: #f7f7f5;
+  /* --- marca --- */
+  --preto: #111214;
+  --laranja: #f39200;
+  --laranja-texto: #a15e00;
+  --laranja-suave: #fdf1de;
+  --cinza-marca: #7b8287;
+
+  /* --- superficies e texto --- */
+  --cor-fundo: #f4f3f1;
   --cor-superficie: #ffffff;
-  --cor-texto: #171717;
-  --cor-texto-suave: #5c5c5c;
-  --azul-faixa: #1e4e8c;
-  --cinza-grafite: #343434;
-  --laranja-acento: #e88917;
-  --verde-sucesso: #267a4b;
+  --cor-texto: #16181a;
+  --cor-texto-suave: #63686c;
+  --cor-borda: #dedbd6;
+
+  /* --- semantica (separada do acento da marca) --- */
+  --verde-sucesso: #1f7a48;
+  --verde-suave: #e6f2ea;
   --vermelho-alerta: #a43d3d;
-  --cor-borda: #e2e0da;
+  --vermelho-suave: #fbeaea;
+  --amarelo-atencao: #8a6412;
+  --amarelo-suave: #fdf4e7;
+
+  /* --- objetivo: a faixa azul --- */
+  --azul-faixa: #1e4e8c;
 
   --raio-card: 16px;
   --espacamento-base: 8px;
@@ -40,9 +65,9 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-/* RNF-04: foco sempre visivel. */
+/* RNF-04: foco sempre visivel. Laranja da marca sobre qualquer fundo. */
 :focus-visible {
-  outline: 3px solid var(--azul-faixa);
+  outline: 3px solid var(--laranja);
   outline-offset: 2px;
 }
 

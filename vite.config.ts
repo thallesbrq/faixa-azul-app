@@ -28,11 +28,15 @@ export default defineConfig({
         scope: './',
         display: 'standalone',
         orientation: 'portrait',
-        // Tokens do spec 8.6
-        theme_color: '#1E4E8C',
-        background_color: '#F7F7F5',
-        // TODO(slice-6): gerar icons 192/512 + maskable antes do deploy.
-        icons: [],
+        // Cores da marca Rilion Gracie, amostradas da propria logo.
+        theme_color: '#111214',
+        background_color: '#F4F3F1',
+        icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          // Maskable tem area de seguranca maior: o sistema recorta as bordas.
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
     }),
   ],
