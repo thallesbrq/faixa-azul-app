@@ -1,0 +1,254 @@
+/* Componentes. Cores e espacamentos vem sempre dos tokens (tokens.css). */
+
+.app {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: calc(var(--espacamento-base) * 2);
+  padding-bottom: calc(var(--espacamento-base) * 6);
+}
+
+.topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacamento-base);
+  margin-bottom: calc(var(--espacamento-base) * 2);
+}
+
+.topo h1 {
+  font-size: 1.25rem;
+  color: var(--azul-faixa);
+  margin: 0;
+}
+
+.topo .academia {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+/* ---------------------------------------------------------------- cartoes */
+
+.card {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  padding: calc(var(--espacamento-base) * 2);
+  margin-bottom: calc(var(--espacamento-base) * 2);
+}
+
+.contagem {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--azul-faixa);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.contagem-rotulo {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  margin-top: 2px;
+}
+
+.linha-metricas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--espacamento-base);
+  margin-top: calc(var(--espacamento-base) * 2);
+}
+
+.metrica {
+  text-align: center;
+}
+
+.metrica .valor {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrica .rotulo {
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+}
+
+/* ----------------------------------------------------------------- botoes */
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--alvo-toque-min);
+  padding: 0 calc(var(--espacamento-base) * 2);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--cinza-grafite);
+  color: #fff;
+}
+
+.botao--principal {
+  background: var(--azul-faixa);
+  width: 100%;
+  font-size: 1.05rem;
+}
+
+.botao--secundario {
+  background: transparent;
+  color: var(--azul-faixa);
+  border-color: var(--cor-borda);
+}
+
+.botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------- revisao */
+
+.revisao-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  margin-bottom: var(--espacamento-base);
+}
+
+.progresso-trilha {
+  height: 4px;
+  background: var(--cor-borda);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: calc(var(--espacamento-base) * 2);
+}
+
+.progresso-trilha > div {
+  height: 100%;
+  background: var(--azul-faixa);
+}
+
+.etiqueta {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--cor-fundo);
+  color: var(--cor-texto-suave);
+  border: 1px solid var(--cor-borda);
+}
+
+.pergunta {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: var(--espacamento-base) 0 calc(var(--espacamento-base) * 2);
+  text-wrap: balance;
+}
+
+.instrucao {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  margin-bottom: calc(var(--espacamento-base) * 2);
+}
+
+.resposta-lista {
+  margin: 0;
+  padding-left: 1.35rem;
+}
+
+.resposta-lista li {
+  margin-bottom: 6px;
+}
+
+/* Aviso de conteudo nao validado pelo professor. */
+.aviso {
+  display: flex;
+  gap: var(--espacamento-base);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  padding: calc(var(--espacamento-base) * 1.5);
+  border-radius: 10px;
+  margin-bottom: calc(var(--espacamento-base) * 2);
+  background: #fdf4e7;
+  border: 1px solid #f0d9b5;
+  color: #6d4c14;
+}
+
+.aviso--risco {
+  background: #fbeaea;
+  border-color: #e9c2c2;
+  color: #7d2b2b;
+}
+
+/* Notas de avaliacao: cores + texto, nunca so cor (RNF-04). */
+.notas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espacamento-base);
+}
+
+.nota {
+  min-height: var(--alvo-toque-min);
+  border-radius: 10px;
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: var(--espacamento-base);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.25;
+}
+
+.nota small {
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+}
+
+.nota--again {
+  border-color: var(--vermelho-alerta);
+  color: var(--vermelho-alerta);
+}
+.nota--hard {
+  border-color: var(--laranja-acento);
+  color: #8a5310;
+}
+.nota--good {
+  border-color: var(--verde-sucesso);
+  color: var(--verde-sucesso);
+}
+.nota--easy {
+  border-color: var(--azul-faixa);
+  color: var(--azul-faixa);
+}
+
+.vazio {
+  text-align: center;
+  padding: calc(var(--espacamento-base) * 3) var(--espacamento-base);
+}
+
+.vazio .emoji {
+  font-size: 2rem;
+}
+
+.rodape-nota {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  margin-top: calc(var(--espacamento-base) * 2);
+  line-height: 1.5;
+}
+
+@media (min-width: 30rem) {
+  .notas {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

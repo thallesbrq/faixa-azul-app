@@ -40,8 +40,14 @@ const ROTULO_KIND: Record<TechniqueKind, string> = {
   defesa_pessoal: 'Defesa pessoal',
 }
 
+/**
+ * Rotulo do cartao. Quando o item nao tem nome de variacao (caso de Fundamentos
+ * e Quedas, cujo slot ja E o nome da tecnica), usa o slot. Nao inclui a posicao
+ * aqui: quem monta o prompt a acrescenta, e repetir produzia
+ * "Base & Movimentacao — Rolamento para frente (Base & Movimentacao)".
+ */
 function rotulo(item: TechniqueItem): string {
-  return item.nome || `${item.posicao} — ${item.slot}`
+  return item.nome || item.slot
 }
 
 const slug = (s: string) =>

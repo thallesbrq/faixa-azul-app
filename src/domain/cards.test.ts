@@ -74,9 +74,19 @@ describe('cartoesDaTecnica', () => {
     expect(seq?.resposta).toEqual(QUATRO_PASSOS)
   })
 
-  it('usa posicao e slot como rotulo quando o nome ainda nao foi definido', () => {
+  it('usa o slot como rotulo quando o nome de variacao nao existe', () => {
+    // Fundamentos e Quedas nao tem nome de variacao: o slot ja e o nome.
     const semNome = cartoesDaTecnica(item({ nome: '' }), conteudo(QUATRO_PASSOS))
-    expect(semNome[0].prompt).toContain('Guarda Fechada — Raspada 1')
+    expect(semNome[0].prompt).toBe('Explique em voz alta: Raspada 1 (Guarda Fechada).')
+  })
+
+  it('nao repete a posicao no prompt', () => {
+    const semNome = cartoesDaTecnica(
+      item({ nome: '', posicao: 'Base & Movimentação', slot: 'Rolamento para frente' }),
+      conteudo(QUATRO_PASSOS),
+    )
+    const ocorrencias = semNome[0].prompt.split('Base & Movimentação').length - 1
+    expect(ocorrencias).toBe(1)
   })
 })
 
