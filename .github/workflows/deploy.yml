@@ -1,0 +1,62 @@
+# Publica o app no GitHub Pages a cada push na branch principal.
+#
+# O build roda os testes antes de publicar: o app e usado no tatame, e uma
+# versao quebrada no celular durante o treino nao tem como ser corrigida ali.
+#
+# `base: './'` no vite.config.ts faz o app funcionar em subpasta (o Pages serve
+# em /nome-do-repo/), entao nao ha nada a configurar aqui para isso.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  # Permite publicar manualmente pela aba Actions.
+  workflow_dispatch:
+
+# Permissoes minimas para o Pages: ler o codigo e escrever a publicacao.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Uma publicacao por vez; se chegar push novo, cancela a anterior em andamento.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22 e a LTS suportada pelo Vite 5 deste projeto. A maquina local roda
+          # Node 21, que cai no vao de versoes exigido pelas versoes novas do
+          # Vite (ver docs/adr/014) — o CI nao tem essa restricao.
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm test
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
