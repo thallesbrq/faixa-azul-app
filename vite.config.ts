@@ -8,6 +8,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 // quanto em subpasta (ex.: GitHub Pages /repo/). Revisar no slice de deploy.
 export default defineConfig({
   base: './',
+  // 5173 (padrao do Vite) esta ocupada por outro processo nesta maquina.
+  server: { port: 5199, strictPort: true },
   plugins: [
     react(),
     VitePWA({

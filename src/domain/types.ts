@@ -63,6 +63,8 @@ export interface TechniqueItem {
   posicao: string
   /** Slot exigido pela prova (ex.: "Raspada 1"). */
   slot: string
+  /** Agrupamento da prova (ex.: "Raspadas", "Passagens", "Finalizacoes"). */
+  categoria: string
   /** Nome da variacao (ex.: "Raspagem de tesoura"). Pode estar vazio se nao validado. */
   nome: string
   aliases: string[]
