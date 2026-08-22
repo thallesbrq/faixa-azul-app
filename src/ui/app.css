@@ -578,3 +578,107 @@
   display: inline-block;
   padding: 0 2px;
 }
+
+/* ------------------------------------------------- barras de progresso */
+
+.lista-barras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--espacamento-base) * 1.5);
+}
+
+.barra-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacamento-base);
+  font-size: 0.88rem;
+  margin-bottom: 4px;
+}
+
+.barra-valor {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+.barra-trilha {
+  height: 8px;
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.barra-trilha > div {
+  height: 100%;
+  background: var(--laranja);
+  border-radius: 20px;
+}
+
+.barra-legenda {
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+  margin-top: 4px;
+}
+
+/* ----------------------------------------------- prontidao em dois eixos */
+
+.dois-eixos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--espacamento-base) * 2);
+  margin: calc(var(--espacamento-base) * 2) 0;
+}
+
+.eixo-valor {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto);
+}
+
+.eixo-valor--validado {
+  color: var(--verde-sucesso);
+}
+
+.eixo-rotulo {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.eixo-rotulo small {
+  font-size: 0.68rem;
+  color: var(--cor-texto-suave);
+}
+
+/* ------------------------------------------------------------- escolhas */
+
+.escolhas {
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: var(--espacamento-base);
+  margin: calc(var(--espacamento-base) * 2) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.escolhas legend {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cor-texto-suave);
+  padding: 0 4px;
+}
+
+.escolhas .radio small {
+  color: var(--cor-texto-suave);
+}

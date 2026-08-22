@@ -3,6 +3,8 @@ import { Navegacao } from './components/Navegacao'
 import type { Tela } from './components/Navegacao'
 import { Curriculo } from './screens/Curriculo'
 import { Hoje } from './screens/Hoje'
+import { Progresso } from './screens/Progresso'
+import { Simulado } from './screens/Simulado'
 import { Revisao } from './screens/Revisao'
 import { armazenamentoPersistente, useApp } from './useApp'
 import './app.css'
@@ -58,6 +60,24 @@ export function App() {
               requisitos={app.requisitos}
               validacoes={app.estado.validacoes}
               aoValidar={app.registrarValidacao}
+            />
+          )}
+
+          {tela === 'simulado' && (
+            <Simulado
+              baralho={app.baralho}
+              itens={app.itens}
+              modulos={app.modulos}
+              aoAvaliar={({ cardId, rating, usouDica }) => app.registrar({ cardId, rating, usouDica })}
+            />
+          )}
+
+          {tela === 'progresso' && (
+            <Progresso
+              itens={app.itens}
+              baralho={app.baralho}
+              revisoes={app.estado.revisoes}
+              modulos={app.modulos}
             />
           )}
 

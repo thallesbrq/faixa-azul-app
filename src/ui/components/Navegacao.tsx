@@ -7,11 +7,13 @@
  * tecnica, onde a correcao do professor e registrada.
  */
 
-export type Tela = 'hoje' | 'curriculo'
+export type Tela = 'hoje' | 'curriculo' | 'simulado' | 'progresso'
 
 const ABAS: { id: Tela; rotulo: string; icone: string }[] = [
   { id: 'hoje', rotulo: 'Hoje', icone: '🎯' },
   { id: 'curriculo', rotulo: 'Currículo', icone: '📋' },
+  { id: 'simulado', rotulo: 'Simulado', icone: '⏱️' },
+  { id: 'progresso', rotulo: 'Progresso', icone: '📈' },
 ]
 
 export function Navegacao({ atual, aoTrocar }: { atual: Tela; aoTrocar: (t: Tela) => void }) {
