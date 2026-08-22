@@ -1,0 +1,54 @@
+/*
+ * Tokens visuais — spec 8.6.
+ * Mantidos como custom properties para que nenhum componente fixe cor no codigo.
+ */
+
+:root {
+  --cor-fundo: #f7f7f5;
+  --cor-superficie: #ffffff;
+  --cor-texto: #171717;
+  --cor-texto-suave: #5c5c5c;
+  --azul-faixa: #1e4e8c;
+  --cinza-grafite: #343434;
+  --laranja-acento: #e88917;
+  --verde-sucesso: #267a4b;
+  --vermelho-alerta: #a43d3d;
+  --cor-borda: #e2e0da;
+
+  --raio-card: 16px;
+  --espacamento-base: 8px;
+
+  /* RNF-04: alvos de toque grandes. */
+  --alvo-toque-min: 44px;
+
+  --fonte-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: var(--fonte-base);
+  /* RNF-04: fonte redimensionavel — nada de tamanho fixo no root. */
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* RNF-04: foco sempre visivel. */
+:focus-visible {
+  outline: 3px solid var(--azul-faixa);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
