@@ -10,6 +10,28 @@ de consultar**, distribui as revisões ao longo do tempo e mostra onde estão su
 > variações, critérios de execução, pontuação e o que de fato cai na prova. Todo conteúdo
 > não validado aparece marcado como tal.
 
+## Abrir o app
+
+**<https://thallesbrq.github.io/faixa-azul-app/>**
+
+Funciona offline depois da primeira visita e pode ser instalado na tela inicial do celular
+(no iPhone: Compartilhar → Adicionar à Tela de Início). O progresso fica salvo **no
+aparelho**, não em servidor — cada celular tem o seu, e nada é enviado para lugar nenhum.
+
+## Os três eixos
+
+O app nunca resume o preparo a um número só, porque três coisas diferentes precisam ser
+verdade ao mesmo tempo — e uma pode esconder a falta das outras:
+
+| Eixo | Pergunta | Onde se move |
+|------|----------|--------------|
+| **Domínio** | eu lembro os passos? | estudo sozinho (ter/qui/sex) |
+| **Validado** | o professor aprovou esta versão? | aula particular |
+| **Funciona** | sai contra alguém resistindo? | rolamento (seg/qua) |
+
+Recuperar de memória uma técnica que o professor nunca viu pode ser decorar a versão
+errada. E dominar mais validar ainda não é conseguir aplicar.
+
 ## Como executar
 
 ```bash
