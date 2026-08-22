@@ -32,6 +32,15 @@ Ranges verificados:
 Fixar **Vite 5.4.21**, com `@vitejs/plugin-react@4.3.4`, `vite-plugin-pwa@1.3.0`
 (o mais recente ainda aceita `vite ^5.0.0`) e `vitest@2.1.9` (o Vitest 4 exige Vite ≥6).
 
+O mesmo problema apareceu no **oxlint**: a versão 1.75 do scaffold exige o mesmo range e
+falhava com `Cannot find module '@oxlint/binding-darwin-arm64'`. A partir da 1.20 o oxlint
+adotou esse range; a **1.0.0** ainda aceita `>=8.*` e funciona.
+
+O oxlint está fixado **sem caret** (`"oxlint": "1.0.0"`), diferente dos outros. Motivo: o
+range `^1.0.0` abrange a 1.75 quebrada, então um `npm install` limpo reintroduziria a
+falha. Vite `^5` e Vitest `^2` não têm esse problema porque as versões incompatíveis estão
+em majors seguintes, fora do range.
+
 **Não alterar o Node do sistema.** Esta é a máquina de trabalho do usuário, onde roda o
 projeto e-Watcher B3 da BRQ com Playwright e TypeScript. Um `brew upgrade node` global
 poderia quebrar aquele ambiente profissional — dano colateral inaceitável para uma

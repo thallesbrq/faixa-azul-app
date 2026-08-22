@@ -45,13 +45,29 @@ para que os testes sejam determinísticos.
 
 ## Estado atual
 
-**Fatia 0 concluída** — fundação, modelo de domínio e scheduler com 24 testes passando,
-incluindo um teste de propriedade que garante que **nenhum cartão vence depois da prova**
-(ADR-011).
+**Fatias 0 e 1 concluídas** — 68 testes passando.
 
-Próximas fatias: seed do currículo e geração de cartões (1), fila diária e tela de revisão
-(2), currículo e dúvidas (3), simulado e progresso (4), registro de treino e 10 aulas (5),
-deploy e migração (6).
+- **Fatia 0:** fundação, modelo de domínio e scheduler, com um teste de propriedade que
+  garante que **nenhum cartão vence depois da prova** ([ADR-011](docs/adr/ADR-011-horizonte-de-prova.md))
+- **Fatia 1:** currículo de 81 itens, **215 cartões** gerados (≈17 revisões/dia em 63
+  dias) e 10 aulas particulares com circuito de validação
+
+Próximas fatias: fila diária e tela de revisão (2), currículo e dúvidas (3), simulado e
+progresso (4), registro de treino e aulas (5), deploy e migração (6).
+
+## Números do baralho
+
+| Tipo de cartão | Quantidade |
+|---|---|
+| Explicação (recordação livre / oral) | 71 |
+| Sequência (ordenar etapas) | 70 |
+| Classificação (raspagem/passagem/finalização…) | 56 |
+| Requisito ("quantas a prova exige?") | 10 |
+| Teoria (valores, história, pontuação) | 8 |
+| **Total** | **215** |
+
+Os tipos *erro comum*, *gatilho* e *cadeia de reação* do spec §11 **não** são gerados: o
+spec proíbe inventar esse conteúdo, e a ausência dele virou pergunta ao professor.
 
 ## Seed do currículo
 
