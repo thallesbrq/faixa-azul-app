@@ -7,6 +7,7 @@ import { Hoje } from './screens/Hoje'
 import { Progresso } from './screens/Progresso'
 import { Simulado } from './screens/Simulado'
 import { Revisao } from './screens/Revisao'
+import { Treino } from './screens/Treino'
 import { armazenamentoPersistente, useApp } from './useApp'
 import './app.css'
 
@@ -14,6 +15,7 @@ export function App() {
   const app = useApp()
   const [tela, setTela] = useState<Tela>('hoje')
   const [revisando, setRevisando] = useState(false)
+  const [registrandoTreino, setRegistrandoTreino] = useState(false)
 
   return (
     <div className="app">
@@ -31,7 +33,16 @@ export function App() {
         </div>
       </header>
 
-      {revisando ? (
+      {registrandoTreino ? (
+        <Treino
+          itens={app.itens}
+          aoSalvar={(entrada) => {
+            app.registrarSessao(entrada)
+            setRegistrandoTreino(false)
+          }}
+          aoSair={() => setRegistrandoTreino(false)}
+        />
+      ) : revisando ? (
         <Revisao
           fila={app.fila.cartoes}
           aoAvaliar={({ cardId, rating, usouDica }) => app.registrar({ cardId, rating, usouDica })}
@@ -50,6 +61,8 @@ export function App() {
               modulos={app.modulos}
               armazenamentoPersistente={armazenamentoPersistente}
               aoComecar={() => setRevisando(true)}
+              resumoTreino={app.resumoTreino}
+              aoRegistrarTreino={() => setRegistrandoTreino(true)}
             />
           )}
 

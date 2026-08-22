@@ -17,6 +17,9 @@ export interface HojeProps {
   modulos: Modulo[]
   armazenamentoPersistente: boolean
   aoComecar: () => void
+  /** Resumo do registro de treino — o terceiro eixo (RF-06). */
+  resumoTreino: { sessoes: number; itensTreinados: number; itensAtivos: number; funcionamSobPressao: number }
+  aoRegistrarTreino: () => void
 }
 
 export function Hoje({
@@ -29,9 +32,19 @@ export function Hoje({
   modulos,
   armazenamentoPersistente,
   aoComecar,
+  resumoTreino,
+  aoRegistrarTreino,
 }: HojeProps) {
   const nomeDoModuloEmRisco = risco ? modulos.find((m) => m.id === risco.moduloId)?.nome : undefined
   const temFila = fila.cartoes.length > 0
+
+  /**
+   * Segunda e quarta sao os dias de aula na Rilion. O app nao agenda nada
+   * nesses dias — o conteudo e do mestre — mas e neles que faz sentido oferecer
+   * o registro em destaque, em vez de esperar que o aluno procure a tela.
+   */
+  const diaDaSemana = new Date().getDay()
+  const diaDeAcademia = diaDaSemana === 1 || diaDaSemana === 3
 
   return (
     <div>
@@ -70,6 +83,48 @@ export function Hoje({
             <div className="rotulo">acerto sem dica</div>
           </div>
         </div>
+      </div>
+
+      <div className={diaDeAcademia ? 'card card--destaque' : 'card'}>
+        <h3 className="detalhe-secao">Treino na academia</h3>
+        <p className="instrucao">
+          {diaDeAcademia ? (
+            <>
+              Hoje é dia de aula com o mestre. Depois do treino, registre o que <strong>funcionou no
+              rolamento</strong> — é o único eixo que lembrar os passos não mede.
+            </>
+          ) : (
+            <>
+              As aulas são segunda e quarta. Se treinou em outro dia, registre aqui do mesmo jeito.
+            </>
+          )}
+        </p>
+
+        {resumoTreino.sessoes > 0 && (
+          <div className="linha-metricas">
+            <div className="metrica">
+              <div className="valor">{resumoTreino.sessoes}</div>
+              <div className="rotulo">treinos</div>
+            </div>
+            <div className="metrica">
+              <div className="valor">
+                {resumoTreino.itensTreinados}/{resumoTreino.itensAtivos}
+              </div>
+              <div className="rotulo">já no rolamento</div>
+            </div>
+            <div className="metrica">
+              <div className="valor">{resumoTreino.funcionamSobPressao}</div>
+              <div className="rotulo">sob pressão</div>
+            </div>
+          </div>
+        )}
+
+        <button
+          className={diaDeAcademia ? 'botao botao--principal' : 'botao botao--secundario'}
+          onClick={aoRegistrarTreino}
+        >
+          Registrar treino
+        </button>
       </div>
 
       <div className="card">

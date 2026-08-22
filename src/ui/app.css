@@ -824,3 +824,138 @@
 .acoes--coluna .botao {
   width: 100%;
 }
+
+/* ---------------------------------------------------------------------------
+   Registro de treino
+   --------------------------------------------------------------------------- */
+
+/* Destaque do dia de academia: faixa laranja no topo, nao fundo colorido —
+   o cartao continua legivel e a enfase nao briga com o resto da tela. */
+.card--destaque {
+  border-top: 3px solid var(--laranja);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: calc(var(--espacamento-base) * 2);
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.campo input,
+.campo textarea {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--cor-texto);
+  padding: calc(var(--espacamento-base) * 1.25);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  background: var(--cor-superficie);
+  min-height: var(--alvo-toque-min);
+  resize: vertical;
+}
+
+.campo input:focus-visible,
+.campo textarea:focus-visible {
+  outline: 2px solid var(--laranja-texto);
+  outline-offset: 1px;
+}
+
+/* Sugestoes da busca de tecnica */
+.sugestoes {
+  list-style: none;
+  margin: var(--espacamento-base) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sugestoes button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  padding: var(--espacamento-base);
+  min-height: var(--alvo-toque-min);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  background: var(--cor-superficie);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sugestoes small {
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+}
+
+.link-limpar {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--laranja-texto);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Observacoes do treino */
+.lista-observacoes {
+  list-style: none;
+  margin: var(--espacamento-base) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+}
+
+.obs {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+  padding: var(--espacamento-base);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+}
+
+/* "Saiu contra resistencia" e o unico resultado que prova algo — merece marca
+   propria, e em verde porque aqui significa sucesso, nao marca. */
+.obs--forte {
+  border-left: 4px solid var(--verde-sucesso);
+  background: var(--verde-suave);
+}
+
+.obs-texto {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.obs-nome {
+  font-weight: 600;
+}
+
+.obs-meta {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.obs-remover {
+  flex-shrink: 0;
+  width: var(--alvo-toque-min);
+  height: var(--alvo-toque-min);
+  border: 0;
+  background: none;
+  color: var(--cor-texto-suave);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 50%;
+}

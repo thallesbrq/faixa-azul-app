@@ -8,11 +8,12 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { montarFilaDoDia, moduloDeMaiorRisco } from '../application/fila'
 import { registrarRevisao, revisadosHoje, taxaDeAcertoSemDica } from '../application/revisar'
+import { criarSessao, resumoDoTreino } from '../application/treino'
 import type { EntradaRevisao } from '../application/revisar'
 import { gerarBaralho } from '../domain/cards'
 import { diasAteProva as calcularDiasAteProva } from '../domain/scheduler'
 import { aplicarValidacoes, criarValidacao } from '../domain/validacao'
-import type { ValidationStatus } from '../domain/types'
+import type { PracticeObservation, ValidationStatus } from '../domain/types'
 import { depositoEmMemoria, depositoLocalStorage } from '../persistence/deposito'
 import { carregar, salvar } from '../persistence/repositorio'
 import type { EstadoPersistido } from '../persistence/repositorio'
@@ -127,6 +128,26 @@ export function useApp() {
     [estado, atualizar],
   )
 
+  /**
+   * Registra uma sessao de treino (aula regular de seg/qua).
+   *
+   * Nota do professor e observacoes vao juntas porque sao a mesma sessao — mas
+   * a validacao de item continua sendo caminho separado (registrarValidacao):
+   * "o mestre comentou no treino" nao e "o mestre confirmou esta tecnica".
+   */
+  const registrarSessao = useCallback(
+    (entrada: { parceiro?: string; notaDoProfessor?: string; observacoes: PracticeObservation[] }) => {
+      const momento = new Date()
+      const sessao = criarSessao({
+        id: `ses-${momento.getTime()}-${++contadorId.current}`,
+        agora: momento,
+        ...entrada,
+      })
+      atualizar({ ...estado, sessoes: [...estado.sessoes, sessao] })
+    },
+    [estado, atualizar],
+  )
+
   /** Aulas do seed com as alteracoes do aluno aplicadas. */
   const aulas = useMemo(() => {
     const alteracoes = new Map(estado.aulas.map((a) => [a.numero, a]))
@@ -153,6 +174,8 @@ export function useApp() {
     definirDataAlvo,
     registrarValidacao,
     marcarAulaRealizada,
+    registrarSessao,
+    resumoTreino: resumoDoTreino(itens, estado.sessoes),
   }
 }
 
