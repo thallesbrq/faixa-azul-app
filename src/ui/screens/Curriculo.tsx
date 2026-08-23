@@ -8,8 +8,9 @@
  */
 
 import { useMemo, useState } from 'react'
-import type { Modulo, TechniqueContent, TechniqueItem, ValidationStatus } from '../../domain/types'
+import type { Dificuldade, Modulo, TechniqueContent, TechniqueItem, ValidationStatus } from '../../domain/types'
 import type { RequisitoProva } from '../../domain/types'
+import type { AlteracaoItem } from '../../persistence/repositorio'
 import { DetalheTecnica } from '../components/DetalheTecnica'
 
 const ROTULO_STATUS: Record<ValidationStatus, string> = {
@@ -28,12 +29,23 @@ const CLASSE_STATUS: Record<ValidationStatus, string> = {
   descartado: 'selo--descartado',
 }
 
+const ROTULO_DIFICULDADE: Record<Dificuldade, string> = {
+  facil: 'fácil',
+  medio: 'médio',
+  dificil: 'difícil',
+}
+
 export interface CurriculoProps {
   itens: TechniqueItem[]
   conteudos: TechniqueContent[]
   modulos: Modulo[]
   requisitos: RequisitoProva[]
   validacoes: import('../../domain/types').ValidacaoDoProfessor[]
+  anotacoes: ReadonlyMap<string, AlteracaoItem>
+  aoAnotar: (
+    itemId: string,
+    mudanca: { dificuldade?: Dificuldade; video?: string; videoTitulo?: string },
+  ) => void
   aoValidar: (entrada: {
     itemId: string
     texto: string
@@ -49,6 +61,8 @@ export function Curriculo({
   modulos,
   requisitos,
   validacoes,
+  anotacoes,
+  aoAnotar,
   aoValidar,
 }: CurriculoProps) {
   const [selecionado, setSelecionado] = useState<string | null>(null)
@@ -86,6 +100,8 @@ export function Curriculo({
         requisito={requisitos.find((r) => r.posicao === item.posicao && r.categoria === item.categoria)}
         validacoes={validacoes.filter((v) => v.itemId === item.id)}
         aoValidar={aoValidar}
+        anotacao={anotacoes.get(item.id)}
+        aoAnotar={aoAnotar}
         aoVoltar={() => setSelecionado(null)}
       />
     )
@@ -129,6 +145,14 @@ export function Curriculo({
                       <button className="linha-tecnica" onClick={() => setSelecionado(it.id)}>
                         <span className="linha-nome">
                           {it.nome || it.slot}
+                          {anotacoes.get(it.id)?.dificuldade && (
+                            <span
+                              className={`selo-dif selo-dif--${anotacoes.get(it.id)!.dificuldade}`}
+                              title="Dificuldade que você marcou"
+                            >
+                              {ROTULO_DIFICULDADE[anotacoes.get(it.id)!.dificuldade!]}
+                            </span>
+                          )}
                           {it.nome && <small>{it.slot}</small>}
                         </span>
                         <span className={`selo ${CLASSE_STATUS[it.validationStatus]}`}>

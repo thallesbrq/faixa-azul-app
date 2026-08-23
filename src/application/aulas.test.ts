@@ -331,3 +331,60 @@ describe('repescagensPendentes', () => {
     expect(fila.map((r) => r.itemId)).toEqual(['b', 'a'])
   })
 })
+
+describe('dificuldade marcada pelo aluno', () => {
+  it('difícil custa mais minutos que médio, e fácil menos', () => {
+    expect(custoEmMinutos(0, false, 'dificil')).toBeGreaterThan(custoEmMinutos(0, false, 'medio'))
+    expect(custoEmMinutos(0, false, 'facil')).toBeLessThan(custoEmMinutos(0, false, 'medio'))
+  })
+
+  it('sem marcacao reproduz exatamente o calculo anterior ao campo existir', () => {
+    // Garantia de compatibilidade: quem nunca marcou nada ve os mesmos numeros.
+    for (const d of [0, 0.5, 1]) {
+      expect(custoEmMinutos(d)).toBe(custoEmMinutos(d, false, 'medio'))
+    }
+    expect(custoEmMinutos(0)).toBe(MINUTOS_ITEM_CRU)
+  })
+
+  it('o fator vale para repescagem tambem — regra sem excecao', () => {
+    expect(custoEmMinutos(0, true, 'dificil')).toBeGreaterThan(custoEmMinutos(0, true, 'medio'))
+    expect(custoEmMinutos(0, true, 'medio')).toBe(MINUTOS_REPESCAGEM)
+  })
+
+  it('marcar tudo como dificil reduz o que cabe no pacote', () => {
+    // E o ponto pratico do campo: o aluno pode marcar isso HOJE, antes de
+    // estudar, e o "cabe / nao cabe" das 10 aulas ja fica mais honesto.
+    const progresso = curriculo(48, 8)
+    const facil = new Map(progresso.map((p) => [p.item.id, 'facil' as const]))
+    const dificil = new Map(progresso.map((p) => [p.item.id, 'dificil' as const]))
+
+    const planoFacil = gerarPlano({ progresso, dificuldades: facil })
+    const planoDificil = gerarPlano({ progresso, dificuldades: dificil })
+
+    expect(planoDificil.foraDoPlano.length).toBeGreaterThan(planoFacil.foraDoPlano.length)
+    expect(planoDificil.minutosDeConteudo).toBeGreaterThan(planoFacil.minutosDeConteudo)
+  })
+
+  it('nenhuma aula estoura o orcamento mesmo com tudo dificil', () => {
+    const progresso = curriculo(48, 8)
+    const dificil = new Map(progresso.map((p) => [p.item.id, 'dificil' as const]))
+    for (const a of gerarPlano({ progresso, dificuldades: dificil }).aulas) {
+      expect(a.minutosEstimados).toBeLessThanOrEqual(MINUTOS_POR_AULA)
+    }
+  })
+
+  it('saldo do pacote reflete a dificuldade marcada', () => {
+    const progresso = curriculo(20, 0)
+    const aulas: AulaParticular[] = Array.from({ length: 10 }, (_, i) => ({
+      numero: i + 1,
+      tema: '',
+      foco: '',
+      itemIds: [],
+    }))
+    const dificil = new Map(progresso.map((p) => [p.item.id, 'dificil' as const]))
+
+    const semMarca = saldoDoPacote(aulas, progresso)
+    const comMarca = saldoDoPacote(aulas, progresso, MINUTOS_POR_AULA, dificil)
+    expect(comMarca.minutosNecessarios).toBeGreaterThan(semMarca.minutosNecessarios)
+  })
+})

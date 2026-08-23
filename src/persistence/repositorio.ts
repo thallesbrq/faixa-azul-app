@@ -13,6 +13,7 @@
  */
 
 import type {
+  Dificuldade,
   ExamPlan,
   PracticeSession,
   ReviewEvent,
@@ -30,6 +31,26 @@ export interface AlteracaoAula {
   numero: number
   realizadaEm?: string
   notas?: string
+}
+
+/**
+ * Anotacoes do aluno sobre um item do curriculo.
+ *
+ * Fica separado do seed pelo mesmo motivo das aulas e validacoes: o curriculo
+ * importado nunca e reescrito, e o que o aluno acrescenta e sempre camada por
+ * cima. Assim um seed corrigido depois nao apaga o trabalho dele.
+ *
+ * `video` e o video que o ALUNO escolheu, diferente do `busca` do conteudo — o
+ * seed traz um termo de busca no YouTube, e este campo guarda o link fixo da
+ * versao que ele decidiu usar como referencia.
+ */
+export interface AlteracaoItem {
+  itemId: string
+  dificuldade?: Dificuldade
+  video?: string
+  /** Titulo do video, para a tela nao mostrar so uma URL crua. */
+  videoTitulo?: string
+  anotacao?: string
 }
 
 /** Alteracoes do aluno sobre uma duvida do seed. */
@@ -56,6 +77,7 @@ export interface EstadoPersistido {
   eventos: ReviewEvent[]
   validacoes: ValidacaoDoProfessor[]
   aulas: AlteracaoAula[]
+  itens: AlteracaoItem[]
   duvidas: AlteracaoDuvida[]
   sessoes: PracticeSession[]
 }
@@ -81,6 +103,7 @@ export function estadoInicial(agora: Date): EstadoPersistido {
     eventos: [],
     validacoes: [],
     aulas: [],
+    itens: [],
     duvidas: [],
     sessoes: [],
   }

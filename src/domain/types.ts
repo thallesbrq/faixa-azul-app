@@ -33,6 +33,20 @@ export type Side = 'direito' | 'esquerdo' | 'unico'
 export type SafetyLevel = 'baixo' | 'medio' | 'alto'
 
 /** Classificacao tecnica usada nos selos e nos cartoes de classificacao. */
+/**
+ * Dificuldade percebida PELO ALUNO — julgamento subjetivo dele, nao medida.
+ *
+ * Existe separada do dominio de proposito, e a distincao importa: `dominio` e
+ * medido pelo desempenho real nas revisoes, enquanto isto e auto-relato. Por
+ * isso a dificuldade alimenta o PLANEJAMENTO (quanto tempo de aula um item vai
+ * custar), e nunca o agendamento das revisoes — ali quem decide e o acerto
+ * observado, nao a opiniao do aluno sobre si mesmo.
+ *
+ * A vantagem pratica: o aluno pode preencher isso hoje, antes de estudar, e
+ * melhorar a estimativa das 10 aulas de imediato.
+ */
+export type Dificuldade = 'facil' | 'medio' | 'dificil'
+
 export type TechniqueKind =
   | 'raspagem'
   | 'passagem'

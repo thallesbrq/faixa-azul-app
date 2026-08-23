@@ -18,7 +18,7 @@ import {
   saldoDoPacote,
 } from '../../application/aulas'
 import { progressoPorItem } from '../../application/progresso'
-import type { Card, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
+import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
 import type { AulaParticular } from '../../domain/types'
 
 export interface AulasProps {
@@ -27,6 +27,8 @@ export interface AulasProps {
   revisoes: ReviewState[]
   aulas: AulaParticular[]
   validacoes: ValidacaoDoProfessor[]
+  /** Dificuldade marcada pelo aluno — entra na estimativa de minutos. */
+  dificuldades: ReadonlyMap<string, Dificuldade>
   aoMarcarRealizada: (numero: number, realizada: boolean) => void
   aoAbrirItem?: (itemId: string) => void
 }
@@ -41,6 +43,7 @@ export function Aulas({
   revisoes,
   aulas,
   validacoes,
+  dificuldades,
   aoMarcarRealizada,
   aoAbrirItem,
 }: AulasProps) {
@@ -52,9 +55,15 @@ export function Aulas({
     [itens, baralho, revisoes],
   )
 
-  const plano = useMemo(() => gerarPlano({ progresso, totalAulas: aulas.length }), [progresso, aulas.length])
+  const plano = useMemo(
+    () => gerarPlano({ progresso, totalAulas: aulas.length, dificuldades }),
+    [progresso, aulas.length, dificuldades],
+  )
   const repescagens = useMemo(() => repescagensPendentes(validacoes), [validacoes])
-  const saldo = useMemo(() => saldoDoPacote(aulas, progresso), [aulas, progresso])
+  const saldo = useMemo(
+    () => saldoDoPacote(aulas, progresso, MINUTOS_POR_AULA, dificuldades),
+    [aulas, progresso, dificuldades],
+  )
 
   /** Proxima aula = a de menor numero ainda nao realizada. */
   const proxima = aulas.find((a) => !a.realizadaEm)
@@ -63,9 +72,9 @@ export function Aulas({
   const pauta = useMemo(
     () =>
       planoDaProxima
-        ? pautaDaAula({ aula: planoDaProxima, repescagens, progresso })
+        ? pautaDaAula({ aula: planoDaProxima, repescagens, progresso, dificuldades })
         : { linhas: [], minutos: 0, estourou: false },
-    [planoDaProxima, repescagens, progresso],
+    [planoDaProxima, repescagens, progresso, dificuldades],
   )
 
   return (

@@ -959,3 +959,81 @@
   cursor: pointer;
   border-radius: 50%;
 }
+
+/* ---------------------------------------------------------------------------
+   Video fixado e dificuldade
+   --------------------------------------------------------------------------- */
+
+.video-fixado {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--espacamento-base) * 1.5);
+  padding: var(--espacamento-base);
+  margin: calc(var(--espacamento-base) * 2) 0 var(--espacamento-base);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  text-decoration: none;
+  color: inherit;
+}
+
+.video-fixado img {
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  /* A miniatura vem do YouTube e nao entra no precache: offline ela falha e o
+     alt vazio deixa o espaco limpo em vez de mostrar icone de imagem quebrada. */
+  background: var(--cor-fundo);
+}
+
+.video-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.video-titulo {
+  font-weight: 600;
+}
+
+.video-origem {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.instrucao--erro {
+  color: var(--vermelho-alerta);
+}
+
+/* Selo de dificuldade na arvore do curriculo. Usa forma + texto, nao so cor:
+   a distincao precisa sobreviver a quem nao diferencia cor bem (RNF-04). */
+.selo-dif {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--cor-borda);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.selo-dif--facil {
+  border-color: var(--verde-sucesso);
+  background: var(--verde-suave);
+  color: var(--verde-sucesso);
+}
+
+.selo-dif--medio {
+  border-color: var(--amarelo-atencao);
+  background: var(--amarelo-suave);
+  color: var(--amarelo-atencao);
+}
+
+.selo-dif--dificil {
+  border-color: var(--vermelho-alerta);
+  background: var(--vermelho-suave);
+  color: var(--vermelho-alerta);
+}

@@ -34,7 +34,7 @@
  */
 
 import { dividirEmPartes, paresDoCirculo } from '../domain/circulo'
-import type { AulaParticular, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
+import type { AulaParticular, Dificuldade, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
 import type { ProgressoDeItem } from './progresso'
 
 /** Duracao de uma aula do pacote. */
@@ -58,16 +58,55 @@ export const MINUTOS_ITEM_DOMINADO = 5
 export const MINUTOS_REPESCAGEM = 3
 
 /**
+ * Fator pela dificuldade que o ALUNO marcou.
+ *
+ * Isto e auto-relato, nao medida — e por isso entra aqui, no planejamento, e
+ * nunca no agendamento das revisoes (ver Dificuldade em domain/types.ts). A
+ * vantagem pratica e de tempo: o aluno pode marcar facil/medio/dificil hoje,
+ * antes de estudar qualquer coisa, e a estimativa das 10 aulas melhora na hora
+ * — enquanto o dominio so existe depois de semanas de revisao.
+ *
+ * Sem marcacao, assume medio (fator 1), que reproduz exatamente o calculo
+ * anterior a este campo existir.
+ */
+export const FATOR_DIFICULDADE: Record<Dificuldade, number> = {
+  facil: 0.75,
+  medio: 1,
+  dificil: 1.35,
+}
+
+/**
  * Quanto tempo de aula um item deve consumir.
  *
  * Interpola linearmente entre cru e dominado. Nao ha ciencia na linearidade —
  * ha a recusa de usar um numero unico, que era o erro maior.
+ *
+ * O fator de dificuldade se aplica tambem a repescagem, sem excecao: uma
+ * tecnica dificil demora mais para ser re-mostrada tambem, e uma regra sem
+ * excecao e mais facil de conferir do que uma com.
  */
-export function custoEmMinutos(dominio: number, repescagem = false): number {
-  if (repescagem) return MINUTOS_REPESCAGEM
+export function custoEmMinutos(
+  dominio: number,
+  repescagem = false,
+  dificuldade: Dificuldade = 'medio',
+): number {
+  const fator = FATOR_DIFICULDADE[dificuldade]
+  if (repescagem) return MINUTOS_REPESCAGEM * fator
   const d = Math.min(1, Math.max(0, dominio))
-  return MINUTOS_ITEM_CRU + (MINUTOS_ITEM_DOMINADO - MINUTOS_ITEM_CRU) * d
+  return (MINUTOS_ITEM_CRU + (MINUTOS_ITEM_DOMINADO - MINUTOS_ITEM_CRU) * d) * fator
 }
+
+/**
+ * Dificuldade marcada pelo aluno, por item. Chega de fora (das anotacoes
+ * persistidas) em vez de morar no ProgressoDeItem: dificuldade nao e progresso,
+ * e misturar as duas coisas obrigaria o modulo de progresso a conhecer as
+ * anotacoes do aluno sem precisar delas.
+ *
+ * Item ausente do mapa conta como 'medio'.
+ */
+export type DificuldadePorItem = ReadonlyMap<string, Dificuldade>
+
+const SEM_DIFICULDADE: DificuldadePorItem = new Map()
 
 // ---------------------------------------------------------------------------
 // Geracao do plano
@@ -158,14 +197,18 @@ export function gerarPlano({
   minutosPorAula = MINUTOS_POR_AULA,
   minutosReservados = MINUTOS_RESERVADOS,
   moduloDeSaidas = 'mod-saidas',
+  dificuldades = SEM_DIFICULDADE,
 }: {
   progresso: ProgressoDeItem[]
   totalAulas?: number
   minutosPorAula?: number
   minutosReservados?: number
   moduloDeSaidas?: string
+  dificuldades?: DificuldadePorItem
 }): PlanoDeAulas {
-  const custoDe = new Map(progresso.map((p) => [p.item.id, custoEmMinutos(p.pontuacao)]))
+  const custoDe = new Map(
+    progresso.map((p) => [p.item.id, custoEmMinutos(p.pontuacao, false, dificuldades.get(p.item.id))]),
+  )
 
   /**
    * A aula 1 nao reserva minutos para repescagem: nao existe aula anterior,
@@ -300,11 +343,13 @@ export function pautaDaAula({
   repescagens,
   progresso,
   minutosPorAula = MINUTOS_POR_AULA,
+  dificuldades = SEM_DIFICULDADE,
 }: {
   aula: AulaPlanejada
   repescagens: Repescagem[]
   progresso: ProgressoDeItem[]
   minutosPorAula?: number
+  dificuldades?: DificuldadePorItem
 }): { linhas: LinhaDePauta[]; minutos: number; estourou: boolean } {
   const porId = new Map(progresso.map((p) => [p.item.id, p]))
 
@@ -314,7 +359,7 @@ export function pautaDaAula({
     return [
       {
         item: p.item,
-        minutos: custoEmMinutos(p.pontuacao, true),
+        minutos: custoEmMinutos(p.pontuacao, true, dificuldades.get(r.itemId)),
         repescagem: true,
         corrigidoNaAula: r.corrigidoNaAula,
       },
@@ -323,7 +368,7 @@ export function pautaDaAula({
 
   const planejadas: LinhaDePauta[] = aula.itens.map((item) => ({
     item,
-    minutos: custoEmMinutos(porId.get(item.id)?.pontuacao ?? 0),
+    minutos: custoEmMinutos(porId.get(item.id)?.pontuacao ?? 0, false, dificuldades.get(item.id)),
     repescagem: false,
   }))
 
@@ -346,6 +391,7 @@ export function saldoDoPacote(
   aulas: AulaParticular[],
   progresso: ProgressoDeItem[],
   minutosPorAula = MINUTOS_POR_AULA,
+  dificuldades: DificuldadePorItem = SEM_DIFICULDADE,
 ): {
   realizadas: number
   restantes: number
@@ -359,7 +405,7 @@ export function saldoDoPacote(
   const restantes = Math.max(0, aulas.length - realizadas)
   const pendentes = progresso.filter((p) => !p.validado)
   const minutosNecessarios = Math.round(
-    pendentes.reduce((s, p) => s + custoEmMinutos(p.pontuacao), 0),
+    pendentes.reduce((s, p) => s + custoEmMinutos(p.pontuacao, false, dificuldades.get(p.item.id)), 0),
   )
   const minutosRestantes = restantes * minutosPorAula
 

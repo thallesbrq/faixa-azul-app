@@ -73,6 +73,8 @@ export function App() {
               modulos={app.modulos}
               requisitos={app.requisitos}
               validacoes={app.estado.validacoes}
+              anotacoes={app.anotacoes}
+              aoAnotar={app.anotarItem}
               aoValidar={app.registrarValidacao}
             />
           )}
@@ -84,6 +86,7 @@ export function App() {
               revisoes={app.estado.revisoes}
               aulas={app.aulas}
               validacoes={app.estado.validacoes}
+              dificuldades={app.dificuldades}
               aoMarcarRealizada={app.marcarAulaRealizada}
             />
           )}

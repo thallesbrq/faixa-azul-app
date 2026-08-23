@@ -13,10 +13,11 @@ import type { EntradaRevisao } from '../application/revisar'
 import { gerarBaralho } from '../domain/cards'
 import { diasAteProva as calcularDiasAteProva } from '../domain/scheduler'
 import { aplicarValidacoes, criarValidacao } from '../domain/validacao'
-import type { PracticeObservation, ValidationStatus } from '../domain/types'
+import { normalizarUrlDeVideo } from '../domain/video'
+import type { Dificuldade, PracticeObservation, ValidationStatus } from '../domain/types'
 import { depositoEmMemoria, depositoLocalStorage } from '../persistence/deposito'
 import { carregar, salvar } from '../persistence/repositorio'
-import type { EstadoPersistido } from '../persistence/repositorio'
+import type { AlteracaoItem, EstadoPersistido } from '../persistence/repositorio'
 import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from '../seed'
 
 /**
@@ -148,6 +149,52 @@ export function useApp() {
     [estado, atualizar],
   )
 
+  /**
+   * Anota um item: dificuldade percebida e/ou video de referencia escolhido.
+   *
+   * A URL passa por `normalizarUrlDeVideo` ANTES de ser guardada, nao na hora de
+   * mostrar. Validar na escrita significa que o armazenamento nunca contem um
+   * link que a tela nao possa abrir com seguranca — inclusive o que vier de um
+   * backup importado de outro aparelho.
+   *
+   * Passar `video: ''` limpa o link; `dificuldade: undefined` nao mexe nela.
+   */
+  const anotarItem = useCallback(
+    (itemId: string, mudanca: { dificuldade?: Dificuldade; video?: string; videoTitulo?: string }) => {
+      const anterior = estado.itens.find((a) => a.itemId === itemId)
+      const proxima: AlteracaoItem = { ...anterior, itemId }
+
+      if (mudanca.dificuldade !== undefined) proxima.dificuldade = mudanca.dificuldade
+      if (mudanca.video !== undefined) {
+        const url = normalizarUrlDeVideo(mudanca.video)
+        proxima.video = url ?? undefined
+        // Limpar o link limpa o titulo junto: titulo sem video e lixo orfao.
+        if (!url) proxima.videoTitulo = undefined
+      }
+      if (mudanca.videoTitulo !== undefined) {
+        proxima.videoTitulo = mudanca.videoTitulo.trim() || undefined
+      }
+
+      atualizar({
+        ...estado,
+        itens: [...estado.itens.filter((a) => a.itemId !== itemId), proxima],
+      })
+    },
+    [estado, atualizar],
+  )
+
+  const anotacoes = useMemo(
+    () => new Map(estado.itens.map((a) => [a.itemId, a])),
+    [estado.itens],
+  )
+
+  /** So as dificuldades, no formato que o planejamento das aulas consome. */
+  const dificuldades = useMemo(() => {
+    const mapa = new Map<string, Dificuldade>()
+    for (const a of estado.itens) if (a.dificuldade) mapa.set(a.itemId, a.dificuldade)
+    return mapa
+  }, [estado.itens])
+
   /** Aulas do seed com as alteracoes do aluno aplicadas. */
   const aulas = useMemo(() => {
     const alteracoes = new Map(estado.aulas.map((a) => [a.numero, a]))
@@ -175,6 +222,9 @@ export function useApp() {
     registrarValidacao,
     marcarAulaRealizada,
     registrarSessao,
+    anotarItem,
+    anotacoes,
+    dificuldades,
     resumoTreino: resumoDoTreino(itens, estado.sessoes),
   }
 }
