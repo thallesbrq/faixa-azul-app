@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dividirEmPartes, paresDoCirculo, passoDoCirculo } from './circulo'
+import { dividirEmPartes, paresDoCirculo, passoDoCirculo, tamanhosEquilibrados } from './circulo'
 
 describe('passoDoCirculo', () => {
   it('escolhe passo coprimo com n', () => {
@@ -92,5 +92,57 @@ describe('dividirEmPartes', () => {
   it('aceita lista menor que o numero de partes', () => {
     // Saida do Norte-Sul tem 1 item so; a segunda aparicao fica vazia.
     expect(dividirEmPartes([1], 2)).toEqual([[1], []])
+  })
+})
+
+describe('tamanhosEquilibrados', () => {
+  it('soma sempre o total pedido', () => {
+    for (const total of [0, 1, 7, 56, 100]) {
+      for (const partes of [1, 3, 10, 12]) {
+        const t = tamanhosEquilibrados(total, partes)
+        expect(t.reduce((a, b) => a + b, 0)).toBe(total)
+        expect(t).toHaveLength(partes)
+      }
+    }
+  })
+
+  it('a diferenca entre o maior e o menor nunca passa de 1', () => {
+    // E o que "o mais igual possivel" significa na pratica.
+    for (const total of [7, 56, 101]) {
+      for (const partes of [3, 10, 12]) {
+        const t = tamanhosEquilibrados(total, partes)
+        expect(Math.max(...t) - Math.min(...t)).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+
+  it('56 itens em 10 aulas da seis 6 e quatro 5', () => {
+    const t = tamanhosEquilibrados(56, 10)
+    expect(t).toEqual([5, 5, 5, 5, 6, 6, 6, 6, 6, 6])
+    expect(t.filter((n) => n === 6)).toHaveLength(6)
+  })
+
+  it('as aulas mais cheias ficam no FIM', () => {
+    // Deliberado: o item fica mais barato conforme o aluno estuda, entao a carga
+    // maior vai para quando cada item custa menos.
+    const t = tamanhosEquilibrados(56, 10)
+    expect(t[0]).toBeLessThanOrEqual(t[t.length - 1])
+  })
+
+  it('restoNoFim: false inverte, para quem precisar do contrario', () => {
+    expect(tamanhosEquilibrados(56, 10, false)).toEqual([6, 6, 6, 6, 6, 6, 5, 5, 5, 5])
+  })
+
+  it('divisao exata da todos iguais', () => {
+    expect(tamanhosEquilibrados(50, 10)).toEqual([5, 5, 5, 5, 5, 5, 5, 5, 5, 5])
+  })
+
+  it('menos itens que grupos deixa grupos vazios, sem quebrar', () => {
+    expect(tamanhosEquilibrados(3, 5)).toEqual([0, 0, 1, 1, 1])
+  })
+
+  it('casos degenerados', () => {
+    expect(tamanhosEquilibrados(10, 0)).toEqual([])
+    expect(tamanhosEquilibrados(0, 3)).toEqual([0, 0, 0])
   })
 })

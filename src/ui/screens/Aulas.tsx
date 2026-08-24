@@ -22,9 +22,9 @@ import {
 import { dataLocalISO, montarPlanner } from '../../application/planner'
 
 /**
- * Primeiro dia do pacote, combinado com o professor. Fica aqui como constante
- * porque ainda nao existe tela de configuracao para ela; quando existir, vira
- * campo no estado.
+ * Primeiro dia do pacote — PROVISORIO. O aluno deixou datas e horarios em aberto
+ * com o professor, entao isto e so uma referencia para o planner ter um eixo de
+ * tempo. Quando as datas forem combinadas, viram campo no estado.
  */
 const INICIO_DO_PACOTE = '2026-09-02'
 import { progressoPorItem } from '../../application/progresso'
@@ -139,13 +139,10 @@ export function Aulas({
           </p>
 
           {pauta.estourou && (
-            <p className="aviso">
-              <span aria-hidden="true">⚠️</span>
-              <span>
-                Passa dos {MINUTOS_POR_AULA} minutos. O plano cobre todos os itens da prova, então o app não
-                corta nada para caber — estude antes: item que você já executa custa menos da metade do tempo
-                de um item cru.
-              </span>
+            <p className="instrucao">
+              A estimativa passa dos {MINUTOS_POR_AULA} min, e isso é só referência — as técnicas não custam o
+              mesmo, e a pauta é montada por <strong>quantidade</strong>. Chegar estudado é o que aperta o
+              tempo real.
             </p>
           )}
 
@@ -232,15 +229,24 @@ export function Aulas({
       </div>
 
       {/* ---------- Auloes de revisao: destino do que nao cabe ---------- */}
-      {plano.foraDoPlano.length > 0 && (
+      {auloes.some((a) => a.itens.length > 0 || a.reforco.length > 0) && (
         <div className="card">
           <h3 className="detalhe-secao">
             Aulões de revisão ({AULOES} dias)
           </h3>
           <p className="instrucao">
-            Cinco itens por aula fecham os {MINUTOS_POR_AULA} min, e sobram{' '}
-            <strong>{plano.foraDoPlano.length} itens</strong> das {aulas.length} particulares. Eles não ficam
-            sem cobertura: vão para os aulões da turma. O conteúdo avançado é o que sobra, por decisão sua.
+            {plano.foraDoPlano.length > 0 ? (
+              <>
+                <strong>{plano.foraDoPlano.length} itens</strong> não couberam nas {aulas.length} particulares e
+                vêm para cá, junto com o que você não levou a 100%.
+              </>
+            ) : (
+              <>
+                As {aulas.length} particulares cobrem os {plano.aulas.flatMap((a) => a.itens).length} itens da
+                prova, então o aulão não recebe conteúdo novo — ele é para <strong>reforçar o que ainda não
+                está firme</strong>.
+              </>
+            )}
           </p>
 
           {auloes.map((aulao) => (
@@ -248,8 +254,15 @@ export function Aulas({
               <h4 className="aulao-titulo">
                 Aulão {aulao.numero}
                 <small>
-                  {aulao.itens.length} {aulao.itens.length === 1 ? 'item novo' : 'itens novos'}
-                  {aulao.reforco.length > 0 && <> · {aulao.reforco.length} de reforço</>}
+                  {aulao.itens.length > 0 && (
+                    <>
+                      {aulao.itens.length} {aulao.itens.length === 1 ? 'item novo' : 'itens novos'}
+                      {aulao.reforco.length > 0 && ' · '}
+                    </>
+                  )}
+                  {aulao.reforco.length > 0
+                    ? `${aulao.reforco.length} de reforço`
+                    : aulao.itens.length === 0 && 'nada pendente ainda'}
                 </small>
               </h4>
 

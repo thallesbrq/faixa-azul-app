@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ITENS_POR_AULA,
   MINUTOS_ITEM_CRU,
   MINUTOS_ITEM_DOMINADO,
   MINUTOS_POR_AULA,
@@ -87,39 +86,39 @@ describe('custoEmMinutos', () => {
 })
 
 describe('gerarPlano', () => {
-  it('toda aula tem exatamente ITENS_POR_AULA itens', () => {
-    const plano = gerarPlano({ progresso: curriculo(48, 8) })
-    for (const a of plano.aulas) {
-      expect(a.itens).toHaveLength(ITENS_POR_AULA)
-    }
-  })
-
-  it('cobre 50 dos 56; a sobra vai para o aulao, nao para o lixo', () => {
-    // Decisao do aluno: respeitar os 60 minutos e mandar o excedente para os
-    // auloes de revisao da turma. A sobra deixou de ser buraco no preparo.
+  it('cobre TODOS os itens — nada fica fora das particulares', () => {
+    // Decisao do aluno: distribuir por quantidade, sem se importar com o tempo.
     const progresso = curriculo(48, 8)
     const plano = gerarPlano({ progresso })
-    const cobertos = plano.aulas.flatMap((a) => a.itens).length
-
-    expect(cobertos).toBe(10 * ITENS_POR_AULA)
-    expect(plano.foraDoPlano).toHaveLength(progresso.length - cobertos)
-    expect(cobertos + plano.foraDoPlano.length).toBe(progresso.length)
+    expect(plano.aulas.flatMap((a) => a.itens)).toHaveLength(progresso.length)
+    expect(plano.foraDoPlano).toEqual([])
   })
 
-  it('cinco itens crus dao exatos 60 minutos — no limite, sem folga', () => {
-    // E a razao de serem cinco. Um sexto item cru levaria a 72.
+  it('distribui em quantidade — diferenca maxima de 1 item entre aulas', () => {
+    // 56 em 10 da 5,6: nao existe divisao exata, e seis de 6 com quatro de 5 e o
+    // mais proximo dela.
+    const tamanhos = gerarPlano({ progresso: curriculo(48, 8) }).aulas.map((a) => a.itens.length)
+    expect(Math.max(...tamanhos) - Math.min(...tamanhos)).toBeLessThanOrEqual(1)
+    expect(tamanhos.filter((n) => n === 6)).toHaveLength(6)
+    expect(tamanhos.filter((n) => n === 5)).toHaveLength(4)
+  })
+
+  it('o tempo e INFORMACAO, nao limite — a pauta nao encolhe por estourar', () => {
+    // A aula de 6 itens crus estima acima dos 60 min e continua com 6 itens: o
+    // aluno decidiu que a quantidade manda porque o custo real varia demais
+    // entre uma raspada simples e um berimbolo.
     const plano = gerarPlano({ progresso: curriculo(48, 8, 0) })
-    for (const a of plano.aulas) {
-      expect(a.minutosEstimados).toBe(MINUTOS_POR_AULA)
-    }
+    const acimaDoTempo = plano.aulas.filter((a) => a.minutosEstimados > MINUTOS_POR_AULA)
+    expect(acimaDoTempo.length).toBeGreaterThan(0)
+    expect(acimaDoTempo.every((a) => a.itens.length === 6)).toBe(true)
   })
 
-  it('estudar sobra tempo na aula, em vez de encolher a pauta', () => {
+  it('estudar reduz a estimativa sem mexer na quantidade', () => {
     const cru = gerarPlano({ progresso: curriculo(48, 8, 0) })
     const estudado = gerarPlano({ progresso: curriculo(48, 8, 0.5) })
 
-    expect(estudado.aulas[0].itens).toHaveLength(ITENS_POR_AULA)
-    expect(estudado.aulas[0].minutosEstimados).toBeLessThan(cru.aulas[0].minutosEstimados)
+    expect(estudado.aulas.map((a) => a.itens.length)).toEqual(cru.aulas.map((a) => a.itens.length))
+    expect(estudado.minutosDeConteudo).toBeLessThan(cru.minutosDeConteudo)
   })
 
   it('nao repete nem perde item entre plano e fora do plano', () => {
@@ -141,10 +140,9 @@ describe('gerarPlano', () => {
     }
   })
 
-  it('a reserva de repescagem nao participa da geracao — todas as aulas iguais', () => {
-    const plano = gerarPlano({ progresso: curriculo(48, 8) })
-    const tamanhos = new Set(plano.aulas.map((a) => a.itens.length))
-    expect([...tamanhos]).toEqual([ITENS_POR_AULA])
+  it('as aulas mais cheias ficam no fim, com o aluno mais treinado', () => {
+    const tamanhos = gerarPlano({ progresso: curriculo(48, 8) }).aulas.map((a) => a.itens.length)
+    expect(tamanhos[0]).toBeLessThanOrEqual(tamanhos[tamanhos.length - 1])
   })
 
   it('a conta sempre fecha, com qualquer numero de aulas', () => {
@@ -289,8 +287,9 @@ describe('corte por profundidade, nao por largura', () => {
   const posicoesDe = (itens: TechniqueItem[]) => new Set(itens.map((i) => i.posicao))
 
   it('NENHUMA posicao fica inteira de fora', () => {
-    // E a propriedade central da regra: corta profundidade, preserva largura.
-    // Antes, uma posicao inteira (o Complexo Moderno) saia do plano.
+    // Com a distribuicao por quantidade isto e garantido por construcao, e o
+    // teste continua valendo como rede: era exatamente o que a regra antiga
+    // violava, mandando o Complexo Moderno inteiro para fora.
     const progresso = desigual()
     const plano = gerarPlano({ progresso })
     const noPlano = posicoesDe(plano.aulas.flatMap((a) => a.itens))
@@ -324,16 +323,16 @@ describe('corte por profundidade, nao por largura', () => {
   })
 
   it('o corte sai das posicoes MAIORES', () => {
-    const progresso = desigual()
-    const plano = gerarPlano({ progresso })
-    const fora = plano.foraDoPlano.filter((i) => i.moduloId === 'mod-guardas')
-
-    // As tres maiores sao Guarda Fechada (11), Meia Guarda (8) e Complexo (8).
-    const grandes = ['Guarda Fechada', 'Meia Guarda', 'Complexo Moderno']
-    expect(fora.length).toBeGreaterThan(0)
-    for (const i of fora) {
-      expect(grandes.some((g) => i.posicao.startsWith(g)), `cortou de "${i.posicao}"`).toBe(true)
-    }
+    // gerarPlano nao corta mais nada (distribui tudo por quantidade), entao a
+    // politica e testada na funcao que a encerra.
+    const porPosicao = new Map<string, TechniqueItem[]>([
+      ['Guarda Fechada', Array.from({ length: 11 }, (_, k) => item({ id: `gf${k}`, posicao: 'Guarda Fechada' }))],
+      ['Meia Guarda', Array.from({ length: 8 }, (_, k) => item({ id: `mg${k}`, posicao: 'Meia Guarda' }))],
+      ['Guarda Laco', Array.from({ length: 3 }, (_, k) => item({ id: `gl${k}`, posicao: 'Guarda Laco' }))],
+    ])
+    const fora = escolherExcedente(porPosicao, 4)
+    expect([...fora].every((id) => id.startsWith('gf') || id.startsWith('mg'))).toBe(true)
+    expect([...fora].some((id) => id.startsWith('gl'))).toBe(false)
   })
 
   it('a posicao mais cheia cede primeiro', () => {
@@ -354,17 +353,18 @@ describe('corte por profundidade, nao por largura', () => {
     expect(fora.has('p0')).toBe(false)
   })
 
-  it('as saidas nunca entram no corte', () => {
-    // A Secao 5 inteira tem 8 itens; tirar dela seria cortar largura.
-    const plano = gerarPlano({ progresso: desigual() })
-    expect(plano.foraDoPlano.every((i) => i.moduloId !== 'mod-saidas')).toBe(true)
+  it('nada fica de fora — nem guarda nem saida', () => {
+    const progresso = desigual()
+    const plano = gerarPlano({ progresso })
+    expect(plano.foraDoPlano).toEqual([])
+    expect(plano.aulas.flatMap((a) => a.itens)).toHaveLength(progresso.length)
   })
 
   it('e deterministico — o mesmo plano em execucoes repetidas', () => {
+    // O plano vai impresso para o professor: nao pode mudar entre aberturas.
     const progresso = desigual()
-    const a = gerarPlano({ progresso }).foraDoPlano.map((i) => i.id)
-    const b = gerarPlano({ progresso }).foraDoPlano.map((i) => i.id)
-    expect(a).toEqual(b)
+    const ids = (p: ReturnType<typeof gerarPlano>) => p.aulas.flatMap((a) => a.itens.map((i) => i.id))
+    expect(ids(gerarPlano({ progresso }))).toEqual(ids(gerarPlano({ progresso })))
   })
 
   it('pedir zero excedente nao corta nada', () => {
@@ -476,7 +476,7 @@ describe('dificuldade marcada pelo aluno', () => {
     const progresso = curriculo(48, 8)
     const dificil = new Map(progresso.map((p) => [p.item.id, 'dificil' as const]))
     const plano = gerarPlano({ progresso, dificuldades: dificil })
-    expect(plano.aulas.every((a) => a.itens.length === ITENS_POR_AULA)).toBe(true)
+    expect(plano.foraDoPlano).toEqual([])
     expect(plano.aulas.some((a) => a.minutosEstimados > MINUTOS_POR_AULA)).toBe(true)
   })
 
@@ -497,21 +497,27 @@ describe('dificuldade marcada pelo aluno', () => {
 })
 
 describe('auloesDoPacote', () => {
-  it('divide entre os dois auloes o que nao cabe nas particulares', () => {
+  it('com cobertura total, o aulao nao recebe item novo', () => {
+    // Mudanca de papel: o aulao deixou de ser destino de sobra e virou canal de
+    // REFORCO do que o aluno nao levou a 100%. Item novo so apareceria ali se o
+    // pacote nao cobrisse tudo.
     const progresso = curriculo(48, 8)
     const plano = gerarPlano({ progresso })
     const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano })
 
     expect(auloes).toHaveLength(2)
-    const total = auloes.flatMap((a) => a.itens).length
-    expect(total).toBe(plano.foraDoPlano.length)
-    // 6 itens em 2 auloes: 3 e 3.
+    expect(auloes.flatMap((a) => a.itens)).toEqual([])
+  })
+
+  it('quando ha sobra, divide entre os auloes', () => {
+    const seis = Array.from({ length: 6 }, (_, k) => item({ id: `x${k}` }))
+    const auloes = auloesDoPacote({ foraDoPlano: seis })
     expect(auloes.map((a) => a.itens.length)).toEqual([3, 3])
   })
 
   it('nenhum item aparece nos dois auloes', () => {
-    const plano = gerarPlano({ progresso: curriculo(48, 8) })
-    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano })
+    const seis = Array.from({ length: 6 }, (_, k) => item({ id: `x${k}` }))
+    const auloes = auloesDoPacote({ foraDoPlano: seis })
     const ids = auloes.flatMap((a) => a.itens.map((i) => i.id))
     expect(new Set(ids).size).toBe(ids.length)
   })

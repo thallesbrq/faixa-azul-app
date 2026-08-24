@@ -34,7 +34,7 @@
  * Modulo puro: sem React, sem I/O.
  */
 
-import { dividirEmPartes, paresDoCirculo } from '../domain/circulo'
+import { dividirEmPartes, paresDoCirculo, tamanhosEquilibrados } from '../domain/circulo'
 import type { AulaParticular, Dificuldade, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
 import type { ProgressoDeItem } from './progresso'
 
@@ -47,27 +47,21 @@ import type { ProgressoDeItem } from './progresso'
 export const MINUTOS_POR_AULA = 60
 
 /**
- * Itens por aula particular — decisao do aluno, e a contagem que manda.
+ * DISTRIBUICAO POR QUANTIDADE, nao por tempo — decisao do aluno.
  *
- * Cinco itens crus dao exatos 60 minutos, que e a duracao da aula. Antes o plano
- * distribuia os 56 itens igualmente (seis aulas de 6, quatro de 5), o que cobria
- * tudo mas estourava o horario em seis aulas. O aluno preferiu o contrario:
- * respeitar os 60 minutos e mandar a sobra para o aulao.
+ * O raciocinio dele: "algumas coisas serao mais rapidas que as outras, entao nao
+ * se importe com o tempo e sim com a quantidade distribuida". E uma correcao
+ * legitima da minha modelagem: eu estimava 12 minutos por item cru para TODO
+ * item, e uma raspagem de tesoura e um berimbolo nao custam o mesmo. Um numero
+ * medio aplicado item a item errava nos dois extremos.
  *
- * A conta: 5 x 10 = 50 vagas para 56 itens ativos, logo 6 itens nao passam pela
- * aula particular. Isso deixou de ser perda quando o aulao entrou no desenho —
- * ver AULOES abaixo.
- */
-export const ITENS_POR_AULA = 5
-
-/**
- * Aulões de revisão da turma. Dois dias, e eles mudam o que "fora do pacote"
- * significa: o item que nao cabe na aula particular nao fica sem cobertura, ele
- * tem outro lugar. Sem isso, o corte de 6 itens seria buraco no preparo.
+ * Consequencia: as 10 aulas cobrem os 56 itens, distribuidos o mais igualmente
+ * possivel — 56/10 = 5,6, logo seis aulas de 6 e quatro de 5. Nada e cortado do
+ * pacote, e os auloes deixam de receber item novo.
  *
- * Recebem duas coisas: os itens que nao couberam nas 10 particulares (calculo
- * deterministico, feito aqui) e o que o aluno nao levou a 100% nas particulares
- * (isso so se sabe na hora, e vem do eixo de dominio).
+ * As estimativas de minuto continuam existindo (`custoEmMinutos`), agora como
+ * INFORMACAO e nao como limite: servem para o aluno saber que uma aula vai ser
+ * apertada, nao para o app decidir o que entra nela.
  */
 export const AULOES = 2
 
@@ -166,6 +160,13 @@ export interface PlanoDeAulas {
 }
 
 /**
+ * SEM CHAMADOR HOJE, e mantida de proposito. Com a distribuicao por quantidade,
+ * as 10 aulas cobrem os 56 itens e nao existe corte — entao ninguem chama isto.
+ * Fica porque a politica que ela encerra e boa e a regra de distribuicao mudou
+ * quatro vezes nesta fase do projeto: se o pacote voltar a nao cobrir tudo (menos
+ * aulas, ou curriculo maior), este e o critério a usar. `tamanhosEquilibrados` ja
+ * foi apagada por "parecer sem uso" e precisou voltar duas etapas depois.
+ *
  * Escolhe o que NAO cabe nas aulas particulares, tirando PROFUNDIDADE em vez de
  * LARGURA: nenhuma posicao fica de fora inteira, e o que sai e o excedente das
  * posicoes com mais itens.
@@ -244,21 +245,20 @@ function sequenciaDeGuardas(porPosicao: Map<string, TechniqueItem[]>): Technique
  * — saidas desde a aula 1, para nao ficarem isoladas no fim, que e onde elas
  * costumam ser negligenciadas.
  *
- * Cinco itens por aula, que e o que cabe em 60 minutos com tudo cru. O que
- * sobrar do curriculo vai para os auloes de revisao (ver `auloesDoPacote`), e e
- * por isso que a sobra deixou de ser um problema a resolver aqui.
+ * Distribui TODOS os itens ativos pelas aulas, o mais igualmente possivel em
+ * QUANTIDADE. O tempo nao participa da decisao: e a escolha do aluno, e a razao
+ * dela e boa — o custo real varia demais entre uma raspada simples e um
+ * berimbolo para um numero medio por item valer como limite.
  */
 export function gerarPlano({
   progresso,
   totalAulas = 10,
-  itensPorAula = ITENS_POR_AULA,
   minutosPorAula = MINUTOS_POR_AULA,
   moduloDeSaidas = 'mod-saidas',
   dificuldades = SEM_DIFICULDADE,
 }: {
   progresso: ProgressoDeItem[]
   totalAulas?: number
-  itensPorAula?: number
   minutosPorAula?: number
   moduloDeSaidas?: string
   dificuldades?: DificuldadePorItem
@@ -279,23 +279,15 @@ export function gerarPlano({
     else guardasPorPosicao.set(p.item.posicao, [p.item])
   }
 
-  /**
-   * Quantos itens de guarda nao cabem, e quais. As saidas nunca entram no corte:
-   * sao 8 para 10 aulas com uma por aula, e a Secao 5 inteira e pequena — tirar
-   * dela seria cortar largura, que e exatamente o que esta regra evita.
-   */
-  const vagasParaGuardas = totalAulas * itensPorAula - Math.min(saidas.length, totalAulas)
-  const totalDeGuardas = [...guardasPorPosicao.values()].reduce((n, l) => n + l.length, 0)
-  const excedente = escolherExcedente(guardasPorPosicao, Math.max(0, totalDeGuardas - vagasParaGuardas))
-
-  const guardasQueEntram = new Map(
-    [...guardasPorPosicao].map(([pos, itens]) => [pos, itens.filter((i) => !excedente.has(i.id))]),
-  )
-  const filaDeGuardas = sequenciaDeGuardas(guardasQueEntram)
+  const filaDeGuardas = sequenciaDeGuardas(guardasPorPosicao)
   const filaDeSaidas = [...saidas]
 
-  /** Excedente na ordem original do curriculo, para o aulao. */
-  const guardasDeFora = [...guardasPorPosicao.values()].flat().filter((i) => excedente.has(i.id))
+  /**
+   * Quantos itens cada aula recebe para TODOS serem cobertos, o mais igualmente
+   * possivel. 56 em 10 nao divide exato, entao saem seis aulas de 6 e quatro
+   * de 5.
+   */
+  const tamanhos = tamanhosEquilibrados(filaDeSaidas.length + filaDeGuardas.length, totalAulas)
 
   const aulas: AulaPlanejada[] = []
   let iGuarda = 0
@@ -303,7 +295,7 @@ export function gerarPlano({
 
   for (let n = 1; n <= totalAulas; n++) {
     const itens: TechniqueItem[] = []
-    const alvo = itensPorAula
+    const alvo = tamanhos[n - 1] ?? 0
 
     // Uma saida por aula, enquanto houver. Quando as saidas acabam (sao 8 para
     // 10 aulas), a vaga vira mais uma guarda em vez de sobrar vazia.
@@ -328,7 +320,7 @@ export function gerarPlano({
     })
   }
 
-  const foraDoPlano = [...filaDeSaidas.slice(iSaida), ...filaDeGuardas.slice(iGuarda), ...guardasDeFora]
+  const foraDoPlano = [...filaDeSaidas.slice(iSaida), ...filaDeGuardas.slice(iGuarda)]
   const minutosDeConteudo = progresso.reduce((s, p) => s + (custoDe.get(p.item.id) ?? 0), 0)
 
   return {
