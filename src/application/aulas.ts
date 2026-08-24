@@ -41,8 +41,26 @@ import type { ProgressoDeItem } from './progresso'
 export const MINUTOS_POR_AULA = 50
 
 /**
+ * Itens por aula — decisao do aluno, e e a contagem que manda no plano.
+ *
+ * Vale registrar a consequencia aritmetica, porque ela nao e obvia e nao muda
+ * com esforco: 5 itens x 10 aulas = 50 vagas para 56 itens ativos. Seis itens
+ * ficam fora do pacote SEMPRE, independente de quanto o aluno estude — antes,
+ * com preenchimento por minutos, estudar fazia o corte encolher ate zero. Agora
+ * estudar reduz os minutos de cada aula, nao a quantidade que fica de fora.
+ *
+ * Os que sobram sao os ultimos da fila, e a fila coloca o conteudo avancado no
+ * fim de proposito (ver PREFIXOS_AVANCADOS). Entao o corte cai onde o aluno
+ * decidiu que deveria cair.
+ */
+export const ITENS_POR_AULA = 5
+
+/**
  * Minutos guardados em cada aula para repescagem (decisao 3). Dois itens ja
  * corrigidos cabem aqui sem tirar nada do plano.
+ *
+ * Com o plano preenchido por contagem, isto nao limita mais a geracao — serve de
+ * folga esperada ao avaliar se a pauta do dia estourou.
  */
 export const MINUTOS_RESERVADOS = 8
 
@@ -186,36 +204,36 @@ function sequenciaDeGuardas(porPosicao: Map<string, TechniqueItem[]>): Technique
 /**
  * Gera a proposta de plano para o pacote.
  *
- * Estrutura de cada aula: uma saida primeiro, depois guardas ate o orcamento de
- * minutos acabar. A saida vem primeiro por decisao registrada no calendario v3
+ * Estrutura de cada aula: uma saida primeiro, depois guardas ate fechar
+ * ITENS_POR_AULA. A saida vem primeiro por decisao registrada no calendario v3
  * — saidas desde a aula 1, para nao ficarem isoladas no fim, que e onde elas
  * costumam ser negligenciadas.
+ *
+ * A CONTAGEM manda, nao o orcamento de minutos. Isso e decisao do aluno, e
+ * muda o papel dos minutos no modulo: eles deixam de LIMITAR a aula e passam a
+ * DESCREVER o que ela vai custar. Quando 5 itens crus pedem mais de 50 minutos,
+ * o plano nao encolhe — a tela avisa (ver `estourou` em pautaDaAula). Cortar em
+ * silencio para caber seria esconder do aluno exatamente o dado que ele precisa
+ * levar ao professor.
  */
 export function gerarPlano({
   progresso,
   totalAulas = 10,
+  itensPorAula = ITENS_POR_AULA,
   minutosPorAula = MINUTOS_POR_AULA,
-  minutosReservados = MINUTOS_RESERVADOS,
   moduloDeSaidas = 'mod-saidas',
   dificuldades = SEM_DIFICULDADE,
 }: {
   progresso: ProgressoDeItem[]
   totalAulas?: number
+  itensPorAula?: number
   minutosPorAula?: number
-  minutosReservados?: number
   moduloDeSaidas?: string
   dificuldades?: DificuldadePorItem
 }): PlanoDeAulas {
   const custoDe = new Map(
     progresso.map((p) => [p.item.id, custoEmMinutos(p.pontuacao, false, dificuldades.get(p.item.id))]),
   )
-
-  /**
-   * A aula 1 nao reserva minutos para repescagem: nao existe aula anterior,
-   * logo nao existe correcao pendente. Reservar ali seria jogar tempo fora com
-   * certeza, nao por precaucao.
-   */
-  const orcamentoDa = (n: number) => minutosPorAula - (n === 1 ? 0 : minutosReservados)
 
   const saidas: TechniqueItem[] = []
   const guardasPorPosicao = new Map<string, TechniqueItem[]>()
@@ -238,29 +256,21 @@ export function gerarPlano({
 
   for (let n = 1; n <= totalAulas; n++) {
     const itens: TechniqueItem[] = []
-    const orcamento = orcamentoDa(n)
-    let minutos = 0
 
-    // Uma saida por aula, enquanto houver.
+    // Uma saida por aula, enquanto houver. Quando as saidas acabam (sao 8 para
+    // 10 aulas), a vaga vira mais uma guarda em vez de sobrar vazia.
     if (iSaida < filaDeSaidas.length) {
-      const item = filaDeSaidas[iSaida]
-      const custo = custoDe.get(item.id) ?? MINUTOS_ITEM_CRU
-      if (custo <= orcamento) {
-        itens.push(item)
-        minutos += custo
-        iSaida += 1
-      }
+      itens.push(filaDeSaidas[iSaida])
+      iSaida += 1
     }
 
-    // Guardas ate o orcamento acabar.
-    while (iGuarda < filaDeGuardas.length) {
-      const item = filaDeGuardas[iGuarda]
-      const custo = custoDe.get(item.id) ?? MINUTOS_ITEM_CRU
-      if (minutos + custo > orcamento) break
-      itens.push(item)
-      minutos += custo
+    // Guardas ate fechar a contagem da aula.
+    while (itens.length < itensPorAula && iGuarda < filaDeGuardas.length) {
+      itens.push(filaDeGuardas[iGuarda])
       iGuarda += 1
     }
+
+    const minutos = itens.reduce((s, i) => s + (custoDe.get(i.id) ?? MINUTOS_ITEM_CRU), 0)
 
     aulas.push({
       numero: n,

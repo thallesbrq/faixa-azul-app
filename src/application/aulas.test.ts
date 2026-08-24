@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ITENS_POR_AULA,
   MINUTOS_ITEM_CRU,
   MINUTOS_ITEM_DOMINADO,
   MINUTOS_POR_AULA,
@@ -84,11 +85,21 @@ describe('custoEmMinutos', () => {
 })
 
 describe('gerarPlano', () => {
-  it('nenhuma aula estoura o orcamento', () => {
+  it('toda aula tem exatamente ITENS_POR_AULA itens', () => {
+    // Decisao do aluno: a contagem manda, nao o orcamento de minutos.
     const plano = gerarPlano({ progresso: curriculo(48, 8) })
     for (const a of plano.aulas) {
-      expect(a.minutosEstimados).toBeLessThanOrEqual(MINUTOS_POR_AULA)
+      expect(a.itens).toHaveLength(ITENS_POR_AULA)
     }
+  })
+
+  it('os minutos DESCREVEM a aula, nao a limitam', () => {
+    // 5 itens crus pedem mais de 50 min. O plano nao encolhe por isso — cortar
+    // em silencio para caber esconderia justamente o dado que o aluno precisa
+    // levar ao professor.
+    const plano = gerarPlano({ progresso: curriculo(48, 8, 0) })
+    expect(plano.aulas[0].itens).toHaveLength(ITENS_POR_AULA)
+    expect(plano.aulas[0].minutosEstimados).toBeGreaterThan(MINUTOS_POR_AULA)
   })
 
   it('nao repete nem perde item entre plano e fora do plano', () => {
@@ -110,20 +121,31 @@ describe('gerarPlano', () => {
     }
   })
 
-  it('a aula 1 nao reserva minutos de repescagem', () => {
-    // Nao existe aula anterior, logo nao existe correcao pendente: reservar ali
-    // seria desperdicio garantido.
+  it('a reserva de repescagem nao encolhe mais nenhuma aula', () => {
+    // Com preenchimento por contagem, a reserva deixou de participar da geracao
+    // e virou so a folga esperada ao julgar se a pauta do dia estourou. Logo
+    // todas as aulas tem o mesmo tamanho, inclusive a primeira.
     const plano = gerarPlano({ progresso: curriculo(48, 8) })
-    expect(plano.aulas[0].minutosEstimados).toBeGreaterThan(plano.aulas[1].minutosEstimados)
+    const tamanhos = new Set(plano.aulas.map((a) => a.itens.length))
+    expect([...tamanhos]).toEqual([ITENS_POR_AULA])
   })
 
-  it('estudar antes faz o pacote caber — a conclusao central do modulo', () => {
+  it('estudar encurta as aulas, mas NAO muda quantos itens ficam de fora', () => {
+    // Mudanca de significado trazida pela contagem fixa, e vale registrar: antes
+    // estudar fazia o corte encolher ate zero. Agora o corte e aritmetico
+    // (5 x 10 = 50 vagas) e estudar reduz os minutos de cada aula.
     const cru = gerarPlano({ progresso: curriculo(48, 8, 0) })
     const estudado = gerarPlano({ progresso: curriculo(48, 8, 0.8) })
 
-    expect(cru.foraDoPlano.length).toBeGreaterThan(0)
-    expect(estudado.foraDoPlano.length).toBe(0)
     expect(estudado.minutosDeConteudo).toBeLessThan(cru.minutosDeConteudo)
+    expect(estudado.foraDoPlano.length).toBe(cru.foraDoPlano.length)
+  })
+
+  it('o que fica de fora e a sobra aritmetica das vagas', () => {
+    const progresso = curriculo(48, 8)
+    const plano = gerarPlano({ progresso })
+    const vagas = 10 * ITENS_POR_AULA
+    expect(plano.foraDoPlano).toHaveLength(progresso.length - vagas)
   })
 
   it('curriculo vazio nao quebra', () => {
@@ -230,8 +252,8 @@ describe('saldoDoPacote', () => {
 describe('corte por nivel de avanco', () => {
   /** Curriculo com uma posicao avancada no MEIO da lista, para provar que a
    *  ordem de entrada nao e o que decide o corte. */
-  function comAvancado(): ProgressoDeItem[] {
-    const basico = Array.from({ length: 40 }, (_, i) =>
+  function comAvancado(quantosBasicos: number): ProgressoDeItem[] {
+    const basico = Array.from({ length: quantosBasicos }, (_, i) =>
       prog({ item: item({ id: `g${i}`, slot: `G${i}`, posicao: `Posicao ${i % 4}` }) }),
     )
     const avancado = Array.from({ length: 8 }, (_, i) =>
@@ -243,11 +265,13 @@ describe('corte por nivel de avanco', () => {
         }),
       }),
     )
-    return [...basico.slice(0, 20), ...avancado, ...basico.slice(20)]
+    const meio = Math.floor(quantosBasicos / 2)
+    return [...basico.slice(0, meio), ...avancado, ...basico.slice(meio)]
   }
 
   it('o avancado cai antes do basico quando nao cabe tudo', () => {
-    const plano = gerarPlano({ progresso: comAvancado() })
+    // 52 + 8 = 60 itens para 50 vagas: 10 ficam de fora.
+    const plano = gerarPlano({ progresso: comAvancado(52) })
     const fora = plano.foraDoPlano.map((i) => i.posicao)
     const avancadosFora = fora.filter((p) => p.startsWith('Complexo Moderno')).length
 
@@ -257,7 +281,8 @@ describe('corte por nivel de avanco', () => {
   })
 
   it('o avancado entra nas ULTIMAS aulas quando cabe', () => {
-    const estudado = comAvancado().map((p) => ({ ...p, pontuacao: 1 }))
+    // 34 + 8 = 42 itens para 50 vagas: cabe tudo, entao da para observar a ORDEM.
+    const estudado = comAvancado(34).map((p) => ({ ...p, pontuacao: 1 }))
     const plano = gerarPlano({ progresso: estudado })
     expect(plano.foraDoPlano).toHaveLength(0)
 
@@ -351,7 +376,7 @@ describe('dificuldade marcada pelo aluno', () => {
     expect(custoEmMinutos(0, true, 'medio')).toBe(MINUTOS_REPESCAGEM)
   })
 
-  it('marcar tudo como dificil reduz o que cabe no pacote', () => {
+  it('marcar tudo como dificil encarece o pacote', () => {
     // E o ponto pratico do campo: o aluno pode marcar isso HOJE, antes de
     // estudar, e o "cabe / nao cabe" das 10 aulas ja fica mais honesto.
     const progresso = curriculo(48, 8)
@@ -361,16 +386,20 @@ describe('dificuldade marcada pelo aluno', () => {
     const planoFacil = gerarPlano({ progresso, dificuldades: facil })
     const planoDificil = gerarPlano({ progresso, dificuldades: dificil })
 
-    expect(planoDificil.foraDoPlano.length).toBeGreaterThan(planoFacil.foraDoPlano.length)
+    // A dificuldade encarece as aulas; ela nao mexe em quantos itens cabem,
+    // porque o que cabe agora e contagem fixa.
     expect(planoDificil.minutosDeConteudo).toBeGreaterThan(planoFacil.minutosDeConteudo)
+    expect(planoDificil.foraDoPlano.length).toBe(planoFacil.foraDoPlano.length)
   })
 
-  it('nenhuma aula estoura o orcamento mesmo com tudo dificil', () => {
+  it('tudo dificil e cru estoura os 50 min, e isso fica VISIVEL', () => {
+    // O estouro nao e bug: e o aviso de que 5 itens crus e dificeis nao caberao
+    // numa aula de 50 minutos, e de que essa conversa e com o professor.
     const progresso = curriculo(48, 8)
     const dificil = new Map(progresso.map((p) => [p.item.id, 'dificil' as const]))
-    for (const a of gerarPlano({ progresso, dificuldades: dificil }).aulas) {
-      expect(a.minutosEstimados).toBeLessThanOrEqual(MINUTOS_POR_AULA)
-    }
+    const plano = gerarPlano({ progresso, dificuldades: dificil })
+    expect(plano.aulas.every((a) => a.itens.length === ITENS_POR_AULA)).toBe(true)
+    expect(plano.aulas.some((a) => a.minutosEstimados > MINUTOS_POR_AULA)).toBe(true)
   })
 
   it('saldo do pacote reflete a dificuldade marcada', () => {
