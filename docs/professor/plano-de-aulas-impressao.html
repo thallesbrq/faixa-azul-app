@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plano das 10 Aulas Particulares — Thalles Alvim</title>
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+
+<style>
+  /* ---------------------------------------------------------------------
+     Paleta tirada da identidade da própria academia (Rilion Gracie), não
+     escolhida por gosto: laranja e preto da logo, cinza da marca. O azul
+     aparece UMA vez, no objetivo — é a faixa, não elemento de interface.
+     --------------------------------------------------------------------- */
+  :root {
+    --tinta: #14161a;
+    --tinta-suave: #4a5157;
+    --cinza: #6f767c;
+    --laranja: #f39200;
+    --laranja-texto: #8f5405;
+    --laranja-fundo: #fdf2e0;
+    --azul-faixa: #1c4a86;
+    --vermelho: #9c3535;
+    --papel: #f5f3f0;
+    --superficie: #ffffff;
+    --linha: #ddd8d1;
+    --linha-forte: #c6bfb5;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --tinta: #f0ece6;
+      --tinta-suave: #b3aca3;
+      --cinza: #8e948a;
+      --laranja: #ffa826;
+      --laranja-texto: #ffbe5c;
+      --laranja-fundo: #2e2415;
+      --azul-faixa: #7fa8dd;
+      --vermelho: #e08a8a;
+      --papel: #16181a;
+      --superficie: #1e2124;
+      --linha: #333a3d;
+      --linha-forte: #4b5357;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --tinta: #f0ece6;
+    --tinta-suave: #b3aca3;
+    --cinza: #8e948a;
+    --laranja: #ffa826;
+    --laranja-texto: #ffbe5c;
+    --laranja-fundo: #2e2415;
+    --azul-faixa: #7fa8dd;
+    --vermelho: #e08a8a;
+    --papel: #16181a;
+    --superficie: #1e2124;
+    --linha: #333a3d;
+    --linha-forte: #4b5357;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: Literata, Georgia, 'Times New Roman', serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .folha {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: clamp(1.25rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2.5rem) 5rem;
+  }
+
+  /* ---------- tipografia ---------- */
+  h1, h2, h3, .rotulo, .num, .tabela, .chip, .meta {
+    font-family: Archivo, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 6.5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -0.022em;
+    margin: 0 0 0.5rem;
+    text-wrap: balance;
+  }
+
+  h2 {
+    font-size: clamp(1.15rem, 3.4vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: -0.012em;
+    margin: 3.5rem 0 0.25rem;
+    text-wrap: balance;
+  }
+
+  h2 + .sub { margin-top: 0; }
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  p { margin: 0 0 1rem; max-width: 40em; }
+
+  .rotulo {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--laranja-texto);
+    margin-bottom: 0.6rem;
+  }
+
+  .sub {
+    color: var(--tinta-suave);
+    font-size: 0.95rem;
+    margin: 0 0 1.75rem;
+    max-width: 38em;
+  }
+
+  strong { font-weight: 600; }
+
+  /* ---------- cabeçalho ---------- */
+  header {
+    border-bottom: 3px solid var(--tinta);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .identificacao {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 2rem;
+    font-family: Archivo, sans-serif;
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+    margin-top: 1.25rem;
+  }
+
+  .identificacao div { display: flex; gap: 0.4rem; }
+  .identificacao b { color: var(--tinta); font-weight: 600; }
+
+  /* ---------- aviso (não é decoração: é o ponto do documento) ---------- */
+  .aviso {
+    background: var(--laranja-fundo);
+    border-left: 4px solid var(--laranja);
+    padding: 1.1rem 1.25rem;
+    margin: 0 0 2.5rem;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .aviso p { margin: 0; max-width: none; }
+  .aviso p + p { margin-top: 0.6rem; }
+
+  /* ---------- pedido ---------- */
+  .pedidos {
+    list-style: none;
+    padding: 0;
+    margin: 1.25rem 0 0;
+    counter-reset: pedido;
+  }
+
+  .pedidos li {
+    counter-increment: pedido;
+    position: relative;
+    padding-left: 2.6rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .pedidos li::before {
+    content: counter(pedido);
+    position: absolute;
+    left: 0;
+    top: 0.1rem;
+    width: 1.85rem;
+    height: 1.85rem;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--laranja);
+    border-radius: 50%;
+    font-family: Archivo, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--laranja-texto);
+  }
+
+  /* ---------- tabela da rotina ---------- */
+  .rolagem { overflow-x: auto; margin: 1.25rem 0 0; }
+
+  .tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 30rem;
+  }
+
+  .tabela th {
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cinza);
+    padding: 0 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--linha-forte);
+    white-space: nowrap;
+  }
+
+  .tabela td {
+    padding: 0.7rem 0.75rem 0.7rem 0;
+    border-bottom: 1px solid var(--linha);
+    vertical-align: top;
+  }
+
+  .tabela tr:last-child td { border-bottom: none; }
+  .tabela .dia { font-weight: 700; white-space: nowrap; }
+  .tabela .hora { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--tinta-suave); }
+
+  /* ---------- as aulas ---------- */
+  .aula {
+    background: var(--superficie);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 1.15rem 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .aula-topo {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.9rem;
+  }
+
+  .num {
+    flex-shrink: 0;
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    color: var(--laranja-texto);
+  }
+
+  .aula-data {
+    font-family: Archivo, sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .meta {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--cinza);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .meta.estoura { color: var(--vermelho); font-weight: 600; }
+
+  .itens { list-style: none; padding: 0; margin: 0; }
+
+  .itens li {
+    display: flex;
+    gap: 0.7rem;
+    align-items: baseline;
+    padding: 0.42rem 0;
+    border-top: 1px solid var(--linha);
+    font-size: 0.95rem;
+  }
+
+  .itens li:first-child { border-top: none; }
+
+  .chip {
+    flex-shrink: 0;
+    width: 1.7rem;
+    text-align: center;
+    padding: 0.1rem 0;
+    border-radius: 4px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--linha-forte);
+    color: var(--cinza);
+  }
+
+  .chip.s5 {
+    border-color: var(--laranja);
+    background: var(--laranja-fundo);
+    color: var(--laranja-texto);
+  }
+
+  .item-nome { flex: 1; min-width: 0; }
+  .item-pos { display: block; font-size: 0.8rem; color: var(--cinza); }
+
+  /* ---------- lacunas ---------- */
+  .lacuna {
+    background: var(--superficie);
+    border: 1px solid var(--linha);
+    border-left: 4px solid var(--vermelho);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.15rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .lacuna h3 { margin-bottom: 0.35rem; }
+  .lacuna p { margin: 0; font-size: 0.93rem; }
+
+  /* ---------- requisitos ---------- */
+  .req {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 1.25rem 0 0;
+  }
+
+  .req li {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    background: var(--superficie);
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.88rem;
+  }
+
+  .req b {
+    font-family: Archivo, sans-serif;
+    font-weight: 800;
+    color: var(--laranja-texto);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .req .req-cat { font-weight: 600; }
+  .req .req-pos { display: block; font-size: 0.78rem; color: var(--cinza); }
+
+  /* ---------- objetivo (único uso do azul da faixa) ---------- */
+  .objetivo {
+    border-top: 3px solid var(--azul-faixa);
+    margin-top: 3.5rem;
+    padding-top: 1.5rem;
+  }
+
+  .objetivo .rotulo { color: var(--azul-faixa); }
+
+  .assinatura {
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--linha);
+    font-size: 0.88rem;
+    color: var(--tinta-suave);
+  }
+
+  @media (max-width: 30rem) {
+    .meta { margin-left: 0; width: 100%; }
+  }
+</style>
+
+
+
+
+  <style>
+    /* --------- Impressao ---------
+       Tema claro forcado: PDF escuro e ilegivel no papel e desconfortavel na
+       tela do celular. O documento vai para o professor, nao para o app. */
+    :root, :root[data-theme="dark"] {
+      --tinta: #14161a !important;
+      --tinta-suave: #4a5157 !important;
+      --cinza: #6f767c !important;
+      --laranja: #f39200 !important;
+      --laranja-texto: #8f5405 !important;
+      --laranja-fundo: #fdf2e0 !important;
+      --azul-faixa: #1c4a86 !important;
+      --vermelho: #9c3535 !important;
+      --papel: #ffffff !important;
+      --superficie: #ffffff !important;
+      --linha: #ddd8d1 !important;
+      --linha-forte: #c6bfb5 !important;
+    }
+
+    @page { size: A4; margin: 16mm 14mm; }
+
+    body { background: #fff; font-size: 11pt; }
+    .folha { max-width: none; padding: 0; }
+
+    /* Um cartao de aula nao deve ser partido entre paginas: quem le no papel
+       precisa da pauta inteira junta. */
+    .aula, .lacuna, .rolagem, .aviso { break-inside: avoid; page-break-inside: avoid; }
+    h2 { break-after: avoid; page-break-after: avoid; margin-top: 1.6rem; }
+    .aula { border: 1px solid #ccc6bd; box-shadow: none; }
+
+    /* A tabela nao precisa de rolagem no papel. */
+    .rolagem { overflow: visible; }
+    .tabela { min-width: 0; }
+
+    h1 { font-size: 22pt; }
+    h2 { font-size: 13pt; }
+    .num { font-size: 15pt; }
+  </style>
+
+</head>
+<body>
+<div class="folha">
+
+  <header>
+    <span class="rotulo">Proposta de pauta · para validação</span>
+    <h1>Plano das 10 aulas particulares</h1>
+    <p class="sub">
+      Seções 4 e 5 do exame de graduação — guardas, saídas e defesas.
+    </p>
+    <div class="identificacao">
+      <div><span>Aluno</span><b>Thalles Alvim</b></div>
+      <div><span>Professor</span><b>João Eduardo Gonçalves</b></div>
+      <div><span>Academia</span><b>Rilion Gracie Garopaba</b></div>
+      <div><span>Início</span><b>a combinar</b></div>
+    </div>
+  </header>
+
+  <div class="aviso">
+    <p>
+      <strong>Tudo neste documento é sugestão minha, não currículo da academia.</strong>
+      Montei a lista a partir do documento do exame e de referências de faixa azul, para não chegar na aula
+      sem nada preparado.
+    </p>
+    <p>
+      O senhor é quem decide os nomes, as variações e o que de fato vale na prova. Onde eu escolhi errado,
+      é isso que eu quero ouvir — e vou registrar cada correção.
+    </p>
+  </div>
+
+  <h2>O que eu peço ao senhor</h2>
+  <p class="sub">Três pontos. Os outros eu já decidi e estão anotados abaixo.</p>
+  <ol class="pedidos">
+    <li>
+      <strong>Corrigir a execução de cada técnica na hora da aula.</strong> Os nomes e as variações desta lista
+      são minha escolha; o que eu preciso é aprender a versão da academia. Cada correção sua eu registro e ela
+      substitui a minha versão.
+    </li>
+    <li>
+      <strong>Dizer se a ordem faz sentido.</strong> Coloquei uma saída em cada aula desde a primeira, para elas
+      não ficarem isoladas no fim, e espalhei cada guarda em duas aulas afastadas em vez de esgotar uma posição
+      de uma vez. Nenhuma posição foi adiada ou priorizada. Se a progressão certa for outra, é o senhor quem sabe.
+    </li>
+    <li>
+      <strong>Combinar os dias e horários</strong> — as 10 particulares e os 2 aulões. Com as datas na mão eu
+      monto o calendário de estudo em volta delas, preparando cada aula na véspera.
+    </li>
+  </ol>
+
+  <h2>O que eu já decidi</h2>
+  <p class="sub">Para o senhor não perder tempo perguntando.</p>
+  <div class="rolagem">
+    <table class="tabela">
+      <thead><tr><th>Ponto</th><th>Decisão</th></tr></thead>
+      <tbody>
+        <tr><td class="dia">Complexo Moderno</td><td>Entra. Berimbolo, 50-50, Guarda X e One-leg X fazem parte da prova.</td></tr>
+        <tr><td class="dia">Lados</td><td>Um lado só, em tudo.</td></tr>
+        <tr><td class="dia">Divisão</td><td>Por quantidade de técnicas, não por minutos — umas saem rápido, outras não. Seis aulas com 6 técnicas e quatro com 5, cobrindo os 56 itens.</td></tr>
+        <tr><td class="dia">Aulões</td><td>Não recebem conteúdo novo. São para reforçar o que eu não tiver levado a 100% nas particulares.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>A rotina</h2>
+  <p class="sub">Dias e horários ainda a combinar com o senhor.</p>
+  <div class="rolagem">
+    <table class="tabela">
+      <thead>
+        <tr><th>Dia</th><th>Horário</th><th>O que é</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="dia">Segunda</td><td class="hora">a combinar</td><td>Aula particular — conteúdo do exame</td></tr>
+        <tr><td class="dia">Terça</td><td class="hora">a combinar</td><td>Aula regular — conteúdo do senhor</td></tr>
+        <tr><td class="dia">Quarta</td><td class="hora">a combinar</td><td>Aula particular — conteúdo do exame</td></tr>
+        <tr><td class="dia">Quinta</td><td class="hora">a combinar</td><td>Aula regular — conteúdo do senhor</td></tr>
+        <tr><td class="dia">Sexta</td><td class="hora">—</td><td>Estudo e revisão por conta própria</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:1.25rem">
+    Estudo sozinho nos cinco dias: a véspera de cada particular eu uso para <strong>chegar já sabendo a
+    sequência</strong>, e o dia da aula e o seguinte para repetir com a correção ainda fresca. A ideia é que a
+    aula sirva para o senhor corrigir execução, não para me apresentar a técnica.
+  </p>
+
+  <h2>As 10 aulas</h2>
+  <p class="sub">
+    Os 56 itens da prova, distribuídos nas 10 aulas. <span class="chip s5">S5</span> marca Seção 5 (saídas e defesas);
+    <span class="chip">S4</span> marca Seção 4 (guardas). Cada guarda aparece em <strong>duas aulas afastadas</strong>, de propósito: assim eu a revejo quando já começou a sair da memória.
+  </p>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">01</span>
+      <span class="aula-data">Aula 1</span>
+      <span class="meta">5 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Upa / ponte (trap and roll)<span class="item-pos">Saída da Montada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Raspagem de tesoura (scissor sweep)<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Raspagem em pêndulo / flor (flower sweep)<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Abrir em pé e passar (toureando)<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Abertura com joelho no cóccix (log split)<span class="item-pos">Guarda Fechada</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">02</span>
+      <span class="aula-data">Aula 2</span>
+      <span class="meta">5 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Cotovelo / reposição de guarda (elbow escape)<span class="item-pos">Saída da Montada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Armlock (chave de braço) da guarda fechada<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Triângulo da guarda fechada<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Lateral / pé no bíceps<span class="item-pos">Guarda Aranha</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Pé no quadril / balão<span class="item-pos">Guarda Aranha</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">03</span>
+      <span class="aula-data">Aula 3</span>
+      <span class="meta">5 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Defesa e saída das costas<span class="item-pos">Saída das Costas</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Passagem tirando os pés dos bíceps (toureando)<span class="item-pos">Guarda Aranha</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Esgrima / pai de todos (old school)<span class="item-pos">Meia Guarda</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Variação de escudo / invertida (knee shield)<span class="item-pos">Meia Guarda</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Passagem de pressão (knee cut)<span class="item-pos">Meia Guarda</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">04</span>
+      <span class="aula-data">Aula 4</span>
+      <span class="meta">5 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Reposição de guarda (frame + fuga de quadril)<span class="item-pos">Saída dos 100 Kilos</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Abrir a perna e passar (open half)<span class="item-pos">Meia Guarda</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Sit-up sweep (sentando)<span class="item-pos">Guarda Dela Riva</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Ida para as costas e ataque (berimbolo)<span class="item-pos">Guarda Dela Riva</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Passagem livrando o gancho (knee cut)<span class="item-pos">Guarda Dela Riva</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">05</span>
+      <span class="aula-data">Aula 5</span>
+      <span class="meta">6 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Barrigada e esgrima / ida para os joelhos<span class="item-pos">Saída dos 100 Kilos</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Raspagem de gancho clássica (butterfly)<span class="item-pos">Guarda Gancho</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Variação de ombro / braço<span class="item-pos">Guarda Gancho</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Lateral (desequilíbrio para trás)<span class="item-pos">Guarda Laço</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Variação com gancho<span class="item-pos">Guarda Laço</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Omoplata da aranha<span class="item-pos">Guarda Aranha</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">06</span>
+      <span class="aula-data">Aula 6</span>
+      <span class="meta">6 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Saída do norte-sul (giro/pêndulo)<span class="item-pos">Saída do Norte-Sul</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Triângulo da aranha<span class="item-pos">Guarda Aranha</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Tripé / pé no quadril (tripod sweep)<span class="item-pos">Guarda Aberta</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Xícara / double leg sentado<span class="item-pos">Guarda Aberta</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Armlock após a raspada/costas<span class="item-pos">Guarda Dela Riva</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Mata-leão / estrangulamento das costas<span class="item-pos">Guarda Dela Riva</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">07</span>
+      <span class="aula-data">Aula 7</span>
+      <span class="meta">6 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Defesa de armlock (postura, fechar o braço, girar)<span class="item-pos">Defesas de Finalização</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">One-leg X (single leg X) — raspagem<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">One-leg X — passagem<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">50-50 — raspagem<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">50-50 — passagem<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Passagem livrando o braço enrolado<span class="item-pos">Guarda Laço</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">08</span>
+      <span class="aula-data">Aula 8</span>
+      <span class="meta">6 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip s5">S5</span><span class="item-nome">Defesa de triângulo (postura, pressão, livrar o ombro)<span class="item-pos">Defesas de Finalização</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Cruzado (cross-collar)<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Gola e manga<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Ezequiel (amassa-pão)<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Omoplata da guarda fechada<span class="item-pos">Guarda Fechada</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Esgrimada com ida para as costas (arm drag)<span class="item-pos">Guarda Fechada</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">09</span>
+      <span class="aula-data">Aula 9</span>
+      <span class="meta">6 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip">S4</span><span class="item-nome">Toureando (bullfighter pass)<span class="item-pos">Guarda Aberta</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Passagem emborcando (stack pass)<span class="item-pos">Guarda Aberta</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Armlock partindo da meia-guarda<span class="item-pos">Meia Guarda</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Triângulo partindo da meia-guarda<span class="item-pos">Meia Guarda</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Estrangulamento partindo da meia-guarda<span class="item-pos">Meia Guarda</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Ida às costas pelo underhook<span class="item-pos">Meia Guarda</span></span></li>
+    </ul>
+  </article>
+
+  <article class="aula">
+    <div class="aula-topo">
+      <span class="num">10</span>
+      <span class="aula-data">Aula 10</span>
+      <span class="meta">6 técnicas</span>
+    </div>
+    <ul class="itens">
+      <li><span class="chip">S4</span><span class="item-nome">Guarda X — raspagem<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Guarda X — passagem<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Berimbolo — execução / raspagem<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Berimbolo — passagem / defesa<span class="item-pos">Complexo Moderno</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Passagem neutralizando o gancho (pressão)<span class="item-pos">Guarda Gancho</span></span></li>
+      <li><span class="chip">S4</span><span class="item-nome">Guilhotina ou kimura<span class="item-pos">Guarda Gancho</span></span></li>
+    </ul>
+  </article>
+
+  <h2>Os 2 aulões de revisão</h2>
+  <p class="sub">
+    Como as 10 particulares cobrem os 56 itens, os aulões não têm conteúdo novo reservado. Levo para eles o que
+    eu não tiver conseguido executar direito nas particulares — essa lista só existe perto da data, porque
+    depende de onde eu estiver no preparo.
+  </p>
+
+  <h2>O que eu já sei que não fecha</h2>
+  <p class="sub">Prefiro apontar antes de o senhor descobrir na aula.</p>
+
+  <div class="lacuna">
+    <h3>As aulas 9 e 10 não têm nada da Seção 5</h3>
+    <p>
+      São 8 saídas e defesas para 10 aulas, uma por aula. Acabam na aula 8. Se o senhor preferir, dá para
+      repetir as duas mais difíceis nessas últimas aulas.
+    </p>
+  </div>
+
+  <div class="lacuna">
+    <h3>Cada saída aparece uma única vez</h3>
+    <p>
+      As guardas eu dividi em duas passagens espaçadas, para rever o que já começou a esquecer. As saídas
+      passam uma só vez — a Seção 5 recebe metade da repetição que a Seção 4 recebe.
+    </p>
+  </div>
+
+  <h2>Os requisitos que eu li no documento da prova</h2>
+  <p class="sub">Para o senhor conferir se eu entendi certo.</p>
+  <ul class="req">
+    <li><b>2</b><span><span class="req-cat">Raspadas</span><span class="req-pos">Guarda Fechada</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Raspadas</span><span class="req-pos">Meia Guarda</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Raspadas</span><span class="req-pos">Guarda Gancho</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Raspadas</span><span class="req-pos">Guarda Aranha</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Raspadas</span><span class="req-pos">Guarda Dela Riva</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Finalizações</span><span class="req-pos">Guarda Dela Riva</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Raspadas</span><span class="req-pos">Guarda Laço</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Raspadas</span><span class="req-pos">Guarda Aberta</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Saídas</span><span class="req-pos">Saída da Montada</span></span></li>
+    <li><b>2</b><span><span class="req-cat">Saídas</span><span class="req-pos">Saída dos 100 Kilos</span></span></li>
+  </ul>
+
+  <div class="objetivo">
+    <span class="rotulo">Objetivo</span>
+    <p>
+      Chegar na banca executando as Seções 4 e 5 do jeito que a academia ensina — não do jeito que eu
+      encontrei em vídeo. Por isso este documento existe antes da primeira aula, e não depois.
+    </p>
+    <p style="margin-bottom:0">
+      Combinando as datas, eu monto o calendário e reservo tempo entre a última particular e a prova para os
+      aulões e para ajustar o que o senhor ainda apontar.
+    </p>
+  </div>
+
+  <p class="assinatura">
+    Thalles Alvim · faixa branca · Rilion Gracie Garopaba<br>
+    Documento gerado do app de estudo que uso para acompanhar o preparo. Cada correção sua entra lá e
+    substitui a minha versão.
+  </p>
+
+</div>
+</body>
+</html>
