@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pautas das 10 Aulas — Thalles Alvim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
+<style>
+  /* Paleta da Rilion Gracie (laranja e preto da logo). O tipo de tecnica e
+     identificado pelo TEXTO da etiqueta; a cor so ajuda a varrer a pagina, e
+     nunca e a unica pista — o documento vai ser lido em papel, no tatame, e
+     possivelmente por quem nao diferencia cor bem. */
+  :root {
+    --tinta: #14161a;
+    --suave: #4a5157;
+    --cinza: #6f767c;
+    --linha: #ddd8d1;
+    --papel: #fff;
+
+    --rasp: #8f5405;   --rasp-bg: #fdf2e0;
+    --pass: #1c4a86;   --pass-bg: #e9eff8;
+    --final: #8d2f3f;  --final-bg: #fbeaed;
+    --saida: #1f6b45;  --saida-bg: #e6f3ec;
+    --costas: #5a4a86; --costas-bg: #eeebf7;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: Literata, Georgia, serif;
+    font-size: 10.5pt;
+    line-height: 1.35;
+  }
+
+  .folha { max-width: 52rem; margin: 0 auto; padding: 14mm 12mm; }
+
+  h1, h2, .t, .cab, .leg { font-family: Archivo, Arial, sans-serif; }
+
+  h1 {
+    font-size: 20pt; font-weight: 800; letter-spacing: -0.02em;
+    margin: 0 0 0.15rem;
+  }
+
+  .cab {
+    font-size: 8.5pt; color: var(--suave);
+    border-bottom: 2.5px solid var(--tinta);
+    padding-bottom: 0.55rem; margin-bottom: 0.9rem;
+  }
+
+  /* Legenda com a contagem de cada tipo: mostra o balanco do plano de relance. */
+  .leg {
+    list-style: none; margin: 0 0 1.1rem; padding: 0;
+    display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem;
+    font-size: 8.5pt; color: var(--suave);
+  }
+  .leg li { display: flex; align-items: center; gap: 0.35rem; }
+  .leg b { color: var(--tinta); font-variant-numeric: tabular-nums; }
+
+  /* Duas colunas de aulas: cabe mais por pagina sem apertar a linha. */
+  .grade { columns: 2; column-gap: 7mm; }
+
+  .a {
+    break-inside: avoid; page-break-inside: avoid;
+    border: 1px solid var(--linha); border-radius: 7px;
+    padding: 0.5rem 0.6rem 0.55rem; margin: 0 0 5mm;
+  }
+
+  .a h2 {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11pt; font-weight: 800; margin: 0 0 0.35rem;
+    padding-bottom: 0.3rem; border-bottom: 1.5px solid var(--tinta);
+  }
+  .a h2 span { font-size: 7.5pt; font-weight: 500; color: var(--cinza); }
+
+  .a ul { list-style: none; margin: 0; padding: 0; }
+  .a li { display: flex; gap: 0.4rem; align-items: baseline; padding: 0.2rem 0; }
+  .a li + li { border-top: 1px solid #f0ece6; }
+
+  .n { flex: 1; min-width: 0; }
+  .n em { display: block; font-style: normal; font-size: 8pt; color: var(--cinza); }
+
+  /* Etiqueta do tipo: largura fixa para as colunas alinharem verticalmente. */
+  .t {
+    flex-shrink: 0; width: 3.4rem; text-align: center;
+    font-size: 6.6pt; font-weight: 800; letter-spacing: 0.05em;
+    padding: 0.1rem 0; border-radius: 3px; border: 1px solid;
+  }
+
+  .t--raspagem    { color: var(--rasp);   background: var(--rasp-bg);   border-color: var(--rasp); }
+  .t--passagem    { color: var(--pass);   background: var(--pass-bg);   border-color: var(--pass); }
+  .t--finalizacao { color: var(--final);  background: var(--final-bg);  border-color: var(--final); }
+  .t--saida       { color: var(--saida);  background: var(--saida-bg);  border-color: var(--saida); }
+  .t--defesa      { color: var(--saida);  background: var(--saida-bg);  border-color: var(--saida); }
+  .t--costas      { color: var(--costas); background: var(--costas-bg); border-color: var(--costas); }
+
+  .rodape {
+    margin-top: 1rem; padding-top: 0.6rem;
+    border-top: 1px solid var(--linha);
+    font-size: 8pt; color: var(--cinza);
+  }
+
+  @page { size: A4; margin: 0; }
+</style>
+</head>
+<body>
+  <div class="folha">
+    <h1>Pautas das 10 aulas particulares</h1>
+    <div class="cab">
+      Thalles Alvim · Prof. João Eduardo Gonçalves · Rilion Gracie Garopaba —
+      Seções 4 e 5 do exame · <strong>56 técnicas</strong> · dias e horários a combinar
+    </div>
+
+    <ul class="leg">
+        <li><span class="t t--raspagem">RASP</span>Raspagem<b>18</b></li>
+        <li><span class="t t--passagem">PASS</span>Passagem<b>14</b></li>
+        <li><span class="t t--finalizacao">FINAL</span>Finalização<b>14</b></li>
+        <li><span class="t t--saida">SAÍDA</span>Saída<b>6</b></li>
+        <li><span class="t t--defesa">DEF</span>Defesa<b>2</b></li>
+        <li><span class="t t--costas">COSTAS</span>Ida às costas<b>2</b></li>
+    </ul>
+
+    <div class="grade">
+      <section class="a">
+        <h2>Aula 1<span>5 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--saida">SAÍDA</span><span class="n">Upa / ponte (trap and roll)<em>Saída da Montada</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Raspagem de tesoura (scissor sweep)<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Raspagem em pêndulo / flor (flower sweep)<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Abrir em pé e passar (toureando)<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Abertura com joelho no cóccix (log split)<em>Guarda Fechada</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 2<span>5 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--saida">SAÍDA</span><span class="n">Cotovelo / reposição de guarda (elbow escape)<em>Saída da Montada</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Armlock (chave de braço) da guarda fechada<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Triângulo da guarda fechada<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Lateral / pé no bíceps<em>Guarda Aranha</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Pé no quadril / balão<em>Guarda Aranha</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 3<span>5 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--saida">SAÍDA</span><span class="n">Defesa e saída das costas<em>Saída das Costas</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Passagem tirando os pés dos bíceps (toureando)<em>Guarda Aranha</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Esgrima / pai de todos (old school)<em>Meia Guarda</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Variação de escudo / invertida (knee shield)<em>Meia Guarda</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Passagem de pressão (knee cut)<em>Meia Guarda</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 4<span>5 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--saida">SAÍDA</span><span class="n">Reposição de guarda (frame + fuga de quadril)<em>Saída dos 100 Kilos</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Abrir a perna e passar (open half)<em>Meia Guarda</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Sit-up sweep (sentando)<em>Guarda Dela Riva</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Ida para as costas e ataque (berimbolo)<em>Guarda Dela Riva</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Passagem livrando o gancho (knee cut)<em>Guarda Dela Riva</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 5<span>6 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--saida">SAÍDA</span><span class="n">Barrigada e esgrima / ida para os joelhos<em>Saída dos 100 Kilos</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Raspagem de gancho clássica (butterfly)<em>Guarda Gancho</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Variação de ombro / braço<em>Guarda Gancho</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Lateral (desequilíbrio para trás)<em>Guarda Laço</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Variação com gancho<em>Guarda Laço</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Omoplata da aranha<em>Guarda Aranha</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 6<span>6 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--saida">SAÍDA</span><span class="n">Saída do norte-sul (giro/pêndulo)<em>Saída do Norte-Sul</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Triângulo da aranha<em>Guarda Aranha</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Tripé / pé no quadril (tripod sweep)<em>Guarda Aberta</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Xícara / double leg sentado<em>Guarda Aberta</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Armlock após a raspada/costas<em>Guarda Dela Riva</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Mata-leão / estrangulamento das costas<em>Guarda Dela Riva</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 7<span>6 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--defesa">DEF</span><span class="n">Defesa de armlock (postura, fechar o braço, girar)<em>Defesas de Finalização</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">One-leg X (single leg X) — raspagem<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">One-leg X — passagem<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">50-50 — raspagem<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">50-50 — passagem<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Passagem livrando o braço enrolado<em>Guarda Laço</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 8<span>6 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--defesa">DEF</span><span class="n">Defesa de triângulo (postura, pressão, livrar o ombro)<em>Defesas de Finalização</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Cruzado (cross-collar)<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Gola e manga<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Ezequiel (amassa-pão)<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Omoplata da guarda fechada<em>Guarda Fechada</em></span></li>
+        <li><span class="t t--costas">COSTAS</span><span class="n">Esgrimada com ida para as costas (arm drag)<em>Guarda Fechada</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 9<span>6 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--passagem">PASS</span><span class="n">Toureando (bullfighter pass)<em>Guarda Aberta</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Passagem emborcando (stack pass)<em>Guarda Aberta</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Armlock partindo da meia-guarda<em>Meia Guarda</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Triângulo partindo da meia-guarda<em>Meia Guarda</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Estrangulamento partindo da meia-guarda<em>Meia Guarda</em></span></li>
+        <li><span class="t t--costas">COSTAS</span><span class="n">Ida às costas pelo underhook<em>Meia Guarda</em></span></li>
+        </ul>
+      </section>
+      <section class="a">
+        <h2>Aula 10<span>6 técnicas</span></h2>
+        <ul>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Guarda X — raspagem<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Guarda X — passagem<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--raspagem">RASP</span><span class="n">Berimbolo — execução / raspagem<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Berimbolo — passagem / defesa<em>Complexo Moderno</em></span></li>
+        <li><span class="t t--passagem">PASS</span><span class="n">Passagem neutralizando o gancho (pressão)<em>Guarda Gancho</em></span></li>
+        <li><span class="t t--finalizacao">FINAL</span><span class="n">Guilhotina ou kimura<em>Guarda Gancho</em></span></li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="rodape">
+      Sugestão de pauta, não currículo da academia — as escolhas de variação são minhas e dependem da
+      correção do professor. Cada guarda aparece em duas aulas afastadas, de propósito.
+    </p>
+  </div>
+</body>
+</html>
