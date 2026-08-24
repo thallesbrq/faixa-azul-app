@@ -1037,3 +1037,156 @@
   background: var(--vermelho-suave);
   color: var(--vermelho-alerta);
 }
+
+/* ---------------------------------------------------------------------------
+   Planner semanal
+   --------------------------------------------------------------------------- */
+
+/* Alternador Plano / Planner */
+.alternador {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: calc(var(--espacamento-base) * 2);
+  background: var(--cor-borda);
+  border-radius: var(--raio-card);
+}
+
+.alternador-item {
+  flex: 1;
+  min-height: var(--alvo-toque-min);
+  border: 0;
+  border-radius: calc(var(--raio-card) - 4px);
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.alternador-item--ativo {
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.planner-dias {
+  list-style: none;
+  margin: var(--espacamento-base) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.planner-dia {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  overflow: hidden;
+}
+
+/* Hoje ganha faixa laranja a esquerda; dia passado perde saturacao. A marca de
+   "hoje" e borda + peso, nao so cor, para nao depender de percepcao de cor. */
+.planner-dia--hoje {
+  border-left: 4px solid var(--laranja);
+  border-color: var(--laranja);
+}
+
+.planner-dia--passou {
+  opacity: 0.55;
+}
+
+.planner-cabeca {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+  padding: var(--espacamento-base);
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.planner-cabeca:disabled {
+  cursor: default;
+}
+
+.planner-data {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  width: 4.4rem;
+}
+
+.planner-data small {
+  color: var(--cor-texto-suave);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.planner-meio {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.planner-foco {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+
+.planner-conta {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.planner-conta small {
+  font-weight: 400;
+  font-size: 0.66rem;
+  color: var(--cor-texto-suave);
+}
+
+/* Chip de papel do dia */
+.papel {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--cor-borda);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.papel--aula {
+  border-color: var(--laranja);
+  background: var(--laranja-suave);
+  color: var(--laranja-texto);
+}
+
+.papel--consolida {
+  border-color: var(--verde-sucesso);
+  background: var(--verde-suave);
+  color: var(--verde-sucesso);
+}
+
+.papel--prepara {
+  border-color: var(--azul-faixa);
+  background: #e8eef7;
+  color: var(--azul-faixa);
+}
+
+.planner-nota {
+  margin: 0 var(--espacamento-base) var(--espacamento-base);
+  font-size: 0.74rem;
+  color: var(--cor-texto-suave);
+}

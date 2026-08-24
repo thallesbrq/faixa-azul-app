@@ -17,7 +17,9 @@ import {
   repescagensPendentes,
   saldoDoPacote,
 } from '../../application/aulas'
+import { dataLocalISO, montarPlanner } from '../../application/planner'
 import { progressoPorItem } from '../../application/progresso'
+import { PlannerSemanal } from '../components/PlannerSemanal'
 import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
 import type { AulaParticular } from '../../domain/types'
 
@@ -31,7 +33,11 @@ export interface AulasProps {
   dificuldades: ReadonlyMap<string, Dificuldade>
   aoMarcarRealizada: (numero: number, realizada: boolean) => void
   aoAbrirItem?: (itemId: string) => void
+  /** Data-alvo da prova, ISO — para o planner medir a folga. */
+  dataAlvo: string
 }
+
+type Visao = 'plano' | 'planner'
 
 function rotulo(item: TechniqueItem): string {
   return item.nome || item.slot
@@ -46,8 +52,11 @@ export function Aulas({
   dificuldades,
   aoMarcarRealizada,
   aoAbrirItem,
+  dataAlvo,
 }: AulasProps) {
   const [expandida, setExpandida] = useState<number | null>(null)
+  const [visao, setVisao] = useState<Visao>('plano')
+  const hoje = dataLocalISO(new Date())
 
   const progresso = useMemo(
     () => progressoPorItem(itens, baralho, revisoes, new Date()),
@@ -77,8 +86,37 @@ export function Aulas({
     [planoDaProxima, repescagens, progresso, dificuldades],
   )
 
+  const planner = useMemo(
+    () => montarPlanner({ plano, primeiraSegunda: hoje, dataDaProva: dataAlvo.slice(0, 10) }),
+    [plano, hoje, dataAlvo],
+  )
+
   return (
     <div>
+      <div className="alternador" role="tablist" aria-label="Visão das aulas">
+        <button
+          role="tab"
+          aria-selected={visao === 'plano'}
+          className={visao === 'plano' ? 'alternador-item alternador-item--ativo' : 'alternador-item'}
+          onClick={() => setVisao('plano')}
+        >
+          Plano
+        </button>
+        <button
+          role="tab"
+          aria-selected={visao === 'planner'}
+          className={visao === 'planner' ? 'alternador-item alternador-item--ativo' : 'alternador-item'}
+          onClick={() => setVisao('planner')}
+        >
+          Planner
+        </button>
+      </div>
+
+      {visao === 'planner' ? (
+        <PlannerSemanal planner={planner} hoje={hoje} />
+      ) : (
+        <>
+
       {/* ---------- Proxima aula: a resposta que a tela existe para dar ---------- */}
       {proxima && planoDaProxima ? (
         <div className="card">
@@ -255,6 +293,8 @@ export function Aulas({
         O plano é uma <strong>proposta</strong> e se recalcula conforme você estuda: item que você já executa
         custa menos minutos de aula, então estudar antes é o que faz o pacote cobrir a prova.
       </p>
+        </>
+      )}
     </div>
   )
 }

@@ -87,6 +87,7 @@ export function App() {
               aulas={app.aulas}
               validacoes={app.estado.validacoes}
               dificuldades={app.dificuldades}
+              dataAlvo={app.estado.planoExame.dataAlvo}
               aoMarcarRealizada={app.marcarAulaRealizada}
             />
           )}
