@@ -1,8 +1,8 @@
 /**
  * Aulas particulares — RF-07.
  *
- * Pacote de 10 aulas de 50 minutos com o Prof. Joao Eduardo, cobrindo as Secoes
- * 4 e 5 (56 itens ativos: 48 guardas, 8 saidas).
+ * Pacote de 10 aulas de 60 minutos com o Prof. Joao Eduardo, cobrindo as Secoes
+ * 4 e 5 (56 itens ativos: 48 guardas, 8 saidas). Todos os 56 entram no plano.
  *
  * DECISOES QUE MOLDARAM ESTE MODULO (tomadas pelo aluno no planejamento):
  *
@@ -25,35 +25,45 @@
  *
  * A consequencia da decisao 4 e o resultado mais util deste modulo, e vale dita
  * em voz alta: com dominio zero em tudo, os 56 itens pedem ~672 minutos e o
- * pacote tem 500 — nao cabe. Com dominio alto, pedem ~280 e cabe folgado. Ou
- * seja, o pacote de 10 aulas so cobre a prova SE o aluno chegar tendo estudado
- * antes. As tercas, quintas e sextas nao sao complemento das aulas: sao o que
- * torna as aulas suficientes.
+ * pacote tem 600 — nao cabe. Basta dominio medio de 0,18 para caber, o que e
+ * pouco, mas nao e zero. Ou seja, o pacote so cobre a prova SE o aluno chegar
+ * tendo estudado antes. As tercas, quintas e sextas nao sao complemento das
+ * aulas: sao o que torna as aulas suficientes.
  *
  * Modulo puro: sem React, sem I/O.
  */
 
-import { dividirEmPartes, paresDoCirculo } from '../domain/circulo'
+import { dividirEmPartes, paresDoCirculo, tamanhosEquilibrados } from '../domain/circulo'
 import type { AulaParticular, Dificuldade, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
 import type { ProgressoDeItem } from './progresso'
 
-/** Duracao de uma aula do pacote. */
-export const MINUTOS_POR_AULA = 50
+/**
+ * Duracao de uma aula do pacote.
+ *
+ * 60 minutos, negociado com o professor justamente para o pacote cobrir os 56
+ * itens. Com 50 nao cabia: ver o comentario de COBERTURA TOTAL abaixo.
+ */
+export const MINUTOS_POR_AULA = 60
 
 /**
- * Itens por aula — decisao do aluno, e e a contagem que manda no plano.
+ * COBERTURA TOTAL: o plano distribui TODOS os itens ativos pelas aulas, o mais
+ * igualmente possivel, em vez de usar uma contagem fixa por aula.
  *
- * Vale registrar a consequencia aritmetica, porque ela nao e obvia e nao muda
- * com esforco: 5 itens x 10 aulas = 50 vagas para 56 itens ativos. Seis itens
- * ficam fora do pacote SEMPRE, independente de quanto o aluno estude — antes,
- * com preenchimento por minutos, estudar fazia o corte encolher ate zero. Agora
- * estudar reduz os minutos de cada aula, nao a quantidade que fica de fora.
+ * 56 itens em 10 aulas nao divide exato (5,6 por aula), entao "igual" de
+ * verdade nao existe aqui — o mais proximo e seis aulas com 6 itens e quatro
+ * com 5, e e isso que `tamanhosEquilibrados` devolve. A vantagem sobre a
+ * contagem fixa de 5 e direta: nada fica fora do pacote.
  *
- * Os que sobram sao os ultimos da fila, e a fila coloca o conteudo avancado no
- * fim de proposito (ver PREFIXOS_AVANCADOS). Entao o corte cai onde o aluno
- * decidiu que deveria cair.
+ * As aulas de 6 ficam no FIM de proposito (ver `tamanhosEquilibrados`): o custo
+ * de um item cai conforme o aluno estuda, entao a carga maior vai para quando
+ * cada item ja sai mais barato.
+ *
+ * O tempo continua sendo o limite real, e ele nao e resolvido pela contagem:
+ * 6 itens crus pedem 72 minutos e a aula tem 60. O limiar e dominio medio de
+ * 0,29 para a aula de 6 caber, e 0,18 para o pacote inteiro. Baixo, mas nao
+ * zero — e por isso o aviso de estouro continua existindo.
  */
-export const ITENS_POR_AULA = 5
+export const ITENS_POR_AULA_MEDIA = 5.6
 
 /**
  * Minutos guardados em cada aula para repescagem (decisao 3). Dois itens ja
@@ -141,8 +151,9 @@ export interface AulaPlanejada {
 export interface PlanoDeAulas {
   aulas: AulaPlanejada[]
   /**
-   * Itens que nao couberam no pacote. Existir e informacao, nao falha: diz
-   * quanto o aluno ainda precisa estudar sozinho para o pacote dar conta.
+   * Itens que nao couberam no pacote. Com cobertura total isto fica vazio no
+   * caso normal; sobra apenas se o numero de aulas for reduzido a ponto de nao
+   * haver vaga para tudo.
    */
   foraDoPlano: TechniqueItem[]
   minutosDeConteudo: number
@@ -204,29 +215,27 @@ function sequenciaDeGuardas(porPosicao: Map<string, TechniqueItem[]>): Technique
 /**
  * Gera a proposta de plano para o pacote.
  *
- * Estrutura de cada aula: uma saida primeiro, depois guardas ate fechar
- * ITENS_POR_AULA. A saida vem primeiro por decisao registrada no calendario v3
+ * Estrutura de cada aula: uma saida primeiro, depois guardas ate fechar a cota
+ * da aula. A saida vem primeiro por decisao registrada no calendario v3
  * — saidas desde a aula 1, para nao ficarem isoladas no fim, que e onde elas
  * costumam ser negligenciadas.
  *
  * A CONTAGEM manda, nao o orcamento de minutos. Isso e decisao do aluno, e
  * muda o papel dos minutos no modulo: eles deixam de LIMITAR a aula e passam a
- * DESCREVER o que ela vai custar. Quando 5 itens crus pedem mais de 50 minutos,
- * o plano nao encolhe — a tela avisa (ver `estourou` em pautaDaAula). Cortar em
- * silencio para caber seria esconder do aluno exatamente o dado que ele precisa
- * levar ao professor.
+ * DESCREVER o que ela vai custar. Quando os itens crus pedem mais que a duracao
+ * da aula, o plano nao encolhe — a tela avisa (ver `estourou` em pautaDaAula).
+ * Cortar em silencio para caber seria esconder do aluno exatamente o dado que
+ * ele precisa levar ao professor.
  */
 export function gerarPlano({
   progresso,
   totalAulas = 10,
-  itensPorAula = ITENS_POR_AULA,
   minutosPorAula = MINUTOS_POR_AULA,
   moduloDeSaidas = 'mod-saidas',
   dificuldades = SEM_DIFICULDADE,
 }: {
   progresso: ProgressoDeItem[]
   totalAulas?: number
-  itensPorAula?: number
   minutosPorAula?: number
   moduloDeSaidas?: string
   dificuldades?: DificuldadePorItem
@@ -250,22 +259,27 @@ export function gerarPlano({
   const filaDeGuardas = sequenciaDeGuardas(guardasPorPosicao)
   const filaDeSaidas = [...saidas]
 
+  // Quantos itens cada aula recebe para TODOS serem cobertos, o mais
+  // igualmente possivel, com as aulas mais cheias no fim.
+  const tamanhos = tamanhosEquilibrados(filaDeSaidas.length + filaDeGuardas.length, totalAulas)
+
   const aulas: AulaPlanejada[] = []
   let iGuarda = 0
   let iSaida = 0
 
   for (let n = 1; n <= totalAulas; n++) {
     const itens: TechniqueItem[] = []
+    const alvo = tamanhos[n - 1] ?? 0
 
     // Uma saida por aula, enquanto houver. Quando as saidas acabam (sao 8 para
     // 10 aulas), a vaga vira mais uma guarda em vez de sobrar vazia.
-    if (iSaida < filaDeSaidas.length) {
+    if (alvo > 0 && iSaida < filaDeSaidas.length) {
       itens.push(filaDeSaidas[iSaida])
       iSaida += 1
     }
 
-    // Guardas ate fechar a contagem da aula.
-    while (itens.length < itensPorAula && iGuarda < filaDeGuardas.length) {
+    // Guardas ate fechar a cota da aula.
+    while (itens.length < alvo && iGuarda < filaDeGuardas.length) {
       itens.push(filaDeGuardas[iGuarda])
       iGuarda += 1
     }

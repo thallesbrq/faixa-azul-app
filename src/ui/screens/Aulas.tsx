@@ -11,7 +11,6 @@
 
 import { useMemo, useState } from 'react'
 import {
-  ITENS_POR_AULA,
   MINUTOS_POR_AULA,
   gerarPlano,
   pautaDaAula,
@@ -92,9 +91,9 @@ export function Aulas({
             <p className="aviso">
               <span aria-hidden="true">⚠️</span>
               <span>
-                Passa dos {MINUTOS_POR_AULA} minutos. Os {ITENS_POR_AULA} itens por aula são fixos por sua
-                decisão, então o app não corta nada — combine com o mestre de acelerar, ou estude antes: item
-                que você já executa custa menos da metade do tempo de um item cru.
+                Passa dos {MINUTOS_POR_AULA} minutos. O plano cobre todos os itens da prova, então o app não
+                corta nada para caber — estude antes: item que você já executa custa menos da metade do tempo
+                de um item cru.
               </span>
             </p>
           )}
@@ -186,10 +185,8 @@ export function Aulas({
         <div className="card">
           <h3 className="detalhe-secao">Fora do pacote ({plano.foraDoPlano.length})</h3>
           <p className="instrucao">
-            São {aulas.length} aulas × {ITENS_POR_AULA} itens = <strong>{aulas.length * ITENS_POR_AULA} vagas</strong>,
-            e o currículo tem mais que isso. Estudar encurta as aulas, mas não cria vaga — estes itens ficam para
-            a aula regular de seg/qua ou para um pacote seguinte. O conteúdo avançado sai primeiro, por decisão
-            sua.
+            Não há vaga para estes itens nas {aulas.length} aulas. O conteúdo avançado sai primeiro, por decisão
+            sua — eles ficam para a aula regular de seg/qua ou para um pacote seguinte.
           </p>
           <ul className="resposta-lista">
             {plano.foraDoPlano.map((i) => (

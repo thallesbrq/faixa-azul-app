@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ITENS_POR_AULA,
   MINUTOS_ITEM_CRU,
   MINUTOS_ITEM_DOMINADO,
   MINUTOS_POR_AULA,
@@ -85,21 +84,43 @@ describe('custoEmMinutos', () => {
 })
 
 describe('gerarPlano', () => {
-  it('toda aula tem exatamente ITENS_POR_AULA itens', () => {
-    // Decisao do aluno: a contagem manda, nao o orcamento de minutos.
+  it('cobre TODOS os itens — nada fica fora do pacote', () => {
+    const progresso = curriculo(48, 8)
+    const plano = gerarPlano({ progresso })
+    const noPlano = plano.aulas.flatMap((a) => a.itens)
+    expect(noPlano).toHaveLength(progresso.length)
+    expect(plano.foraDoPlano).toEqual([])
+  })
+
+  it('distribui o mais igualmente possivel — diferenca maxima de 1 item', () => {
+    // 56 em 10 nao divide exato (5,6), entao "igual" de verdade nao existe: o
+    // mais proximo e seis aulas de 6 e quatro de 5.
     const plano = gerarPlano({ progresso: curriculo(48, 8) })
-    for (const a of plano.aulas) {
-      expect(a.itens).toHaveLength(ITENS_POR_AULA)
-    }
+    const tamanhos = plano.aulas.map((a) => a.itens.length)
+    expect(Math.max(...tamanhos) - Math.min(...tamanhos)).toBeLessThanOrEqual(1)
+    expect(tamanhos.filter((n) => n === 6)).toHaveLength(6)
+    expect(tamanhos.filter((n) => n === 5)).toHaveLength(4)
+  })
+
+  it('as aulas mais cheias ficam no fim, onde o item custa menos', () => {
+    const tamanhos = gerarPlano({ progresso: curriculo(48, 8) }).aulas.map((a) => a.itens.length)
+    expect(tamanhos[0]).toBeLessThanOrEqual(tamanhos[tamanhos.length - 1])
   })
 
   it('os minutos DESCREVEM a aula, nao a limitam', () => {
-    // 5 itens crus pedem mais de 50 min. O plano nao encolhe por isso — cortar
-    // em silencio para caber esconderia justamente o dado que o aluno precisa
-    // levar ao professor.
+    // 6 itens crus pedem 72 min e a aula tem 60. O plano nao encolhe por isso —
+    // cortar em silencio esconderia justamente o dado que o aluno precisa levar
+    // ao professor.
     const plano = gerarPlano({ progresso: curriculo(48, 8, 0) })
-    expect(plano.aulas[0].itens).toHaveLength(ITENS_POR_AULA)
-    expect(plano.aulas[0].minutosEstimados).toBeGreaterThan(MINUTOS_POR_AULA)
+    expect(plano.aulas.some((a) => a.minutosEstimados > MINUTOS_POR_AULA)).toBe(true)
+  })
+
+  it('com dominio suficiente, nenhuma aula estoura os 60 min', () => {
+    // Limiar calculado: dominio medio 0,29 para a aula de 6 itens caber.
+    const plano = gerarPlano({ progresso: curriculo(48, 8, 0.5) })
+    for (const a of plano.aulas) {
+      expect(a.minutosEstimados).toBeLessThanOrEqual(MINUTOS_POR_AULA)
+    }
   })
 
   it('nao repete nem perde item entre plano e fora do plano', () => {
@@ -121,31 +142,35 @@ describe('gerarPlano', () => {
     }
   })
 
-  it('a reserva de repescagem nao encolhe mais nenhuma aula', () => {
-    // Com preenchimento por contagem, a reserva deixou de participar da geracao
-    // e virou so a folga esperada ao julgar se a pauta do dia estourou. Logo
-    // todas as aulas tem o mesmo tamanho, inclusive a primeira.
-    const plano = gerarPlano({ progresso: curriculo(48, 8) })
-    const tamanhos = new Set(plano.aulas.map((a) => a.itens.length))
-    expect([...tamanhos]).toEqual([ITENS_POR_AULA])
+  it('a reserva de repescagem nao participa mais da geracao', () => {
+    // Ela virou apenas a folga esperada ao julgar se a pauta do dia estourou.
+    // Se ainda encolhesse a aula 1, o total coberto seria menor que o curriculo.
+    const progresso = curriculo(48, 8)
+    const plano = gerarPlano({ progresso })
+    expect(plano.aulas.flatMap((a) => a.itens)).toHaveLength(progresso.length)
   })
 
-  it('estudar encurta as aulas, mas NAO muda quantos itens ficam de fora', () => {
-    // Mudanca de significado trazida pela contagem fixa, e vale registrar: antes
-    // estudar fazia o corte encolher ate zero. Agora o corte e aritmetico
-    // (5 x 10 = 50 vagas) e estudar reduz os minutos de cada aula.
+  it('estudar encurta as aulas; a cobertura ja era total nos dois casos', () => {
     const cru = gerarPlano({ progresso: curriculo(48, 8, 0) })
     const estudado = gerarPlano({ progresso: curriculo(48, 8, 0.8) })
 
     expect(estudado.minutosDeConteudo).toBeLessThan(cru.minutosDeConteudo)
-    expect(estudado.foraDoPlano.length).toBe(cru.foraDoPlano.length)
+    expect(cru.foraDoPlano).toEqual([])
+    expect(estudado.foraDoPlano).toEqual([])
   })
 
-  it('o que fica de fora e a sobra aritmetica das vagas', () => {
+  it('com menos aulas que saidas, as saidas excedentes sobram — e aparecem', () => {
+    // Consequencia da regra "uma saida por aula": com 4 aulas para 8 saidas, so
+    // 4 saidas tem vez e as outras 4 nao entram. Nao e perda silenciosa — elas
+    // saem em foraDoPlano, e a conta sempre fecha. Com o pacote real (10 aulas,
+    // 8 saidas) isso nao acontece.
     const progresso = curriculo(48, 8)
-    const plano = gerarPlano({ progresso })
-    const vagas = 10 * ITENS_POR_AULA
-    expect(plano.foraDoPlano).toHaveLength(progresso.length - vagas)
+    const plano = gerarPlano({ progresso, totalAulas: 4 })
+    const cobertos = plano.aulas.flatMap((a) => a.itens).length
+
+    expect(plano.foraDoPlano).toHaveLength(4)
+    expect(plano.foraDoPlano.every((i) => i.moduloId === 'mod-saidas')).toBe(true)
+    expect(cobertos + plano.foraDoPlano.length).toBe(progresso.length)
   })
 
   it('curriculo vazio nao quebra', () => {
@@ -269,19 +294,28 @@ describe('corte por nivel de avanco', () => {
     return [...basico.slice(0, meio), ...avancado, ...basico.slice(meio)]
   }
 
-  it('o avancado cai antes do basico quando nao cabe tudo', () => {
-    // 52 + 8 = 60 itens para 50 vagas: 10 ficam de fora.
-    const plano = gerarPlano({ progresso: comAvancado(52) })
-    const fora = plano.foraDoPlano.map((i) => i.posicao)
-    const avancadosFora = fora.filter((p) => p.startsWith('Complexo Moderno')).length
-
-    expect(plano.foraDoPlano.length).toBeGreaterThan(0)
-    // Todo o avancado esta fora antes de sobrar qualquer basico de fora.
-    expect(avancadosFora).toBe(8)
+  /**
+   * Nao existe mais teste de "o avancado e o primeiro a ser CORTADO": com
+   * cobertura total nada e cortado, porque a distribuicao aloca todos os itens
+   * por construcao. O que sobrou da decisao do aluno — e o que ainda vale
+   * garantir — e que o avancado fique nas ULTIMAS aulas.
+   */
+  it('o avancado fica nas ultimas aulas, nunca no comeco', () => {
+    const plano = gerarPlano({ progresso: comAvancado(48) })
+    const primeiraComAvancado = plano.aulas.findIndex((a) =>
+      a.itens.some((i) => i.posicao.startsWith('Complexo Moderno')),
+    )
+    const ultimaComBasico = plano.aulas.reduce(
+      (max, a, i) => (a.itens.some((x) => !x.posicao.startsWith('Complexo Moderno')) ? i : max),
+      -1,
+    )
+    expect(primeiraComAvancado).toBeGreaterThan(-1)
+    // O avancado comeca depois de metade do pacote, e nunca antes do basico.
+    expect(primeiraComAvancado).toBeGreaterThanOrEqual(plano.aulas.length / 2)
+    expect(primeiraComAvancado).toBeGreaterThanOrEqual(ultimaComBasico - 1)
   })
 
   it('o avancado entra nas ULTIMAS aulas quando cabe', () => {
-    // 34 + 8 = 42 itens para 50 vagas: cabe tudo, entao da para observar a ORDEM.
     const estudado = comAvancado(34).map((p) => ({ ...p, pontuacao: 1 }))
     const plano = gerarPlano({ progresso: estudado })
     expect(plano.foraDoPlano).toHaveLength(0)
@@ -386,19 +420,19 @@ describe('dificuldade marcada pelo aluno', () => {
     const planoFacil = gerarPlano({ progresso, dificuldades: facil })
     const planoDificil = gerarPlano({ progresso, dificuldades: dificil })
 
-    // A dificuldade encarece as aulas; ela nao mexe em quantos itens cabem,
-    // porque o que cabe agora e contagem fixa.
+    // A dificuldade encarece as aulas; ela nao mexe na cobertura, que e total.
     expect(planoDificil.minutosDeConteudo).toBeGreaterThan(planoFacil.minutosDeConteudo)
-    expect(planoDificil.foraDoPlano.length).toBe(planoFacil.foraDoPlano.length)
+    expect(planoDificil.foraDoPlano).toEqual([])
+    expect(planoFacil.foraDoPlano).toEqual([])
   })
 
-  it('tudo dificil e cru estoura os 50 min, e isso fica VISIVEL', () => {
-    // O estouro nao e bug: e o aviso de que 5 itens crus e dificeis nao caberao
-    // numa aula de 50 minutos, e de que essa conversa e com o professor.
+  it('tudo dificil e cru estoura a aula, e isso fica VISIVEL', () => {
+    // O estouro nao e bug: e o aviso de que itens crus e dificeis nao caberao na
+    // aula, e de que essa conversa e com o professor.
     const progresso = curriculo(48, 8)
     const dificil = new Map(progresso.map((p) => [p.item.id, 'dificil' as const]))
     const plano = gerarPlano({ progresso, dificuldades: dificil })
-    expect(plano.aulas.every((a) => a.itens.length === ITENS_POR_AULA)).toBe(true)
+    expect(plano.foraDoPlano).toEqual([])
     expect(plano.aulas.some((a) => a.minutosEstimados > MINUTOS_POR_AULA)).toBe(true)
   })
 
