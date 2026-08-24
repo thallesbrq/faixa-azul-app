@@ -1,37 +1,38 @@
 /**
- * Planner semanal — visao de segunda a sexta.
+ * Planner semanal — a rotina de segunda a sexta.
  *
- * Os cinco dias aparecem com PAPEIS diferentes, nao como cinco dias iguais de
- * estudo: segunda e quarta sao da academia (conteudo do mestre) e levam a aula
- * particular; terca e quinta consolidam a aula do dia anterior; sexta prepara a
- * aula da segunda seguinte.
+ * Cada dia mostra DUAS coisas separadas, porque na vida real elas sao separadas:
+ * a aula na academia as 8h (quando ha) e o estudo proprio do dia. No dia de aula
+ * particular as duas acontecem, e juntar as duas numa linha unica esconderia
+ * justamente o que o aluno precisa fazer depois de sair do tatame.
  *
- * A folga entre o fim do pacote e a prova fica no topo porque foi ela que
- * motivou esta tela existir: a lista de aulas nao tem data, e por isso nao
- * mostrava que o pacote num certo ritmo termina depois da prova.
+ * A folga entre a ultima aula e a prova fica no topo porque foi ela que motivou
+ * esta tela existir: lista de aulas nao tem data, e por isso nao mostrava que o
+ * pacote em certos ritmos termina depois da prova.
  */
 
 import { useState } from 'react'
+import { HORARIO_AULA } from '../../application/planner'
 import type { DiaDoPlanner, Planner } from '../../application/planner'
 import type { TechniqueItem } from '../../domain/types'
 
-const ROTULO_PAPEL: Record<DiaDoPlanner['papel'], string> = {
-  aula_particular: 'aula',
-  estudo_consolida: 'consolida',
-  estudo_prepara: 'prepara',
+const ROTULO_ESTUDO: Record<DiaDoPlanner['estudo']['papel'], string> = {
+  prepara: 'prepara',
+  consolida: 'consolida',
+  livre: 'revisão livre',
 }
 
-const CLASSE_PAPEL: Record<DiaDoPlanner['papel'], string> = {
-  aula_particular: 'papel--aula',
-  estudo_consolida: 'papel--consolida',
-  estudo_prepara: 'papel--prepara',
+const CLASSE_ESTUDO: Record<DiaDoPlanner['estudo']['papel'], string> = {
+  prepara: 'papel--prepara',
+  consolida: 'papel--consolida',
+  livre: 'papel--livre',
 }
 
 function rotulo(item: TechniqueItem): string {
   return item.nome || item.slot
 }
 
-/** `2026-08-24` -> `24/08`. */
+/** `2026-09-02` -> `02/09`. */
 function diaMes(iso: string): string {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
@@ -55,26 +56,44 @@ export function PlannerSemanal({ planner, hoje }: { planner: Planner; hoje: stri
   return (
     <div>
       <div className="card">
-        <h3 className="detalhe-secao">Pacote no calendário</h3>
-        <p className="instrucao">
-          {planner.semanas.length} semanas · 2 aulas por semana · termina em{' '}
-          <strong>{diaMes(planner.ultimoDia ?? '')}</strong>
-        </p>
+        <h3 className="detalhe-secao">A rotina</h3>
+        <ul className="rotina-legenda">
+          <li>
+            <span className="papel papel--aula">particular</span> segunda e quarta, {HORARIO_AULA} — conteúdo
+            da prova
+          </li>
+          <li>
+            <span className="papel papel--regular">regular</span> terça e quinta, {HORARIO_AULA} — conteúdo do
+            mestre
+          </li>
+          <li>
+            <span className="papel papel--prepara">prepara</span> /{' '}
+            <span className="papel papel--consolida">consolida</span> seu estudo, nos cinco dias
+          </li>
+        </ul>
 
-        {folga !== null && folga < 0 ? (
+        {planner.ultimaAula && (
+          <p className="instrucao">
+            Última aula em <strong>{diaMes(planner.ultimaAula)}</strong>
+            {folga !== null && (
+              <>
+                {' '}
+                · sobram <strong>{folga} dias</strong> até a prova
+              </>
+            )}
+          </p>
+        )}
+
+        {planner.aulasSemData > 0 && (
           <p className="aviso" style={{ marginBottom: 0 }}>
             <span aria-hidden="true">⚠️</span>
             <span>
-              Neste ritmo o pacote termina <strong>{Math.abs(folga)} dias depois da prova</strong>. Aumente as
-              aulas por semana ou ajuste a data-alvo.
+              <strong>{planner.aulasSemData}</strong>{' '}
+              {planner.aulasSemData === 1 ? 'aula não cabe' : 'aulas não cabem'} antes da prova neste ritmo.
+              Aumente as aulas por semana ou ajuste a data-alvo.
             </span>
           </p>
-        ) : folga !== null ? (
-          <p className="instrucao" style={{ marginBottom: 0 }}>
-            Sobram <strong>{folga} dias</strong> entre a última aula e a prova — tempo para revisar e para o que
-            o mestre ainda corrigir.
-          </p>
-        ) : null}
+        )}
       </div>
 
       {planner.semanas.map((semana) => (
@@ -87,25 +106,20 @@ export function PlannerSemanal({ planner, hoje }: { planner: Planner; hoje: stri
             {semana.dias.map((dia) => {
               const ehHoje = dia.data === hoje
               const passou = dia.data < hoje
-              const chave = dia.data
-              const expandido = aberto === chave
+              const expandido = aberto === dia.data
 
               return (
                 <li
-                  key={chave}
-                  className={[
-                    'planner-dia',
-                    ehHoje ? 'planner-dia--hoje' : '',
-                    passou ? 'planner-dia--passou' : '',
-                  ]
+                  key={dia.data}
+                  className={['planner-dia', ehHoje ? 'planner-dia--hoje' : '', passou ? 'planner-dia--passou' : '']
                     .filter(Boolean)
                     .join(' ')}
                 >
                   <button
                     className="planner-cabeca"
-                    onClick={() => setAberto(expandido ? null : chave)}
+                    onClick={() => setAberto(expandido ? null : dia.data)}
                     aria-expanded={expandido}
-                    disabled={dia.itens.length === 0}
+                    disabled={dia.estudo.itens.length === 0}
                   >
                     <span className="planner-data">
                       <strong>{dia.nomeDoDia}</strong>
@@ -113,31 +127,32 @@ export function PlannerSemanal({ planner, hoje }: { planner: Planner; hoje: stri
                     </span>
 
                     <span className="planner-meio">
-                      <span className={`papel ${CLASSE_PAPEL[dia.papel]}`}>
-                        {dia.papel === 'aula_particular' && dia.aulaNumero
-                          ? `aula ${dia.aulaNumero}`
-                          : ROTULO_PAPEL[dia.papel]}
+                      <span className="planner-chips">
+                        {dia.aula ? (
+                          <span className={`papel ${dia.aula.tipo === 'particular' ? 'papel--aula' : 'papel--regular'}`}>
+                            {dia.aula.tipo === 'particular' ? `aula ${dia.aula.numero}` : 'regular'}
+                          </span>
+                        ) : dia.feriado ? (
+                          <span className="papel papel--feriado">{dia.feriado}</span>
+                        ) : null}
+                        <span className={`papel ${CLASSE_ESTUDO[dia.estudo.papel]}`}>
+                          {ROTULO_ESTUDO[dia.estudo.papel]}
+                        </span>
                       </span>
-                      <span className="planner-foco">{dia.foco}</span>
+                      <span className="planner-foco">{dia.estudo.foco}</span>
                     </span>
 
-                    {dia.itens.length > 0 && (
+                    {dia.estudo.itens.length > 0 && (
                       <span className="planner-conta">
-                        {dia.itens.length}
+                        {dia.estudo.itens.length}
                         <small>itens</small>
                       </span>
                     )}
                   </button>
 
-                  {dia.naAcademia && (
-                    <p className="planner-nota">
-                      Também é dia de aula regular na Rilion — o conteúdo dessa aula é do mestre.
-                    </p>
-                  )}
-
                   {expandido && (
                     <ul className="resposta-lista">
-                      {dia.itens.map((i) => (
+                      {dia.estudo.itens.map((i) => (
                         <li key={i.id}>
                           {rotulo(i)} <small>— {i.posicao}</small>
                         </li>
@@ -152,9 +167,9 @@ export function PlannerSemanal({ planner, hoje }: { planner: Planner; hoje: stri
       ))}
 
       <p className="rodape-nota">
-        Segunda e quarta você já está na academia, então é ali que as particulares encaixam. Terça e quinta
-        consolidam a aula do dia anterior; sexta prepara a de segunda — <strong>chegar estudado é o que faz a
-        aula caber nos 60 minutos</strong>.
+        A véspera de cada aula <strong>prepara</strong> ela — chegar sabendo corta o tempo da aula quase pela
+        metade, e é isso que faz os 60 minutos darem conta. O dia da aula e o seguinte{' '}
+        <strong>consolidam</strong>, enquanto a correção do mestre ainda está fresca.
       </p>
     </div>
   )

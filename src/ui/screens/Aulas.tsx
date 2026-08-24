@@ -18,6 +18,13 @@ import {
   saldoDoPacote,
 } from '../../application/aulas'
 import { dataLocalISO, montarPlanner } from '../../application/planner'
+
+/**
+ * Primeiro dia do pacote, combinado com o professor. Fica aqui como constante
+ * porque ainda nao existe tela de configuracao para ela; quando existir, vira
+ * campo no estado.
+ */
+const INICIO_DO_PACOTE = '2026-09-02'
 import { progressoPorItem } from '../../application/progresso'
 import { PlannerSemanal } from '../components/PlannerSemanal'
 import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
@@ -87,7 +94,7 @@ export function Aulas({
   )
 
   const planner = useMemo(
-    () => montarPlanner({ plano, primeiraSegunda: hoje, dataDaProva: dataAlvo.slice(0, 10) }),
+    () => montarPlanner({ plano, inicio: INICIO_DO_PACOTE, hoje, dataDaProva: dataAlvo.slice(0, 10) }),
     [plano, hoje, dataAlvo],
   )
 

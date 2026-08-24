@@ -1190,3 +1190,46 @@
   font-size: 0.74rem;
   color: var(--cor-texto-suave);
 }
+
+/* Chips extras do planner */
+.papel--regular {
+  border-color: var(--cinza-marca);
+  background: var(--cor-fundo);
+  color: var(--cinza-marca);
+}
+
+.papel--livre {
+  border-color: var(--cor-borda);
+  background: var(--cor-fundo);
+  color: var(--cor-texto-suave);
+}
+
+.papel--feriado {
+  border-color: var(--vermelho-alerta);
+  background: var(--vermelho-suave);
+  color: var(--vermelho-alerta);
+}
+
+.planner-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rotina-legenda {
+  list-style: none;
+  margin: var(--espacamento-base) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.rotina-legenda li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}

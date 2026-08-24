@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { dataLocalISO, montarPlanner, segundaDaSemana, somarDias } from './planner'
+import {
+  dataLocalISO,
+  datasDasAulas,
+  diaDaSemana,
+  montarPlanner,
+  segundaDaSemana,
+  somarDias,
+} from './planner'
 import type { AulaPlanejada, PlanoDeAulas } from './aulas'
 import type { TechniqueItem } from '../domain/types'
+
+const INICIO = '2026-09-02' // quarta-feira
+const PROVA = '2026-10-24'
 
 function item(id: string): TechniqueItem {
   return {
@@ -21,7 +31,6 @@ function item(id: string): TechniqueItem {
   }
 }
 
-/** Plano com `n` aulas de 5 itens cada. */
 function plano(n: number): PlanoDeAulas {
   const aulas: AulaPlanejada[] = Array.from({ length: n }, (_, i) => ({
     numero: i + 1,
@@ -32,195 +41,235 @@ function plano(n: number): PlanoDeAulas {
   return { aulas, foraDoPlano: [], minutosDeConteudo: 0, minutosDisponiveis: 0 }
 }
 
-describe('somarDias', () => {
-  it('soma sem escorregar de dia por fuso', () => {
-    expect(somarDias('2026-08-24', 1)).toBe('2026-08-25')
-    expect(somarDias('2026-08-24', 7)).toBe('2026-08-31')
-    expect(somarDias('2026-08-24', 0)).toBe('2026-08-24')
-  })
+/** Todos os dias do planner, achatados. */
+function todosOsDias(p: ReturnType<typeof montarPlanner>) {
+  return p.semanas.flatMap((s) => s.dias)
+}
 
-  it('atravessa virada de mes e de ano', () => {
+describe('somarDias / diaDaSemana / segundaDaSemana', () => {
+  it('soma sem escorregar de dia por fuso', () => {
+    expect(somarDias('2026-09-02', 1)).toBe('2026-09-03')
     expect(somarDias('2026-08-31', 1)).toBe('2026-09-01')
     expect(somarDias('2026-12-31', 1)).toBe('2027-01-01')
-  })
-
-  it('aceita dias negativos', () => {
     expect(somarDias('2026-09-01', -1)).toBe('2026-08-31')
   })
-})
 
-describe('segundaDaSemana', () => {
-  it('numa terca devolve a segunda anterior', () => {
-    // 2026-08-25 e terca.
-    expect(segundaDaSemana('2026-08-25')).toBe('2026-08-24')
+  it('identifica o dia da semana com segunda = 1', () => {
+    expect(diaDaSemana('2026-08-31')).toBe(1) // segunda
+    expect(diaDaSemana('2026-09-02')).toBe(3) // quarta
+    expect(diaDaSemana('2026-09-06')).toBe(7) // domingo
   })
 
-  it('numa segunda devolve ela mesma', () => {
-    expect(segundaDaSemana('2026-08-24')).toBe('2026-08-24')
-  })
-
-  it('no fim de semana pula para a segunda SEGUINTE', () => {
-    // Nao faz sentido comecar um planner no meio de um fim de semana ja passado.
-    expect(segundaDaSemana('2026-08-22')).toBe('2026-08-24') // sabado
-    expect(segundaDaSemana('2026-08-23')).toBe('2026-08-24') // domingo
-  })
-})
-
-describe('montarPlanner', () => {
-  it('10 aulas a 2 por semana fecham em 5 semanas', () => {
-    const p = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' })
-    expect(p.semanas).toHaveLength(5)
-  })
-
-  it('toda semana tem os 5 dias uteis, de segunda a sexta', () => {
-    const p = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' })
-    for (const s of p.semanas) {
-      expect(s.dias.map((d) => d.diaSemana)).toEqual([1, 2, 3, 4, 5])
-    }
-  })
-
-  it('as aulas particulares caem nos dias de academia', () => {
-    // Segunda e quarta: ele ja esta na Rilion nesses dias.
-    const p = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' })
-    for (const s of p.semanas) {
-      const comAula = s.dias.filter((d) => d.papel === 'aula_particular')
-      expect(comAula.map((d) => d.diaSemana)).toEqual([1, 3])
-      expect(comAula.every((d) => d.naAcademia)).toBe(true)
-    }
-  })
-
-  it('as 10 aulas aparecem uma unica vez cada, em ordem', () => {
-    const p = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' })
-    const numeros = p.semanas
-      .flatMap((s) => s.dias)
-      .filter((d) => d.papel === 'aula_particular')
-      .map((d) => d.aulaNumero)
-    expect(numeros).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-  })
-
-  it('terca consolida a aula de segunda; quinta consolida a de quarta', () => {
-    const [semana] = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' }).semanas
-    const terca = semana.dias[1]
-    const quinta = semana.dias[3]
-
-    expect(terca.papel).toBe('estudo_consolida')
-    expect(terca.aulaNumero).toBe(1)
-    expect(quinta.papel).toBe('estudo_consolida')
-    expect(quinta.aulaNumero).toBe(2)
-  })
-
-  it('sexta PREPARA a aula da segunda seguinte — fecha o ciclo', () => {
-    // E a razao de existir do ciclo: chegar estudado baixa o custo da aula.
-    const [semana] = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' }).semanas
-    const sexta = semana.dias[4]
-    expect(sexta.papel).toBe('estudo_prepara')
-    expect(sexta.aulaNumero).toBe(3)
-  })
-
-  it('o dia de estudo carrega os itens da aula que ele serve', () => {
-    const [semana] = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' }).semanas
-    const segunda = semana.dias[0]
-    const terca = semana.dias[1]
-    expect(terca.itens.map((i) => i.id)).toEqual(segunda.itens.map((i) => i.id))
-  })
-
-  it('as datas avancam de sete em sete por semana', () => {
-    const p = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-24' })
-    expect(p.semanas.map((s) => s.inicio)).toEqual([
-      '2026-08-24',
-      '2026-08-31',
-      '2026-09-07',
-      '2026-09-14',
-      '2026-09-21',
-    ])
-  })
-
-  it('calcula a folga entre o fim do pacote e a prova', () => {
-    const p = montarPlanner({
-      plano: plano(10),
-      primeiraSegunda: '2026-08-24',
-      dataDaProva: '2026-10-24',
-    })
-    // Ultima sexta: 2026-09-25. Sobram 29 dias.
-    expect(p.ultimoDia).toBe('2026-09-25')
-    expect(p.diasDeFolgaAteAProva).toBe(29)
-  })
-
-  it('acusa folga NEGATIVA quando o pacote termina depois da prova', () => {
-    // E o conflito que motivou este modulo: uma aula por semana nao cabe.
-    const p = montarPlanner({
-      plano: plano(10),
-      primeiraSegunda: '2026-08-24',
-      dataDaProva: '2026-10-24',
-      aulasPorSemana: 1,
-    })
-    expect(p.semanas).toHaveLength(10)
-    expect(p.diasDeFolgaAteAProva).toBeLessThan(0)
-  })
-
-  it('uma aula por semana usa apenas o primeiro dia de academia', () => {
-    const p = montarPlanner({ plano: plano(4), primeiraSegunda: '2026-08-24', aulasPorSemana: 1 })
-    for (const s of p.semanas) {
-      const comAula = s.dias.filter((d) => d.papel === 'aula_particular')
-      expect(comAula.map((d) => d.diaSemana)).toEqual([1])
-    }
-  })
-
-  it('numero impar de aulas nao deixa dia orfao na ultima semana', () => {
-    // 9 aulas a 2 por semana: a semana 5 tem uma aula so, e a quarta vira estudo.
-    const p = montarPlanner({ plano: plano(9), primeiraSegunda: '2026-08-24' })
-    expect(p.semanas).toHaveLength(5)
-    const ultima = p.semanas[4]
-    expect(ultima.dias.filter((d) => d.papel === 'aula_particular')).toHaveLength(1)
-    expect(ultima.dias).toHaveLength(5)
-  })
-
-  it('dias apos a ultima aula viram revisao livre, sem itens', () => {
-    const p = montarPlanner({ plano: plano(9), primeiraSegunda: '2026-08-24' })
-    const sexta = p.semanas[4].dias[4]
-    expect(sexta.itens).toEqual([])
-    expect(sexta.foco).toMatch(/Revisão livre/)
-  })
-
-  it('plano vazio devolve planner vazio, sem quebrar', () => {
-    const p = montarPlanner({ plano: plano(0), primeiraSegunda: '2026-08-24' })
-    expect(p.semanas).toEqual([])
-    expect(p.ultimoDia).toBeNull()
-    expect(p.diasDeFolgaAteAProva).toBeNull()
-  })
-
-  it('ignora aulas sem itens', () => {
-    const base = plano(3)
-    base.aulas[2].itens = []
-    const p = montarPlanner({ plano: base, primeiraSegunda: '2026-08-24' })
-    const numeros = p.semanas
-      .flatMap((s) => s.dias)
-      .filter((d) => d.papel === 'aula_particular')
-      .map((d) => d.aulaNumero)
-    expect(numeros).toEqual([1, 2])
-  })
-
-  it('aceita comecar de qualquer dia da semana', () => {
-    const deQuarta = montarPlanner({ plano: plano(10), primeiraSegunda: '2026-08-26' })
-    expect(deQuarta.semanas[0].inicio).toBe('2026-08-24')
+  it('acha a segunda da semana de qualquer dia', () => {
+    expect(segundaDaSemana('2026-09-02')).toBe('2026-08-31')
+    expect(segundaDaSemana('2026-08-31')).toBe('2026-08-31')
+    expect(segundaDaSemana('2026-09-06')).toBe('2026-08-31')
   })
 })
 
 describe('dataLocalISO', () => {
   it('usa a data LOCAL, nao a UTC', () => {
-    // 21h em Brasilia (UTC-3) e 00h do dia seguinte em UTC. O aluno treina das
-    // 19h as 21h e abre o app depois — se usassemos toISOString, o planner
-    // marcaria amanha como hoje justamente na hora de uso.
-    const vinteEUma = new Date(2026, 7, 24, 21, 30) // 24/08/2026 21:30 local
-    expect(dataLocalISO(vinteEUma)).toBe('2026-08-24')
-  })
-
-  it('zera a hora sem escorregar de dia', () => {
-    expect(dataLocalISO(new Date(2026, 7, 24, 0, 0))).toBe('2026-08-24')
-    expect(dataLocalISO(new Date(2026, 7, 24, 23, 59))).toBe('2026-08-24')
+    // A noite em Brasilia (UTC-3) o UTC ja virou; com toISOString o planner
+    // marcaria amanha como hoje.
+    expect(dataLocalISO(new Date(2026, 8, 2, 22, 30))).toBe('2026-09-02')
+    expect(dataLocalISO(new Date(2026, 8, 2, 0, 0))).toBe('2026-09-02')
   })
 
   it('preenche mes e dia com zero a esquerda', () => {
     expect(dataLocalISO(new Date(2026, 0, 5, 12, 0))).toBe('2026-01-05')
+  })
+})
+
+describe('datasDasAulas', () => {
+  it('agenda so em segunda e quarta, a partir do inicio', () => {
+    const datas = datasDasAulas({ inicio: INICIO, quantidade: 4, feriados: {} })
+    expect(datas).toEqual(['2026-09-02', '2026-09-07', '2026-09-09', '2026-09-14'])
+    expect(datas.every((d) => [1, 3].includes(diaDaSemana(d)))).toBe(true)
+  })
+
+  it('PULA feriado que cai em dia de aula', () => {
+    // 07/09/2026 (Independencia) e uma segunda. Sem isto o app marcaria aula
+    // num dia de academia fechada.
+    const datas = datasDasAulas({ inicio: INICIO, quantidade: 4 })
+    expect(datas).not.toContain('2026-09-07')
+    expect(datas).toEqual(['2026-09-02', '2026-09-09', '2026-09-14', '2026-09-16'])
+  })
+
+  it('nunca agenda em fim de semana', () => {
+    const datas = datasDasAulas({ inicio: INICIO, quantidade: 10 })
+    expect(datas.every((d) => diaDaSemana(d) <= 5)).toBe(true)
+  })
+
+  it('para no limite da prova, devolvendo menos datas', () => {
+    const datas = datasDasAulas({ inicio: INICIO, quantidade: 10, limite: '2026-09-16' })
+    expect(datas).toHaveLength(4)
+    expect(datas.every((d) => d <= '2026-09-16')).toBe(true)
+  })
+
+  it('as 10 aulas cabem antes da prova', () => {
+    const datas = datasDasAulas({ inicio: INICIO, quantidade: 10, limite: PROVA })
+    expect(datas).toHaveLength(10)
+    expect(datas[datas.length - 1]).toBe('2026-10-07')
+  })
+})
+
+describe('montarPlanner', () => {
+  const p = () => montarPlanner({ plano: plano(10), inicio: INICIO, dataDaProva: PROVA })
+
+  it('toda semana tem os cinco dias uteis', () => {
+    for (const s of p().semanas) {
+      expect(s.dias.map((d) => d.diaSemana)).toEqual([1, 2, 3, 4, 5])
+    }
+  })
+
+  it('as 10 aulas particulares aparecem uma vez cada, em ordem', () => {
+    const numeros = todosOsDias(p())
+      .filter((d) => d.aula?.tipo === 'particular')
+      .map((d) => d.aula?.numero)
+    expect(numeros).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+  })
+
+  it('particular so em seg/qua; regular so em ter/qui', () => {
+    for (const d of todosOsDias(p())) {
+      if (d.aula?.tipo === 'particular') expect([1, 3]).toContain(d.diaSemana)
+      if (d.aula?.tipo === 'regular') expect([2, 4]).toContain(d.diaSemana)
+    }
+  })
+
+  it('sexta nunca tem aula — nem particular nem regular', () => {
+    const sextas = todosOsDias(p()).filter((d) => d.diaSemana === 5)
+    expect(sextas.every((d) => d.aula === undefined)).toBe(true)
+  })
+
+  it('todas as aulas sao as 8h-9h', () => {
+    const comAula = todosOsDias(p()).filter((d) => d.aula)
+    expect(comAula.length).toBeGreaterThan(0)
+    expect(comAula.every((d) => d.aula?.horario === '8h–9h')).toBe(true)
+  })
+
+  it('nao marca aula nenhuma no feriado', () => {
+    const sete = todosOsDias(p()).find((d) => d.data === '2026-09-07')
+    expect(sete?.feriado).toBe('Independência')
+    expect(sete?.aula).toBeUndefined()
+  })
+
+  it('dias antes do inicio nao tem aula, mas PREPARAM a primeira', () => {
+    // O pacote comeca na quarta 02/09. Segunda 31/08 e terca 01/09 nao tem aula
+    // nenhuma, e sao o unico preparo possivel da aula 1 — que e a mais caro do
+    // pacote, com tudo cru.
+    const antes = todosOsDias(p()).filter((d) => d.data < INICIO)
+    expect(antes.length).toBeGreaterThan(0)
+    expect(antes.every((d) => d.aula === undefined)).toBe(true)
+    expect(antes.every((d) => d.estudo.papel === 'prepara')).toBe(true)
+    expect(antes.every((d) => d.estudo.aulaNumero === 1)).toBe(true)
+  })
+
+  it('quando hoje e antes do inicio, a visao comeca na semana de hoje', () => {
+    // Some-la jogaria fora dias de preparo que existem de verdade.
+    const r = montarPlanner({
+      plano: plano(10),
+      inicio: INICIO,
+      hoje: '2026-08-24',
+      dataDaProva: PROVA,
+    })
+    expect(r.semanas[0].inicio).toBe('2026-08-24')
+    const preparamAula1 = todosOsDias(r).filter(
+      (d) => d.estudo.papel === 'prepara' && d.estudo.aulaNumero === 1,
+    )
+    expect(preparamAula1.length).toBeGreaterThanOrEqual(5)
+  })
+
+  it('todos os cinco dias tem estudo atribuido', () => {
+    // Decisao do aluno: estudo nos 5 dias, viavel porque a aula e as 8h.
+    expect(todosOsDias(p()).every((d) => d.estudo.foco.length > 0)).toBe(true)
+  })
+
+  it('no dia da aula, o estudo consolida a aula daquele dia', () => {
+    const dia = todosOsDias(p()).find((d) => d.data === '2026-09-02')
+    expect(dia?.aula?.numero).toBe(1)
+    expect(dia?.estudo.papel).toBe('consolida')
+    expect(dia?.estudo.aulaNumero).toBe(1)
+  })
+
+  it('a vespera de uma aula PREPARA ela', () => {
+    // Terca 08/09 e vespera da aula de quarta 09/09.
+    const terca = todosOsDias(p()).find((d) => d.data === '2026-09-08')
+    expect(terca?.aula?.tipo).toBe('regular')
+    expect(terca?.estudo.papel).toBe('prepara')
+    expect(terca?.estudo.aulaNumero).toBe(2)
+  })
+
+  it('o dia seguinte a uma aula CONSOLIDA ela, com um dia de intervalo', () => {
+    // Quinta 10/09 vem depois da aula de quarta 09/09.
+    const quinta = todosOsDias(p()).find((d) => d.data === '2026-09-10')
+    expect(quinta?.estudo.papel).toBe('consolida')
+    expect(quinta?.estudo.aulaNumero).toBe(2)
+  })
+
+  it('sexta prepara a proxima aula, fechando o ciclo entre semanas', () => {
+    const sexta = todosOsDias(p()).find((d) => d.data === '2026-09-11')
+    expect(sexta?.estudo.papel).toBe('prepara')
+    expect(sexta?.estudo.aulaNumero).toBe(3)
+  })
+
+  it('toda aula e preparada antes e consolidada depois', () => {
+    // A propriedade que da sentido ao ciclo: nenhuma aula chega sem preparo.
+    const dias = todosOsDias(p())
+    const numeros = dias.filter((d) => d.aula?.tipo === 'particular').map((d) => d.aula!.numero!)
+
+    for (const n of numeros) {
+      const preparada = dias.some((d) => d.estudo.papel === 'prepara' && d.estudo.aulaNumero === n)
+      const consolidada = dias.some((d) => d.estudo.papel === 'consolida' && d.estudo.aulaNumero === n)
+      expect(preparada, `aula ${n} sem dia de preparacao`).toBe(true)
+      expect(consolidada, `aula ${n} sem dia de consolidacao`).toBe(true)
+    }
+  })
+
+  it('o estudo carrega os itens da aula que ele serve', () => {
+    const dias = todosOsDias(p())
+    const aula1 = dias.find((d) => d.aula?.numero === 1)!
+    const preparaAula1 = dias.find((d) => d.estudo.papel === 'prepara' && d.estudo.aulaNumero === 1)
+    expect(preparaAula1?.estudo.itens.map((i) => i.id)).toEqual(aula1.estudo.itens.map((i) => i.id))
+  })
+
+  it('calcula a folga entre a ultima aula e a prova', () => {
+    const r = p()
+    expect(r.ultimaAula).toBe('2026-10-07')
+    expect(r.diasDeFolgaAteAProva).toBe(17)
+    expect(r.aulasSemData).toBe(0)
+  })
+
+  it('acusa aulas SEM DATA quando nao cabem antes da prova', () => {
+    // O conflito que motivou o modulo, agora detectavel: prova muito perto.
+    const r = montarPlanner({ plano: plano(10), inicio: INICIO, dataDaProva: '2026-09-16' })
+    expect(r.aulasSemData).toBeGreaterThan(0)
+  })
+
+  it('folga negativa nunca acontece — a aula simplesmente nao e agendada', () => {
+    const r = montarPlanner({ plano: plano(10), inicio: INICIO, dataDaProva: '2026-09-16' })
+    expect(r.diasDeFolgaAteAProva).toBeGreaterThanOrEqual(0)
+  })
+
+  it('depois da ultima aula o estudo vira revisao livre', () => {
+    const r = montarPlanner({ plano: plano(2), inicio: INICIO, dataDaProva: PROVA })
+    const dias = todosOsDias(r)
+    const depoisDaUltima = dias.filter((d) => d.data > r.ultimaAula!)
+    expect(depoisDaUltima.length).toBeGreaterThan(0)
+    expect(depoisDaUltima.every((d) => d.estudo.papel === 'consolida' || d.estudo.papel === 'livre')).toBe(
+      true,
+    )
+    expect(depoisDaUltima.some((d) => d.estudo.papel === 'livre')).toBe(true)
+  })
+
+  it('plano vazio devolve planner vazio, sem quebrar', () => {
+    const r = montarPlanner({ plano: plano(0), inicio: INICIO })
+    expect(r.semanas).toEqual([])
+    expect(r.ultimaAula).toBeNull()
+    expect(r.diasDeFolgaAteAProva).toBeNull()
+    expect(r.aulasSemData).toBe(0)
+  })
+
+  it('a primeira semana comeca na segunda, mesmo o pacote comecando na quarta', () => {
+    expect(p().semanas[0].inicio).toBe('2026-08-31')
   })
 })
