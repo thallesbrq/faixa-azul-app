@@ -7,6 +7,7 @@ import {
   MINUTOS_REPESCAGEM,
   auloesDoPacote,
   custoEmMinutos,
+  escolherExcedente,
   gerarPlano,
   pautaDaAula,
   repescagensPendentes,
@@ -256,64 +257,125 @@ describe('saldoDoPacote', () => {
   })
 })
 
-describe('corte por nivel de avanco', () => {
-  /** Curriculo com uma posicao avancada no MEIO da lista, para provar que a
-   *  ordem de entrada nao e o que decide o corte. */
-  function comAvancado(quantosBasicos: number): ProgressoDeItem[] {
-    const basico = Array.from({ length: quantosBasicos }, (_, i) =>
-      prog({ item: item({ id: `g${i}`, slot: `G${i}`, posicao: `Posicao ${i % 4}` }) }),
+describe('corte por profundidade, nao por largura', () => {
+  /**
+   * Curriculo com posicoes de tamanhos bem diferentes, como o real: uma grande
+   * (11), duas medias (8) e varias pequenas.
+   */
+  function desigual(): ProgressoDeItem[] {
+    const tamanhos: [string, number][] = [
+      ['Guarda Fechada', 11],
+      ['Meia Guarda', 8],
+      ['Complexo Moderno (One Leg, 50-50, Guarda X, Berimbolo)', 8],
+      ['Guarda Aranha', 5],
+      ['Guarda Dela Riva', 5],
+      ['Guarda Gancho', 4],
+      ['Guarda Aberta', 4],
+      ['Guarda Laco', 3],
+    ]
+    const guardas = tamanhos.flatMap(([pos, n]) =>
+      Array.from({ length: n }, (_, k) =>
+        prog({ item: item({ id: `${pos}-${k}`, slot: `${pos} ${k}`, posicao: pos }) }),
+      ),
     )
-    const avancado = Array.from({ length: 8 }, (_, i) =>
+    const saidas = Array.from({ length: 8 }, (_, i) =>
       prog({
-        item: item({
-          id: `cm${i}`,
-          slot: `CM${i}`,
-          posicao: 'Complexo Moderno (One Leg, 50-50, Guarda X, Berimbolo)',
-        }),
+        item: item({ id: `s${i}`, slot: `Saida ${i}`, moduloId: 'mod-saidas', posicao: `Saida ${i}` }),
       }),
     )
-    const meio = Math.floor(quantosBasicos / 2)
-    return [...basico.slice(0, meio), ...avancado, ...basico.slice(meio)]
+    return [...guardas, ...saidas]
   }
 
-  /**
-   * Nao existe mais teste de "o avancado e o primeiro a ser CORTADO": com
-   * cobertura total nada e cortado, porque a distribuicao aloca todos os itens
-   * por construcao. O que sobrou da decisao do aluno — e o que ainda vale
-   * garantir — e que o avancado fique nas ULTIMAS aulas.
-   */
-  it('o avancado fica nas ultimas aulas, nunca no comeco', () => {
-    const plano = gerarPlano({ progresso: comAvancado(48) })
-    const primeiraComAvancado = plano.aulas.findIndex((a) =>
-      a.itens.some((i) => i.posicao.startsWith('Complexo Moderno')),
-    )
-    const ultimaComBasico = plano.aulas.reduce(
-      (max, a, i) => (a.itens.some((x) => !x.posicao.startsWith('Complexo Moderno')) ? i : max),
-      -1,
-    )
-    expect(primeiraComAvancado).toBeGreaterThan(-1)
-    // O avancado comeca depois de metade do pacote, e nunca antes do basico.
-    expect(primeiraComAvancado).toBeGreaterThanOrEqual(plano.aulas.length / 2)
-    expect(primeiraComAvancado).toBeGreaterThanOrEqual(ultimaComBasico - 1)
+  const posicoesDe = (itens: TechniqueItem[]) => new Set(itens.map((i) => i.posicao))
+
+  it('NENHUMA posicao fica inteira de fora', () => {
+    // E a propriedade central da regra: corta profundidade, preserva largura.
+    // Antes, uma posicao inteira (o Complexo Moderno) saia do plano.
+    const progresso = desigual()
+    const plano = gerarPlano({ progresso })
+    const noPlano = posicoesDe(plano.aulas.flatMap((a) => a.itens))
+    const todas = posicoesDe(progresso.map((p) => p.item))
+
+    for (const pos of todas) {
+      expect(noPlano.has(pos), `posicao "${pos}" ficou inteira de fora`).toBe(true)
+    }
   })
 
-  it('o avancado entra nas ULTIMAS aulas quando cabe', () => {
-    const estudado = comAvancado(34).map((p) => ({ ...p, pontuacao: 1 }))
-    const plano = gerarPlano({ progresso: estudado })
-    expect(plano.foraDoPlano).toHaveLength(0)
-
-    // A propriedade que importa nao e "aula numero tal" — isso muda com o
-    // dominio, porque item dominado custa menos e cabem mais por aula. E que
-    // TODO o basico vem antes de qualquer avancado.
-    const guardas = plano.aulas
+  it('o Complexo Moderno entra nas aulas particulares', () => {
+    // Decisao do aluno depois de o professor confirmar que a prova cobra.
+    const plano = gerarPlano({ progresso: desigual() })
+    const doComplexo = plano.aulas
       .flatMap((a) => a.itens)
-      .filter((i) => i.moduloId === 'mod-guardas')
-    const primeiroAvancado = guardas.findIndex((i) => i.posicao.startsWith('Complexo Moderno'))
+      .filter((i) => i.posicao.startsWith('Complexo Moderno'))
+    expect(doComplexo.length).toBeGreaterThan(0)
+  })
 
-    expect(primeiroAvancado).toBeGreaterThan(-1)
-    expect(guardas.slice(primeiroAvancado).every((i) => i.posicao.startsWith('Complexo Moderno'))).toBe(
-      true,
-    )
+  it('o Complexo Moderno mantem o espacamento do circulo', () => {
+    // A regra antiga o tirava do circulo. Agora ele e tratado como qualquer
+    // outra posicao: duas passagens, afastadas.
+    const plano = gerarPlano({ progresso: desigual() })
+    const aulasComComplexo = plano.aulas
+      .map((a, idx) => (a.itens.some((i) => i.posicao.startsWith('Complexo Moderno')) ? idx : -1))
+      .filter((idx) => idx >= 0)
+
+    expect(aulasComComplexo.length).toBeGreaterThan(1)
+    const distancia = aulasComComplexo[aulasComComplexo.length - 1] - aulasComComplexo[0]
+    expect(distancia).toBeGreaterThan(1)
+  })
+
+  it('o corte sai das posicoes MAIORES', () => {
+    const progresso = desigual()
+    const plano = gerarPlano({ progresso })
+    const fora = plano.foraDoPlano.filter((i) => i.moduloId === 'mod-guardas')
+
+    // As tres maiores sao Guarda Fechada (11), Meia Guarda (8) e Complexo (8).
+    const grandes = ['Guarda Fechada', 'Meia Guarda', 'Complexo Moderno']
+    expect(fora.length).toBeGreaterThan(0)
+    for (const i of fora) {
+      expect(grandes.some((g) => i.posicao.startsWith(g)), `cortou de "${i.posicao}"`).toBe(true)
+    }
+  })
+
+  it('a posicao mais cheia cede primeiro', () => {
+    const porPosicao = new Map<string, TechniqueItem[]>([
+      ['grande', Array.from({ length: 5 }, (_, k) => item({ id: `g${k}`, posicao: 'grande' }))],
+      ['pequena', [item({ id: 'p0', posicao: 'pequena' })]],
+    ])
+    const fora = escolherExcedente(porPosicao, 2)
+    expect([...fora]).toEqual(['g4', 'g3'])
+  })
+
+  it('nunca corta uma posicao a ponto de zerar quando ha maior disponivel', () => {
+    const porPosicao = new Map<string, TechniqueItem[]>([
+      ['grande', Array.from({ length: 6 }, (_, k) => item({ id: `g${k}`, posicao: 'grande' }))],
+      ['pequena', [item({ id: 'p0', posicao: 'pequena' })]],
+    ])
+    const fora = escolherExcedente(porPosicao, 3)
+    expect(fora.has('p0')).toBe(false)
+  })
+
+  it('as saidas nunca entram no corte', () => {
+    // A Secao 5 inteira tem 8 itens; tirar dela seria cortar largura.
+    const plano = gerarPlano({ progresso: desigual() })
+    expect(plano.foraDoPlano.every((i) => i.moduloId !== 'mod-saidas')).toBe(true)
+  })
+
+  it('e deterministico — o mesmo plano em execucoes repetidas', () => {
+    const progresso = desigual()
+    const a = gerarPlano({ progresso }).foraDoPlano.map((i) => i.id)
+    const b = gerarPlano({ progresso }).foraDoPlano.map((i) => i.id)
+    expect(a).toEqual(b)
+  })
+
+  it('pedir zero excedente nao corta nada', () => {
+    const porPosicao = new Map([['x', [item({ id: 'x0' })]]])
+    expect(escolherExcedente(porPosicao, 0).size).toBe(0)
+    expect(escolherExcedente(porPosicao, -3).size).toBe(0)
+  })
+
+  it('pedir mais excedente do que existe nao quebra', () => {
+    const porPosicao = new Map([['x', [item({ id: 'x0' })]]])
+    expect(escolherExcedente(porPosicao, 99).size).toBe(1)
   })
 })
 

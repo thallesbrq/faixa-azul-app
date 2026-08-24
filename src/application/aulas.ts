@@ -166,37 +166,60 @@ export interface PlanoDeAulas {
 }
 
 /**
- * Posicoes tratadas como avancadas: entram no fim da fila e por isso sao as
- * primeiras a cair quando o pacote nao comporta tudo (decisao do aluno).
+ * Escolhe o que NAO cabe nas aulas particulares, tirando PROFUNDIDADE em vez de
+ * LARGURA: nenhuma posicao fica de fora inteira, e o que sai e o excedente das
+ * posicoes com mais itens.
  *
- * O Complexo Moderno reune berimbolo, 50-50, guarda X e one leg X — o conteudo
- * que custa mais minutos por item e o que menos aparece numa banca de faixa
- * azul. Deixar isso no fim e escolher deliberadamente onde o corte cai, em vez
- * de aceitar o que o algoritmo deixou por ultimo.
+ * A regra anterior mandava uma posicao inteira para o fim da fila (era o
+ * Complexo Moderno), e isso misturava duas punicoes diferentes na mesma
+ * decisao: perder o espacamento do circulo E ser o primeiro a cair. Quando o
+ * professor confirmou que o Complexo Moderno faz parte da prova, ficou claro que
+ * as duas coisas precisavam ser separadas — o aluno pediu o conteudo de volta
+ * para as particulares, e o corte teve de achar outro critério.
  *
- * Comparacao por prefixo porque o rotulo importado e longo e pode variar no
- * final ("(One Leg, 50-50, Guarda X, Berimbolo)").
+ * O critério: enquanto sobrar item, tira o ULTIMO da posicao que tem MAIS itens.
+ * A Guarda Fechada tem 11 itens e a prova exige 2 raspadas dela; a 11a tecnica
+ * de Guarda Fechada rende menos numa aula individual do que a unica tecnica de
+ * uma posicao pequena. Empate resolve pela ordem de entrada, para o plano ser
+ * estavel entre execucoes.
  */
-export const PREFIXOS_AVANCADOS = ['Complexo Moderno']
+export function escolherExcedente(
+  porPosicao: Map<string, TechniqueItem[]>,
+  quantos: number,
+): Set<string> {
+  if (quantos <= 0) return new Set()
 
-function ehAvancada(posicao: string): boolean {
-  return PREFIXOS_AVANCADOS.some((p) => posicao.startsWith(p))
+  const restantes = new Map([...porPosicao].map(([pos, itens]) => [pos, [...itens]]))
+  const ordemDeEntrada = [...porPosicao.keys()]
+  const excedente = new Set<string>()
+
+  for (let i = 0; i < quantos; i++) {
+    let escolhida: string | undefined
+    let maior = 0
+    for (const pos of ordemDeEntrada) {
+      const n = restantes.get(pos)?.length ?? 0
+      if (n > maior) {
+        maior = n
+        escolhida = pos
+      }
+    }
+    if (!escolhida || maior === 0) break
+    const item = restantes.get(escolhida)!.pop()
+    if (item) excedente.add(item.id)
+  }
+
+  return excedente
 }
 
 /**
- * Sequencia das guardas: circulo primeiro, avancadas depois.
+ * Sequencia das guardas em ordem de circulo — TODAS as posicoes participam.
  *
- * As posicoes avancadas ficam FORA do circulo de proposito. O circulo existe
- * para espacar as duas passagens de cada posicao, e isso briga com colocar algo
- * no fim da fila — uma posicao no circulo aparece cedo por construcao. Como o
- * aluno decidiu que o avancado e o primeiro a cair, ele perde o espacamento e
- * ganha a posicao final. Se o dominio subir e o conteudo couber, ele cai nas
- * ultimas aulas, que e onde conteudo avancado faz mais sentido de qualquer modo.
+ * Nenhuma posicao e mais excluida do circulo: o espacamento entre as duas
+ * passagens de uma posicao vale igual para conteudo basico e avancado. Quem
+ * decide o corte agora e `escolherExcedente`, antes de a fila ser montada.
  */
 function sequenciaDeGuardas(porPosicao: Map<string, TechniqueItem[]>): TechniqueItem[] {
-  const todas = [...porPosicao.keys()]
-  const avancadas = todas.filter(ehAvancada)
-  const posicoes = todas.filter((p) => !ehAvancada(p))
+  const posicoes = [...porPosicao.keys()]
   const metades = new Map(posicoes.map((p) => [p, dividirEmPartes(porPosicao.get(p) ?? [], 2)]))
   const usadas = new Map(posicoes.map((p) => [p, 0]))
 
@@ -208,10 +231,6 @@ function sequenciaDeGuardas(porPosicao: Map<string, TechniqueItem[]>): Technique
       sequencia.push(...(metades.get(pos)?.[ponteiro] ?? []))
       usadas.set(pos, ponteiro + 1)
     }
-  }
-
-  for (const pos of avancadas) {
-    sequencia.push(...(porPosicao.get(pos) ?? []))
   }
 
   return sequencia
@@ -260,8 +279,23 @@ export function gerarPlano({
     else guardasPorPosicao.set(p.item.posicao, [p.item])
   }
 
-  const filaDeGuardas = sequenciaDeGuardas(guardasPorPosicao)
+  /**
+   * Quantos itens de guarda nao cabem, e quais. As saidas nunca entram no corte:
+   * sao 8 para 10 aulas com uma por aula, e a Secao 5 inteira e pequena — tirar
+   * dela seria cortar largura, que e exatamente o que esta regra evita.
+   */
+  const vagasParaGuardas = totalAulas * itensPorAula - Math.min(saidas.length, totalAulas)
+  const totalDeGuardas = [...guardasPorPosicao.values()].reduce((n, l) => n + l.length, 0)
+  const excedente = escolherExcedente(guardasPorPosicao, Math.max(0, totalDeGuardas - vagasParaGuardas))
+
+  const guardasQueEntram = new Map(
+    [...guardasPorPosicao].map(([pos, itens]) => [pos, itens.filter((i) => !excedente.has(i.id))]),
+  )
+  const filaDeGuardas = sequenciaDeGuardas(guardasQueEntram)
   const filaDeSaidas = [...saidas]
+
+  /** Excedente na ordem original do curriculo, para o aulao. */
+  const guardasDeFora = [...guardasPorPosicao.values()].flat().filter((i) => excedente.has(i.id))
 
   const aulas: AulaPlanejada[] = []
   let iGuarda = 0
@@ -294,7 +328,7 @@ export function gerarPlano({
     })
   }
 
-  const foraDoPlano = [...filaDeSaidas.slice(iSaida), ...filaDeGuardas.slice(iGuarda)]
+  const foraDoPlano = [...filaDeSaidas.slice(iSaida), ...filaDeGuardas.slice(iGuarda), ...guardasDeFora]
   const minutosDeConteudo = progresso.reduce((s, p) => s + (custoDe.get(p.item.id) ?? 0), 0)
 
   return {
