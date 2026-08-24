@@ -54,28 +54,6 @@ export function paresDoCirculo(n: number): [number, number][] {
 }
 
 /**
- * Tamanhos de `partes` grupos que somam `total`, o mais parecidos possivel.
- *
- * 56 itens em 10 aulas devolve seis 6 e quatro 5 — nao existe divisao exata, e
- * este e o mais proximo dela.
- *
- * `restoNoFim` decide onde ficam os grupos maiores, e no caso das aulas isso
- * importa: o custo de um item cai conforme o aluno estuda, entao as aulas mais
- * cheias devem ser as ULTIMAS, quando cada item ja sai mais barato. Colocar as
- * maiores no comeco seria empilhar mais conteudo justamente onde ele custa mais.
- */
-export function tamanhosEquilibrados(total: number, partes: number, restoNoFim = true): number[] {
-  if (partes <= 0 || total < 0) return []
-  const base = Math.floor(total / partes)
-  const resto = total % partes
-
-  return Array.from({ length: partes }, (_, i) => {
-    const ganhaExtra = restoNoFim ? i >= partes - resto : i < resto
-    return base + (ganhaExtra ? 1 : 0)
-  })
-}
-
-/**
  * Divide uma lista em `partes` pedacos de tamanho o mais parecido possivel,
  * distribuindo o resto nos primeiros pedacos.
  *

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ITENS_POR_AULA,
   MINUTOS_ITEM_CRU,
   MINUTOS_ITEM_DOMINADO,
   MINUTOS_POR_AULA,
   MINUTOS_REPESCAGEM,
+  auloesDoPacote,
   custoEmMinutos,
   gerarPlano,
   pautaDaAula,
@@ -84,43 +86,39 @@ describe('custoEmMinutos', () => {
 })
 
 describe('gerarPlano', () => {
-  it('cobre TODOS os itens — nada fica fora do pacote', () => {
+  it('toda aula tem exatamente ITENS_POR_AULA itens', () => {
+    const plano = gerarPlano({ progresso: curriculo(48, 8) })
+    for (const a of plano.aulas) {
+      expect(a.itens).toHaveLength(ITENS_POR_AULA)
+    }
+  })
+
+  it('cobre 50 dos 56; a sobra vai para o aulao, nao para o lixo', () => {
+    // Decisao do aluno: respeitar os 60 minutos e mandar o excedente para os
+    // auloes de revisao da turma. A sobra deixou de ser buraco no preparo.
     const progresso = curriculo(48, 8)
     const plano = gerarPlano({ progresso })
-    const noPlano = plano.aulas.flatMap((a) => a.itens)
-    expect(noPlano).toHaveLength(progresso.length)
-    expect(plano.foraDoPlano).toEqual([])
+    const cobertos = plano.aulas.flatMap((a) => a.itens).length
+
+    expect(cobertos).toBe(10 * ITENS_POR_AULA)
+    expect(plano.foraDoPlano).toHaveLength(progresso.length - cobertos)
+    expect(cobertos + plano.foraDoPlano.length).toBe(progresso.length)
   })
 
-  it('distribui o mais igualmente possivel — diferenca maxima de 1 item', () => {
-    // 56 em 10 nao divide exato (5,6), entao "igual" de verdade nao existe: o
-    // mais proximo e seis aulas de 6 e quatro de 5.
-    const plano = gerarPlano({ progresso: curriculo(48, 8) })
-    const tamanhos = plano.aulas.map((a) => a.itens.length)
-    expect(Math.max(...tamanhos) - Math.min(...tamanhos)).toBeLessThanOrEqual(1)
-    expect(tamanhos.filter((n) => n === 6)).toHaveLength(6)
-    expect(tamanhos.filter((n) => n === 5)).toHaveLength(4)
-  })
-
-  it('as aulas mais cheias ficam no fim, onde o item custa menos', () => {
-    const tamanhos = gerarPlano({ progresso: curriculo(48, 8) }).aulas.map((a) => a.itens.length)
-    expect(tamanhos[0]).toBeLessThanOrEqual(tamanhos[tamanhos.length - 1])
-  })
-
-  it('os minutos DESCREVEM a aula, nao a limitam', () => {
-    // 6 itens crus pedem 72 min e a aula tem 60. O plano nao encolhe por isso —
-    // cortar em silencio esconderia justamente o dado que o aluno precisa levar
-    // ao professor.
+  it('cinco itens crus dao exatos 60 minutos — no limite, sem folga', () => {
+    // E a razao de serem cinco. Um sexto item cru levaria a 72.
     const plano = gerarPlano({ progresso: curriculo(48, 8, 0) })
-    expect(plano.aulas.some((a) => a.minutosEstimados > MINUTOS_POR_AULA)).toBe(true)
+    for (const a of plano.aulas) {
+      expect(a.minutosEstimados).toBe(MINUTOS_POR_AULA)
+    }
   })
 
-  it('com dominio suficiente, nenhuma aula estoura os 60 min', () => {
-    // Limiar calculado: dominio medio 0,29 para a aula de 6 itens caber.
-    const plano = gerarPlano({ progresso: curriculo(48, 8, 0.5) })
-    for (const a of plano.aulas) {
-      expect(a.minutosEstimados).toBeLessThanOrEqual(MINUTOS_POR_AULA)
-    }
+  it('estudar sobra tempo na aula, em vez de encolher a pauta', () => {
+    const cru = gerarPlano({ progresso: curriculo(48, 8, 0) })
+    const estudado = gerarPlano({ progresso: curriculo(48, 8, 0.5) })
+
+    expect(estudado.aulas[0].itens).toHaveLength(ITENS_POR_AULA)
+    expect(estudado.aulas[0].minutosEstimados).toBeLessThan(cru.aulas[0].minutosEstimados)
   })
 
   it('nao repete nem perde item entre plano e fora do plano', () => {
@@ -142,35 +140,19 @@ describe('gerarPlano', () => {
     }
   })
 
-  it('a reserva de repescagem nao participa mais da geracao', () => {
-    // Ela virou apenas a folga esperada ao julgar se a pauta do dia estourou.
-    // Se ainda encolhesse a aula 1, o total coberto seria menor que o curriculo.
-    const progresso = curriculo(48, 8)
-    const plano = gerarPlano({ progresso })
-    expect(plano.aulas.flatMap((a) => a.itens)).toHaveLength(progresso.length)
+  it('a reserva de repescagem nao participa da geracao — todas as aulas iguais', () => {
+    const plano = gerarPlano({ progresso: curriculo(48, 8) })
+    const tamanhos = new Set(plano.aulas.map((a) => a.itens.length))
+    expect([...tamanhos]).toEqual([ITENS_POR_AULA])
   })
 
-  it('estudar encurta as aulas; a cobertura ja era total nos dois casos', () => {
-    const cru = gerarPlano({ progresso: curriculo(48, 8, 0) })
-    const estudado = gerarPlano({ progresso: curriculo(48, 8, 0.8) })
-
-    expect(estudado.minutosDeConteudo).toBeLessThan(cru.minutosDeConteudo)
-    expect(cru.foraDoPlano).toEqual([])
-    expect(estudado.foraDoPlano).toEqual([])
-  })
-
-  it('com menos aulas que saidas, as saidas excedentes sobram — e aparecem', () => {
-    // Consequencia da regra "uma saida por aula": com 4 aulas para 8 saidas, so
-    // 4 saidas tem vez e as outras 4 nao entram. Nao e perda silenciosa — elas
-    // saem em foraDoPlano, e a conta sempre fecha. Com o pacote real (10 aulas,
-    // 8 saidas) isso nao acontece.
-    const progresso = curriculo(48, 8)
-    const plano = gerarPlano({ progresso, totalAulas: 4 })
-    const cobertos = plano.aulas.flatMap((a) => a.itens).length
-
-    expect(plano.foraDoPlano).toHaveLength(4)
-    expect(plano.foraDoPlano.every((i) => i.moduloId === 'mod-saidas')).toBe(true)
-    expect(cobertos + plano.foraDoPlano.length).toBe(progresso.length)
+  it('a conta sempre fecha, com qualquer numero de aulas', () => {
+    for (const totalAulas of [1, 4, 10, 14]) {
+      const progresso = curriculo(48, 8)
+      const plano = gerarPlano({ progresso, totalAulas })
+      const cobertos = plano.aulas.flatMap((a) => a.itens).length
+      expect(cobertos + plano.foraDoPlano.length).toBe(progresso.length)
+    }
   })
 
   it('curriculo vazio nao quebra', () => {
@@ -420,10 +402,10 @@ describe('dificuldade marcada pelo aluno', () => {
     const planoFacil = gerarPlano({ progresso, dificuldades: facil })
     const planoDificil = gerarPlano({ progresso, dificuldades: dificil })
 
-    // A dificuldade encarece as aulas; ela nao mexe na cobertura, que e total.
+    // A dificuldade encarece as aulas; ela nao mexe em QUANTOS itens entram,
+    // porque a contagem por aula e fixa.
     expect(planoDificil.minutosDeConteudo).toBeGreaterThan(planoFacil.minutosDeConteudo)
-    expect(planoDificil.foraDoPlano).toEqual([])
-    expect(planoFacil.foraDoPlano).toEqual([])
+    expect(planoDificil.foraDoPlano.length).toBe(planoFacil.foraDoPlano.length)
   })
 
   it('tudo dificil e cru estoura a aula, e isso fica VISIVEL', () => {
@@ -432,7 +414,7 @@ describe('dificuldade marcada pelo aluno', () => {
     const progresso = curriculo(48, 8)
     const dificil = new Map(progresso.map((p) => [p.item.id, 'dificil' as const]))
     const plano = gerarPlano({ progresso, dificuldades: dificil })
-    expect(plano.foraDoPlano).toEqual([])
+    expect(plano.aulas.every((a) => a.itens.length === ITENS_POR_AULA)).toBe(true)
     expect(plano.aulas.some((a) => a.minutosEstimados > MINUTOS_POR_AULA)).toBe(true)
   })
 
@@ -449,5 +431,79 @@ describe('dificuldade marcada pelo aluno', () => {
     const semMarca = saldoDoPacote(aulas, progresso)
     const comMarca = saldoDoPacote(aulas, progresso, MINUTOS_POR_AULA, dificil)
     expect(comMarca.minutosNecessarios).toBeGreaterThan(semMarca.minutosNecessarios)
+  })
+})
+
+describe('auloesDoPacote', () => {
+  it('divide entre os dois auloes o que nao cabe nas particulares', () => {
+    const progresso = curriculo(48, 8)
+    const plano = gerarPlano({ progresso })
+    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano })
+
+    expect(auloes).toHaveLength(2)
+    const total = auloes.flatMap((a) => a.itens).length
+    expect(total).toBe(plano.foraDoPlano.length)
+    // 6 itens em 2 auloes: 3 e 3.
+    expect(auloes.map((a) => a.itens.length)).toEqual([3, 3])
+  })
+
+  it('nenhum item aparece nos dois auloes', () => {
+    const plano = gerarPlano({ progresso: curriculo(48, 8) })
+    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano })
+    const ids = auloes.flatMap((a) => a.itens.map((i) => i.id))
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('separa reforco de item novo — sao coisas diferentes', () => {
+    // `itens` nunca foi visto com o professor; `reforco` foi visto e nao fixou.
+    // Juntar os dois esconderia do aluno qual dos dois problemas ele tem.
+    const progresso = curriculo(48, 8, 0.2).map((p) => ({ ...p, dominio: 'visto' as const }))
+    const plano = gerarPlano({ progresso })
+    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano, progresso })
+
+    const novos = auloes.flatMap((a) => a.itens.map((i) => i.id))
+    const reforco = auloes.flatMap((a) => a.reforco.map((i) => i.id))
+    expect(reforco.length).toBeGreaterThan(0)
+    // Nenhum item esta nas duas listas.
+    expect(novos.some((id) => reforco.includes(id))).toBe(false)
+  })
+
+  it('item NUNCA estudado nao entra como reforco', () => {
+    // Sem isso, o curriculo intocado joga os 50 itens da particular na lista de
+    // reforco: verdade trivial que enche a tela e faz o aluno parar de ler.
+    const progresso = curriculo(48, 8, 0) // pontuacao 0 e dominio nao_iniciado
+    const plano = gerarPlano({ progresso })
+    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano, progresso })
+    expect(auloes.flatMap((a) => a.reforco)).toEqual([])
+  })
+
+  it('estudar e ainda estar fraco SIM entra como reforco', () => {
+    const progresso = curriculo(48, 8, 0.3).map((p) => ({ ...p, dominio: 'aprendendo' as const }))
+    const plano = gerarPlano({ progresso })
+    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano, progresso })
+    expect(auloes.flatMap((a) => a.reforco).length).toBeGreaterThan(0)
+  })
+
+  it('item dominado nao vai para reforco', () => {
+    const progresso = curriculo(48, 8, 1)
+    const plano = gerarPlano({ progresso })
+    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano, progresso })
+    expect(auloes.flatMap((a) => a.reforco)).toEqual([])
+  })
+
+  it('sem progresso, devolve so os itens que nao couberam', () => {
+    const plano = gerarPlano({ progresso: curriculo(48, 8) })
+    const auloes = auloesDoPacote({ foraDoPlano: plano.foraDoPlano })
+    expect(auloes.every((a) => a.reforco.length === 0)).toBe(true)
+  })
+
+  it('sem sobra e sem fraqueza, os auloes ficam vazios mas existem', () => {
+    const auloes = auloesDoPacote({ foraDoPlano: [], progresso: [] })
+    expect(auloes).toHaveLength(2)
+    expect(auloes.every((a) => a.itens.length === 0 && a.reforco.length === 0)).toBe(true)
+  })
+
+  it('zero auloes devolve lista vazia', () => {
+    expect(auloesDoPacote({ foraDoPlano: [], quantidade: 0 })).toEqual([])
   })
 })

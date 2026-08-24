@@ -2,7 +2,8 @@
  * Aulas particulares — RF-07.
  *
  * Pacote de 10 aulas de 60 minutos com o Prof. Joao Eduardo, cobrindo as Secoes
- * 4 e 5 (56 itens ativos: 48 guardas, 8 saidas). Todos os 56 entram no plano.
+ * 4 e 5 (56 itens ativos: 48 guardas, 8 saidas). Cinco itens por aula cobrem 50;
+ * os 6 restantes vao para os auloes de revisao da turma.
  *
  * DECISOES QUE MOLDARAM ESTE MODULO (tomadas pelo aluno no planejamento):
  *
@@ -33,7 +34,7 @@
  * Modulo puro: sem React, sem I/O.
  */
 
-import { dividirEmPartes, paresDoCirculo, tamanhosEquilibrados } from '../domain/circulo'
+import { dividirEmPartes, paresDoCirculo } from '../domain/circulo'
 import type { AulaParticular, Dificuldade, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
 import type { ProgressoDeItem } from './progresso'
 
@@ -46,24 +47,29 @@ import type { ProgressoDeItem } from './progresso'
 export const MINUTOS_POR_AULA = 60
 
 /**
- * COBERTURA TOTAL: o plano distribui TODOS os itens ativos pelas aulas, o mais
- * igualmente possivel, em vez de usar uma contagem fixa por aula.
+ * Itens por aula particular — decisao do aluno, e a contagem que manda.
  *
- * 56 itens em 10 aulas nao divide exato (5,6 por aula), entao "igual" de
- * verdade nao existe aqui — o mais proximo e seis aulas com 6 itens e quatro
- * com 5, e e isso que `tamanhosEquilibrados` devolve. A vantagem sobre a
- * contagem fixa de 5 e direta: nada fica fora do pacote.
+ * Cinco itens crus dao exatos 60 minutos, que e a duracao da aula. Antes o plano
+ * distribuia os 56 itens igualmente (seis aulas de 6, quatro de 5), o que cobria
+ * tudo mas estourava o horario em seis aulas. O aluno preferiu o contrario:
+ * respeitar os 60 minutos e mandar a sobra para o aulao.
  *
- * As aulas de 6 ficam no FIM de proposito (ver `tamanhosEquilibrados`): o custo
- * de um item cai conforme o aluno estuda, entao a carga maior vai para quando
- * cada item ja sai mais barato.
- *
- * O tempo continua sendo o limite real, e ele nao e resolvido pela contagem:
- * 6 itens crus pedem 72 minutos e a aula tem 60. O limiar e dominio medio de
- * 0,29 para a aula de 6 caber, e 0,18 para o pacote inteiro. Baixo, mas nao
- * zero — e por isso o aviso de estouro continua existindo.
+ * A conta: 5 x 10 = 50 vagas para 56 itens ativos, logo 6 itens nao passam pela
+ * aula particular. Isso deixou de ser perda quando o aulao entrou no desenho —
+ * ver AULOES abaixo.
  */
-export const ITENS_POR_AULA_MEDIA = 5.6
+export const ITENS_POR_AULA = 5
+
+/**
+ * Aulões de revisão da turma. Dois dias, e eles mudam o que "fora do pacote"
+ * significa: o item que nao cabe na aula particular nao fica sem cobertura, ele
+ * tem outro lugar. Sem isso, o corte de 6 itens seria buraco no preparo.
+ *
+ * Recebem duas coisas: os itens que nao couberam nas 10 particulares (calculo
+ * deterministico, feito aqui) e o que o aluno nao levou a 100% nas particulares
+ * (isso so se sabe na hora, e vem do eixo de dominio).
+ */
+export const AULOES = 2
 
 /**
  * Minutos guardados em cada aula para repescagem (decisao 3). Dois itens ja
@@ -151,9 +157,8 @@ export interface AulaPlanejada {
 export interface PlanoDeAulas {
   aulas: AulaPlanejada[]
   /**
-   * Itens que nao couberam no pacote. Com cobertura total isto fica vazio no
-   * caso normal; sobra apenas se o numero de aulas for reduzido a ponto de nao
-   * haver vaga para tudo.
+   * Itens que nao couberam nas aulas particulares. NAO sao itens perdidos: e a
+   * entrada dos auloes de revisao (ver `auloesDoPacote`).
    */
   foraDoPlano: TechniqueItem[]
   minutosDeConteudo: number
@@ -220,22 +225,21 @@ function sequenciaDeGuardas(porPosicao: Map<string, TechniqueItem[]>): Technique
  * — saidas desde a aula 1, para nao ficarem isoladas no fim, que e onde elas
  * costumam ser negligenciadas.
  *
- * A CONTAGEM manda, nao o orcamento de minutos. Isso e decisao do aluno, e
- * muda o papel dos minutos no modulo: eles deixam de LIMITAR a aula e passam a
- * DESCREVER o que ela vai custar. Quando os itens crus pedem mais que a duracao
- * da aula, o plano nao encolhe — a tela avisa (ver `estourou` em pautaDaAula).
- * Cortar em silencio para caber seria esconder do aluno exatamente o dado que
- * ele precisa levar ao professor.
+ * Cinco itens por aula, que e o que cabe em 60 minutos com tudo cru. O que
+ * sobrar do curriculo vai para os auloes de revisao (ver `auloesDoPacote`), e e
+ * por isso que a sobra deixou de ser um problema a resolver aqui.
  */
 export function gerarPlano({
   progresso,
   totalAulas = 10,
+  itensPorAula = ITENS_POR_AULA,
   minutosPorAula = MINUTOS_POR_AULA,
   moduloDeSaidas = 'mod-saidas',
   dificuldades = SEM_DIFICULDADE,
 }: {
   progresso: ProgressoDeItem[]
   totalAulas?: number
+  itensPorAula?: number
   minutosPorAula?: number
   moduloDeSaidas?: string
   dificuldades?: DificuldadePorItem
@@ -259,17 +263,13 @@ export function gerarPlano({
   const filaDeGuardas = sequenciaDeGuardas(guardasPorPosicao)
   const filaDeSaidas = [...saidas]
 
-  // Quantos itens cada aula recebe para TODOS serem cobertos, o mais
-  // igualmente possivel, com as aulas mais cheias no fim.
-  const tamanhos = tamanhosEquilibrados(filaDeSaidas.length + filaDeGuardas.length, totalAulas)
-
   const aulas: AulaPlanejada[] = []
   let iGuarda = 0
   let iSaida = 0
 
   for (let n = 1; n <= totalAulas; n++) {
     const itens: TechniqueItem[] = []
-    const alvo = tamanhos[n - 1] ?? 0
+    const alvo = itensPorAula
 
     // Uma saida por aula, enquanto houver. Quando as saidas acabam (sao 8 para
     // 10 aulas), a vaga vira mais uma guarda em vez de sobrar vazia.
@@ -303,6 +303,72 @@ export function gerarPlano({
     minutosDeConteudo: Math.round(minutosDeConteudo),
     minutosDisponiveis: totalAulas * minutosPorAula,
   }
+}
+
+/** Um aulao de revisao da turma. */
+export interface AulaoPlanejado {
+  numero: number
+  /**
+   * Itens que nao passaram por aula particular e precisam ser cobertos aqui.
+   * Deterministico: sai da sobra do plano.
+   */
+  itens: TechniqueItem[]
+  /**
+   * Itens que passaram por aula particular mas o aluno ainda nao domina. Nao e
+   * calculado com antecedencia porque depende de onde ele estiver no dia — a
+   * tela resolve isso na hora.
+   */
+  reforco: TechniqueItem[]
+}
+
+/**
+ * Distribui entre os auloes o que nao cabe nas aulas particulares.
+ *
+ * Reaproveita `tamanhosEquilibrados`: 6 itens em 2 auloes dao 3 e 3. Os auloes
+ * mais cheios ficariam no fim pela regra padrao, mas com dois dias iguais em
+ * duracao isso nao tem efeito pratico — o que importa e a divisao parelha.
+ */
+export function auloesDoPacote({
+  foraDoPlano,
+  progresso,
+  quantidade = AULOES,
+  dominioMinimo = 0.7,
+}: {
+  foraDoPlano: TechniqueItem[]
+  /** Para achar o que passou pela aula mas ficou fraco. */
+  progresso?: ProgressoDeItem[]
+  quantidade?: number
+  /** Abaixo disto o item conta como "nao peguei 100%". */
+  dominioMinimo?: number
+}): AulaoPlanejado[] {
+  if (quantidade <= 0) return []
+
+  const idsFora = new Set(foraDoPlano.map((i) => i.id))
+  const partes = dividirEmPartes(foraDoPlano, quantidade)
+
+  /**
+   * Itens fracos que JA passaram por aula particular. Ficam separados dos de
+   * cima porque a natureza e diferente: um nunca foi visto com o professor, o
+   * outro foi visto e nao fixou.
+   *
+   * `dominio !== 'nao_iniciado'` e o que faz a distincao valer. Sem isso, com o
+   * curriculo ainda intocado TODOS os 50 itens da aula particular entram como
+   * reforco — verdade trivial e inutil, que enche a tela e faz o aluno parar de
+   * ler a lista. Item que ninguem estudou nao "deixou de fixar".
+   */
+  const fracos = (progresso ?? [])
+    .filter(
+      (p) =>
+        !idsFora.has(p.item.id) && p.dominio !== 'nao_iniciado' && p.pontuacao < dominioMinimo,
+    )
+    .map((p) => p.item)
+  const reforcos = dividirEmPartes(fracos, quantidade)
+
+  return Array.from({ length: quantidade }, (_, i) => ({
+    numero: i + 1,
+    itens: partes[i] ?? [],
+    reforco: reforcos[i] ?? [],
+  }))
 }
 
 // ---------------------------------------------------------------------------

@@ -11,7 +11,9 @@
 
 import { useMemo, useState } from 'react'
 import {
+  AULOES,
   MINUTOS_POR_AULA,
+  auloesDoPacote,
   gerarPlano,
   pautaDaAula,
   repescagensPendentes,
@@ -76,6 +78,10 @@ export function Aulas({
     [progresso, aulas.length, dificuldades],
   )
   const repescagens = useMemo(() => repescagensPendentes(validacoes), [validacoes])
+  const auloes = useMemo(
+    () => auloesDoPacote({ foraDoPlano: plano.foraDoPlano, progresso }),
+    [plano.foraDoPlano, progresso],
+  )
   const saldo = useMemo(
     () => saldoDoPacote(aulas, progresso, MINUTOS_POR_AULA, dificuldades),
     [aulas, progresso, dificuldades],
@@ -225,21 +231,64 @@ export function Aulas({
         )}
       </div>
 
-      {/* ---------- O que nao cabe ---------- */}
+      {/* ---------- Auloes de revisao: destino do que nao cabe ---------- */}
       {plano.foraDoPlano.length > 0 && (
         <div className="card">
-          <h3 className="detalhe-secao">Fora do pacote ({plano.foraDoPlano.length})</h3>
+          <h3 className="detalhe-secao">
+            Aulões de revisão ({AULOES} dias)
+          </h3>
           <p className="instrucao">
-            Não há vaga para estes itens nas {aulas.length} aulas. O conteúdo avançado sai primeiro, por decisão
-            sua — eles ficam para a aula regular de seg/qua ou para um pacote seguinte.
+            Cinco itens por aula fecham os {MINUTOS_POR_AULA} min, e sobram{' '}
+            <strong>{plano.foraDoPlano.length} itens</strong> das {aulas.length} particulares. Eles não ficam
+            sem cobertura: vão para os aulões da turma. O conteúdo avançado é o que sobra, por decisão sua.
           </p>
-          <ul className="resposta-lista">
-            {plano.foraDoPlano.map((i) => (
-              <li key={i.id}>
-                {rotulo(i)} <small>— {i.posicao}</small>
-              </li>
-            ))}
-          </ul>
+
+          {auloes.map((aulao) => (
+            <div key={aulao.numero} className="aulao">
+              <h4 className="aulao-titulo">
+                Aulão {aulao.numero}
+                <small>
+                  {aulao.itens.length} {aulao.itens.length === 1 ? 'item novo' : 'itens novos'}
+                  {aulao.reforco.length > 0 && <> · {aulao.reforco.length} de reforço</>}
+                </small>
+              </h4>
+
+              {aulao.itens.length > 0 && (
+                <ul className="resposta-lista">
+                  {aulao.itens.map((i) => (
+                    <li key={i.id}>
+                      {rotulo(i)} <small>— {i.posicao}</small>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {aulao.reforco.length > 0 && (
+                <>
+                  <p className="instrucao instrucao--apertada">
+                    Reforço — passou na particular e ainda não fixou:
+                  </p>
+                  <ul className="resposta-lista resposta-lista--fraca">
+                    {aulao.reforco.slice(0, 8).map((i) => (
+                      <li key={i.id}>
+                        {rotulo(i)} <small>— {i.posicao}</small>
+                      </li>
+                    ))}
+                    {aulao.reforco.length > 8 && (
+                      <li>
+                        <small>e mais {aulao.reforco.length - 8}…</small>
+                      </li>
+                    )}
+                  </ul>
+                </>
+              )}
+            </div>
+          ))}
+
+          <p className="instrucao" style={{ marginBottom: 0 }}>
+            A lista de reforço muda conforme você estuda — ela mostra o que ainda não está firme{' '}
+            <strong>hoje</strong>, não o que estará no dia do aulão.
+          </p>
         </div>
       )}
 

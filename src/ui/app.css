@@ -1233,3 +1233,40 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+
+/* ---------------------------------------------------------------------------
+   Aulões de revisão
+   --------------------------------------------------------------------------- */
+
+.aulao {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  padding: var(--espacamento-base);
+  margin-bottom: var(--espacamento-base);
+}
+
+.aulao-titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 var(--espacamento-base);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.aulao-titulo small {
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+
+.instrucao--apertada {
+  margin-top: var(--espacamento-base);
+  margin-bottom: 4px;
+}
+
+/* Reforco se distingue do item novo por peso, nao so por posicao na lista: os
+   dois problemas sao diferentes e a tela nao deve deixar confundir. */
+.resposta-lista--fraca li {
+  color: var(--cor-texto-suave);
+}
