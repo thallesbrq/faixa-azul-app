@@ -5,10 +5,15 @@
  * camadas de dominio e aplicacao, que nao sabem que React existe.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { montarFilaDoDia, moduloDeMaiorRisco } from '../application/fila'
 import { registrarRevisao, revisadosHoje, taxaDeAcertoSemDica } from '../application/revisar'
 import { atribuir } from '../application/montagem'
+import {
+  codificarMontagem,
+  codigoDoHash,
+  decodificarMontagem,
+} from '../domain/compartilhar'
 import { criarSessao, resumoDoTreino } from '../application/treino'
 import type { EntradaRevisao } from '../application/revisar'
 import { gerarBaralho } from '../domain/cards'
@@ -247,6 +252,54 @@ export function useApp() {
     [estado, atualizar],
   )
 
+  /**
+   * Montagem recebida por link, se houver.
+   *
+   * Lida UMA VEZ, na montagem do componente, e nunca aplicada sozinha: importar
+   * sobrescreve o arranjo atual, e sobrescrever trabalho de alguem sem pedir e
+   * inaceitavel. A UI mostra o que vai acontecer e espera o gesto.
+   */
+  const lerDoHash = useCallback(() => {
+    const codigo = codigoDoHash(window.location.hash)
+    if (!codigo) return null
+    // Devolve o resultado como ele vem: ja e uma uniao discriminada por `ok`.
+    return decodificarMontagem(codigo, ITENS.filter((i) => i.ativo))
+  }, [])
+
+  const [recebida, setRecebida] = useState(lerDoHash)
+
+  /**
+   * Escuta `hashchange` alem de ler na montagem.
+   *
+   * Sem isto, o recurso falha justamente no caso mais comum: o app instalado
+   * como PWA ja esta aberto, o professor manda o link, e abrir um link que muda
+   * SO o fragmento nao recarrega a pagina — o inicializador do estado nunca roda
+   * de novo e o aviso nunca aparece. Encontrado testando o fluxo de verdade, e
+   * nao pelo caminho que eu tinha imaginado.
+   */
+  useEffect(() => {
+    const aoMudar = () => setRecebida(lerDoHash())
+    window.addEventListener('hashchange', aoMudar)
+    return () => window.removeEventListener('hashchange', aoMudar)
+  }, [lerDoHash])
+
+  /** Limpa o fragmento sem recarregar, para o link nao reaparecer a cada volta. */
+  const limparHash = useCallback(() => {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    setRecebida(null)
+  }, [])
+
+  const importarRecebida = useCallback(() => {
+    if (recebida?.ok) definirAtribuicao(recebida.atribuicao)
+    limparHash()
+  }, [recebida, definirAtribuicao, limparHash])
+
+  /** Codigo compartilhavel do arranjo atual. */
+  const codigoDaMontagem = useMemo(
+    () => codificarMontagem(itens.filter((i) => i.ativo), atribuicao),
+    [itens, atribuicao],
+  )
+
   /** Aulas do seed com as alteracoes do aluno aplicadas. */
   const aulas = useMemo(() => {
     const alteracoes = new Map(estado.aulas.map((a) => [a.numero, a]))
@@ -275,6 +328,10 @@ export function useApp() {
     marcarAulaRealizada,
     registrarSessao,
     atribuicao,
+    codigoDaMontagem,
+    recebida,
+    importarRecebida,
+    descartarRecebida: limparHash,
     atribuirItem,
     definirAtribuicao,
     anotarItem,

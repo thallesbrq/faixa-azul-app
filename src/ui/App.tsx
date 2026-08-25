@@ -4,6 +4,7 @@ import type { Tela } from './components/Navegacao'
 import { Aulas } from './screens/Aulas'
 import { Curriculo } from './screens/Curriculo'
 import { Montar } from './screens/Montar'
+import { EXPLICACAO_DA_RECUSA } from '../domain/compartilhar'
 import { Hoje } from './screens/Hoje'
 import { Progresso } from './screens/Progresso'
 import { Simulado } from './screens/Simulado'
@@ -16,6 +17,17 @@ export function App() {
   const app = useApp()
   const [tela, setTela] = useState<Tela>('hoje')
   const [revisando, setRevisando] = useState(false)
+  /**
+   * Em variavel local so por legibilidade — o valor e usado varias vezes no
+   * bloco abaixo.
+   *
+   * Nota de historia: isto comecou como contorno para o estreitamento da uniao
+   * discriminada nao funcionar. A causa real nao era o TypeScript e sim o
+   * projeto estar sem `strict` no tsconfig, o que desliga `strictNullChecks` e
+   * enfraquece o estreitamento. Ligado o strict, o estreitamento passou a
+   * funcionar e o contorno virou apenas estilo.
+   */
+  const recebida = app.recebida
   const [registrandoTreino, setRegistrandoTreino] = useState(false)
 
   return (
@@ -33,6 +45,41 @@ export function App() {
           <span className="academia">Preparação para a graduação</span>
         </div>
       </header>
+
+      {/* Montagem recebida por link. Nunca aplicada sozinha: importar
+          sobrescreve o arranjo atual, e a tela diz o que vai acontecer antes. */}
+      {recebida && (
+        <div className={recebida.ok ? 'card card--destaque' : 'card'}>
+          {recebida.ok ? (
+            <>
+              <h3 className="detalhe-secao">Montagem recebida</h3>
+              <p className="instrucao">
+                Alguém compartilhou uma grade com <strong>{recebida.atribuidos} técnicas</strong>{' '}
+                distribuídas. Importar <strong>substitui</strong> o arranjo que está no seu aparelho.
+              </p>
+              <div className="acoes">
+                <button className="botao botao--principal" onClick={app.importarRecebida}>
+                  Importar
+                </button>
+                <button className="botao botao--secundario" onClick={app.descartarRecebida}>
+                  Descartar
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="detalhe-secao">Não foi possível importar</h3>
+              <p className="aviso">
+                <span aria-hidden="true">⚠️</span>
+                <span>{EXPLICACAO_DA_RECUSA[recebida.motivo]}</span>
+              </p>
+              <button className="botao botao--secundario" onClick={app.descartarRecebida}>
+                Entendi
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {registrandoTreino ? (
         <Treino
@@ -101,6 +148,7 @@ export function App() {
                   aoAtribuir={app.atribuirItem}
                   aoDefinirAtribuicao={app.definirAtribuicao}
                   aoAnotar={app.anotarItem}
+                  codigoDaMontagem={app.codigoDaMontagem.codigo}
                 />
               }
             />

@@ -17,6 +17,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { linkDaMontagem } from '../../domain/compartilhar'
 import { ATRIBUTO_ALVO, useArrastar } from '../useArrastar'
 import {
   atribuicaoDoPlano,
@@ -53,6 +54,8 @@ export interface MontarProps {
     itemId: string,
     mudanca: { dificuldade?: Dificuldade; video?: string; videoTitulo?: string },
   ) => void
+  /** Codigo curto do arranjo atual, para mandar a quem precisa ver. */
+  codigoDaMontagem: string
 }
 
 function rotulo(item: TechniqueItem): string {
@@ -174,7 +177,9 @@ export function Montar({
   aoAtribuir,
   aoDefinirAtribuicao,
   aoAnotar,
+  codigoDaMontagem,
 }: MontarProps) {
+  const [avisoDoLink, setAvisoDoLink] = useState<string | null>(null)
   /** Item escolhido, esperando o toque na aula de destino. */
   const [selecionado, setSelecionado] = useState<string | null>(null)
   const [editandoVideo, setEditandoVideo] = useState<string | null>(null)
@@ -207,6 +212,31 @@ export function Montar({
     const plano = gerarPlano({ progresso, dificuldades })
     aoDefinirAtribuicao(atribuicaoDoPlano(plano.aulas))
     setSelecionado(null)
+  }
+
+  /**
+   * Compartilha o arranjo como link.
+   *
+   * O codigo vai no FRAGMENTO da URL, que nao e enviado ao servidor em
+   * requisicao nenhuma — o arranjo viaja pela mensagem, nao pela rede do app.
+   *
+   * Tenta a folha de compartilhamento do sistema primeiro (e o gesto natural no
+   * celular) e cai para a area de transferencia quando ela nao existe.
+   */
+  async function compartilhar() {
+    const link = linkDaMontagem(window.location.href, codigoDaMontagem)
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Montagem das aulas', text: 'Grade das 10 aulas', url: link })
+        return
+      }
+      await navigator.clipboard.writeText(link)
+      setAvisoDoLink('Link copiado — cole na mensagem para o professor.')
+    } catch {
+      // Recusa do usuario na folha de compartilhamento cai aqui tambem, e nesse
+      // caso nao ha nada a avisar. Mostrar o link cru serve para os dois casos.
+      setAvisoDoLink(link)
+    }
   }
 
   function limpar() {
@@ -294,6 +324,9 @@ export function Montar({
         )}
 
         <div className="acoes">
+          <button className="botao botao--secundario" onClick={compartilhar}>
+            Compartilhar arranjo
+          </button>
           <button className="botao botao--secundario" onClick={sugerir}>
             Sugerir distribuição
           </button>
@@ -301,6 +334,11 @@ export function Montar({
             Limpar tudo
           </button>
         </div>
+        {avisoDoLink && (
+          <p className="instrucao mt-link" style={{ wordBreak: 'break-all' }}>
+            {avisoDoLink}
+          </p>
+        )}
         <p className="instrucao" style={{ marginBottom: 0 }}>
           A sugestão usa o método do círculo: cada guarda em duas aulas afastadas, para revê-la quando já
           começou a sair da memória. Serve de ponto de partida — mexa por cima.

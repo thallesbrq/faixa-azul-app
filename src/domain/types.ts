@@ -82,7 +82,14 @@ export interface TechniqueItem {
   /** Nome da variacao (ex.: "Raspagem de tesoura"). Pode estar vazio se nao validado. */
   nome: string
   aliases: string[]
-  kind?: TechniqueKind
+  /**
+   * Tipo da tecnica. OBRIGATORIO: todos os 81 itens importados tem, e o app
+   * depende dele para o papel (atacando/passando/defendendo) e para a etiqueta
+   * nos documentos. Era opcional por frouxidao do import, e o tipo mais frouxo
+   * que os dados custava tratamento de `undefined` em cinco lugares onde ele
+   * nunca acontece. Ha teste no seed garantindo que continue verdade.
+   */
+  kind: TechniqueKind
   sideMode: SideMode
   safetyLevel: SafetyLevel
   validationStatus: ValidationStatus

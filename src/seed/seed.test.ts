@@ -108,6 +108,14 @@ describe('foco declarado nas Secoes 4 e 5', () => {
     expect(6 * 6 + 4 * 5).toBe(ativos.length)
   })
 
+  it('TODO item tem kind — o tipo exige, e o seed precisa sustentar', () => {
+    // `kind` deixou de ser opcional no tipo porque nenhum item vive sem ele. Se
+    // um import futuro trouxer item sem kind, este teste falha antes de a tela
+    // mostrar etiqueta vazia.
+    const semKind = ITENS.filter((i) => !i.kind)
+    expect(semKind.map((i) => i.id)).toEqual([])
+  })
+
   it('as quatro alternativas do Complexo estao ativas', () => {
     const doComplexo = ativos.filter((i) => i.posicao.startsWith('Complexo Moderno'))
     expect(new Set(doComplexo.map((i) => i.categoria))).toEqual(
