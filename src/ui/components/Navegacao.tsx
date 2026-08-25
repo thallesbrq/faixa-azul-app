@@ -7,12 +7,23 @@
  * tecnica, onde a correcao do professor e registrada.
  */
 
-export type Tela = 'hoje' | 'curriculo' | 'aulas' | 'simulado' | 'progresso'
+export type Tela = 'aulas' | 'hoje' | 'curriculo' | 'simulado' | 'progresso'
 
+/**
+ * A ORDEM AQUI E A ORDEM NA BARRA — e agora ela concorda com a tela que abre.
+ *
+ * Aulas passou para primeiro por decisao do aluno. Antes de mudar isto, Aulas era
+ * a tela inicial mas aparecia em terceiro na barra: quem abrisse o app cairia
+ * numa aba do meio, com a marca de ativo longe do canto onde o dedo espera. Era
+ * uma incoerencia entre duas decisoes tomadas em momentos diferentes.
+ *
+ * A ordem do tipo `Tela` acompanha por leitura, nao por necessidade — a uniao nao
+ * tem ordem semantica.
+ */
 const ABAS: { id: Tela; rotulo: string; icone: string }[] = [
+  { id: 'aulas', rotulo: 'Aulas', icone: '🥋' },
   { id: 'hoje', rotulo: 'Hoje', icone: '🎯' },
   { id: 'curriculo', rotulo: 'Currículo', icone: '📋' },
-  { id: 'aulas', rotulo: 'Aulas', icone: '🥋' },
   { id: 'simulado', rotulo: 'Simulado', icone: '⏱️' },
   { id: 'progresso', rotulo: 'Progresso', icone: '📈' },
 ]
