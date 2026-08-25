@@ -13,7 +13,33 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      /**
+       * `prompt`, nao `autoUpdate` — o app AVISA e o aluno decide.
+       *
+       * Um service worker novo instala e fica em estado `waiting`: vivo, mas sem
+       * controlar a pagina, porque a versao antiga ainda tem cliente aberto.
+       * `autoUpdate` chamava `skipWaiting()` sozinho, e isso dava duas coisas
+       * ruins:
+       *
+       * 1. A pagina servia o pacote ANTIGO na primeira abertura depois do deploy
+       *    e trocava na seguinte, em silencio. Quem recebesse um link de
+       *    montagem gerado por versao nova podia ver "nada acontece" sem nenhuma
+       *    explicacao na tela.
+       * 2. A troca podia acontecer no meio de uma revisao, sem aviso.
+       *
+       * O PRECO, que e real: com `prompt`, quem ignorar o aviso fica na versao
+       * antiga indefinidamente — `autoUpdate` era mais confuso mas convergia
+       * sozinho. Compensado em ./src/ui/useAtualizacao.ts, que checa de hora em
+       * hora e nao deixa o aviso desaparecer para sempre.
+       */
+      registerType: 'prompt',
+      /**
+       * O registro fica no React (`useRegisterSW`), nao num script injetado no
+       * index.html: e de la que sai o estado "tem versao nova", e o aviso
+       * precisa desse estado. Com o registro em dois lugares, o SW seria
+       * registrado duas vezes.
+       */
+      injectRegister: null,
       // RNF-02: dashboard, cartoes, conteudo e scheduler devem funcionar offline.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],

@@ -1656,3 +1656,76 @@
   border-color: var(--laranja);
   box-shadow: inset 0 0 0 2px var(--laranja);
 }
+
+/* ---------------------------------------------------------------------------
+   Aviso de versao nova / pronto para offline
+   ---------------------------------------------------------------------------
+   Nao usa `.card` de proposito. O card e o container do CONTEUDO do app, e este
+   aviso fala sobre o app em si — se ele parecesse conteudo, competiria com a
+   pauta da aula pela mesma atencao. Barra estreita, largura cheia, no topo.
+
+   As cores saem dos tokens (--laranja para acao, --verde-sucesso para
+   confirmacao). O app e de tema unico, claro — nao existe `prefers-color-scheme`
+   em tokens.css — entao nao ha variante escura aqui de proposito, e nao porque
+   ficou faltando.
+   --------------------------------------------------------------------------- */
+.versao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacamento-base);
+  padding: calc(var(--espacamento-base) * 1.5);
+  margin-bottom: calc(var(--espacamento-base) * 2);
+  border-radius: var(--raio-card);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.versao-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Sem isto, no 375px o texto empurra os botoes para fora em vez de quebrar. */
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.versao-texto span {
+  color: var(--cor-texto-suave);
+  font-size: 0.85rem;
+}
+
+.versao--nova {
+  background: var(--laranja-suave);
+  border: 1px solid var(--laranja);
+  color: var(--laranja-texto);
+}
+
+.versao--nova .versao-texto strong {
+  color: var(--laranja-texto);
+}
+
+.versao--offline {
+  background: var(--verde-suave);
+  border: 1px solid var(--verde-sucesso);
+}
+
+/* No 375px o texto ja ocupa a linha toda, entao as acoes caem para a linha de
+   baixo. Deixadas no padrao, cada botao caia numa linha propria e com largura
+   diferente do outro — o principal esticado, o secundario encolhido, o que
+   parecia defeito.
+
+   O `width: auto` NAO e redundante: `.botao--principal` tem `width: 100%`, e
+   dentro de um flex isso vira flex-basis 100% e obriga o segundo botao a quebrar
+   linha. (Removi este override uma vez chamando de CSS morto, depois de conferir
+   `.botao` e esquecer `.botao--principal`. Fica o registro: a largura do botao
+   principal vem do modificador, nao da base.) */
+.versao .acoes {
+  flex: 1 1 100%;
+}
+
+.versao .acoes .botao {
+  flex: 1 1 auto;
+  width: auto;
+}

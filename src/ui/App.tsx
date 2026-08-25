@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AvisoDeVersao } from './components/AvisoDeVersao'
 import { Navegacao } from './components/Navegacao'
 import type { Tela } from './components/Navegacao'
 import { Aulas } from './screens/Aulas'
@@ -11,10 +12,12 @@ import { Simulado } from './screens/Simulado'
 import { Revisao } from './screens/Revisao'
 import { Treino } from './screens/Treino'
 import { armazenamentoPersistente, useApp } from './useApp'
+import { useAtualizacao } from './useAtualizacao'
 import './app.css'
 
 export function App() {
   const app = useApp()
+  const atualizacao = useAtualizacao()
   const [tela, setTela] = useState<Tela>('hoje')
   const [revisando, setRevisando] = useState(false)
   /**
@@ -45,6 +48,15 @@ export function App() {
           <span className="academia">Preparação para a graduação</span>
         </div>
       </header>
+
+      {/* Antes de qualquer conteudo: se o pacote esta velho, o resto da tela
+          pode estar mentindo sobre o que o app faz. */}
+      <AvisoDeVersao
+        temAtualizacao={atualizacao.temAtualizacao}
+        prontoOffline={atualizacao.prontoOffline}
+        aoAtualizar={atualizacao.atualizar}
+        aoDispensar={atualizacao.dispensar}
+      />
 
       {/* Montagem recebida por link. Nunca aplicada sozinha: importar
           sobrescreve o arranjo atual, e a tela diz o que vai acontecer antes. */}
