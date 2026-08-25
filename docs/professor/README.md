@@ -36,7 +36,7 @@ Dois canais, de propósito em intensidades diferentes:
 | Canal | Codifica | Valores |
 |-------|----------|---------|
 | **Etiqueta saturada** | tipo de técnica (`kind`) | RASP, PASS, FINAL, SAÍDA, DEF, COSTAS |
-| **Quadradinho** | família de guarda | Fechada, Meia-guarda, Pegada de manga, Gancho, Sem pegada fixa, Pernas entrelaçadas, Posição dominada, Finalização sofrida |
+| **Quadradinho** | guarda do currículo | Guarda Fechada, Meia Guarda, Guarda Gancho, Guarda Aranha, Guarda Dela Riva, Guarda Laço, Guarda Aberta, Complexo Moderno, Saídas |
 | **Texto** | papel | eu ataco / eu passo / eu defendo |
 
 Se a família usasse fundo colorido, brigaria com a etiqueta em cima dela — dois
@@ -52,20 +52,39 @@ texto da família é omitido e o quadradinho carrega a informação sozinho — 
 
 ### Por que existem duas dimensões
 
-`familiaDaPosicao` e `papelDoKind` vivem em `src/domain/taxonomia.ts`, com teste
-provando a propriedade que as justifica: **toda família de guarda mistura atacar
-e passar.** "Guarda Fechada · Raspagem de tesoura" e "Guarda Fechada · Abrir em
-pé e passar" são lados opostos da luta com o mesmo nome de posição.
+`guardaDaPosicao` e `papelDoKind` vivem em `src/domain/taxonomia.ts`, com teste
+provando a propriedade que as justifica: **toda guarda do currículo mistura
+atacar e passar.** "Guarda Fechada · Raspagem de tesoura" e "Guarda Fechada ·
+Abrir em pé e passar" são lados opostos da luta com o mesmo nome de posição.
 
-A tabela posição → família é **explícita**, não regra de string: classificar
-guarda é conhecimento técnico. Se o professor classificar diferente, muda ali e o
-app e os documentos acompanham.
+As guardas são **exatamente as do documento da prova**. Uma versão anterior
+agrupava Aranha com Laço e Dela Riva com Gancho por família técnica — invenção
+minha, corrigida. Há teste garantindo que não voltem a ser agrupadas: inventar
+taxonomia sobre um documento que já tem a sua cria uma segunda linguagem que
+ninguém na academia fala.
+
+### Escopo: 50 itens, conferido item a item contra o PDF da banca
+
+O PDF do exame está nesta pasta. A conferência corrigiu um
+superdimensionamento: o documento traz **uma entrada única** para o complexo
+moderno — `Guarda One leg / 50-50 / Guarda X / One leg / Berimbolo` com
+`Raspada` e `Passagem` no **singular**. São alternativas: a prova pede uma
+raspagem e uma passagem de **uma** delas. A importação expandiu isso em quatro
+posições de dois itens, 8 onde a banca cobra 2.
+
+`SUBPOSICAO_DO_COMPLEXO` em `src/seed/index.ts` escolhe qual fica ativa (hoje
+`Guarda X`). As outras três **continuam no seed**, desativadas — trocar é mudar
+uma constante.
+
+Efeito: **50 itens em 10 aulas = exatos 5 por aula**, 60 minutos cada, zero
+sobra. O atrito de "56 não divide por 10" nunca precisou de solução; precisou de
+leitura da fonte.
 
 ### Balanço do plano
 
-- **Técnica:** 18 raspagens · 14 passagens · 14 finalizações · 6 saídas · 2 defesas · 2 idas às costas
-- **Família:** 11 Fechada · 9 Gancho · 8 Meia-guarda · 8 Pegada de manga · 8 Pernas entrelaçadas · 6 Posição dominada · 4 Sem pegada · 2 Finalização sofrida
-- **Papel:** 34 eu ataco · 14 eu passo · 8 eu defendo
+- **Técnica:** 15 raspagens · 11 passagens · 14 finalizações · 6 saídas · 2 defesas · 2 idas às costas
+- **Guarda:** 11 Fechada · 8 Meia Guarda · 5 Aranha · 5 Dela Riva · 4 Gancho · 4 Aberta · 3 Laço · 2 Complexo Moderno · 8 Saídas
+- **Papel:** 31 eu ataco · 11 eu passo · 8 eu defendo
 
 A versão de impressão força o tema claro (PDF escuro é ilegível no papel) e usa
 `break-inside: avoid` nos cartões, para nenhuma pauta de aula ser partida entre
