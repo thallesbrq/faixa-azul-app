@@ -55,6 +55,29 @@ export const DIAS_REGULAR: DiaUtil[] = [2, 4]
 export const HORARIO_AULA = '8h–9h'
 
 /**
+ * Primeiro dia do pacote de 10 aulas particulares: CONFIRMADO pelo aluno com o
+ * professor em 2026-08-25. Nao e mais provisorio.
+ *
+ * Estava como constante dentro da tela de Aulas, marcada "PROVISORIO... so uma
+ * referencia para o planner ter um eixo de tempo". Confirmada, virou fato da
+ * rotina e mora junto dos outros — dias, horario, feriados — em vez de dentro de
+ * um componente.
+ *
+ * E QUARTA-FEIRA, o que importa: as particulares sao seg/qua (DIAS_PARTICULAR),
+ * entao a aula 1 cai no primeiro dia possivel e o pacote comeca sem espera. Se
+ * a data mudar para um dia que nao e de aula particular, `datasDasAulas` joga a
+ * aula 1 para o proximo dia valido em vez de agendar num dia sem academia.
+ *
+ * NAO CONFUNDIR com `planoExame.provisoria`, que segue `true`: a data da PROVA
+ * continua sem marcacao do professor. Duas datas diferentes, e so uma foi
+ * confirmada.
+ *
+ * Ainda e constante, e nao campo do estado, porque nao existe tela de Ajustes.
+ * Quando existir, isto passa a ser o valor inicial dela.
+ */
+export const INICIO_DO_PACOTE = '2026-09-02'
+
+/**
  * Feriados nacionais na janela do pacote.
  *
  * Existe porque um deles conflita de verdade: 07/09/2026 (Independencia) cai

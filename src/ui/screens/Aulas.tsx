@@ -20,18 +20,11 @@ import {
   saldoDoPacote,
 } from '../../application/aulas'
 import type { AtribuicaoDeItens } from '../../application/aulas'
-import { dataLocalISO, montarPlanner } from '../../application/planner'
+import { INICIO_DO_PACOTE, dataLocalISO, montarPlanner } from '../../application/planner'
 import { progressoPorItem } from '../../application/progresso'
 import { PlannerSemanal } from '../components/PlannerSemanal'
 import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
 import type { AulaParticular } from '../../domain/types'
-
-/**
- * Primeiro dia do pacote — PROVISORIO. O aluno deixou datas e horarios em aberto
- * com o professor, entao isto e so uma referencia para o planner ter um eixo de
- * tempo. Quando as datas forem combinadas, viram campo no estado.
- */
-const INICIO_DO_PACOTE = '2026-09-02'
 
 export interface AulasProps {
   itens: TechniqueItem[]

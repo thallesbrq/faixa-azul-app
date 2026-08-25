@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DIAS_PARTICULAR,
+  FERIADOS,
+  INICIO_DO_PACOTE,
   dataLocalISO,
   datasDasAulas,
   diaDaSemana,
@@ -271,5 +274,62 @@ describe('montarPlanner', () => {
 
   it('a primeira semana comeca na segunda, mesmo o pacote comecando na quarta', () => {
     expect(p().semanas[0].inicio).toBe('2026-08-31')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Calendario CONFIRMADO do pacote — inicio 02/09/2026
+// ---------------------------------------------------------------------------
+
+describe('calendario confirmado do pacote', () => {
+  const datas = datasDasAulas({ inicio: INICIO_DO_PACOTE, quantidade: 10 })
+
+  it('a aula 1 cai no proprio dia de inicio, porque 02/09/2026 e quarta', () => {
+    // Se a data confirmada caisse num dia sem aula particular, a aula 1 iria
+    // para o proximo dia valido e o pacote comecaria depois do combinado — e o
+    // aluno descobriria isso pelo planner, nao por aviso.
+    expect(datas[0]).toBe('2026-09-02')
+    expect(diaDaSemana('2026-09-02')).toBe(3)
+    expect(DIAS_PARTICULAR).toContain(3)
+  })
+
+  it('pula 07/09 (Independencia), que cai em segunda de aula particular', () => {
+    // O feriado que motivou a lista FERIADOS existir.
+    expect(datas).not.toContain('2026-09-07')
+    expect(FERIADOS['2026-09-07']).toBeDefined()
+    expect(diaDaSemana('2026-09-07')).toBe(1)
+    // A aula 2 vai para a quarta seguinte, nao para o feriado.
+    expect(datas[1]).toBe('2026-09-09')
+  })
+
+  it('as 10 aulas cabem antes da meta provisoria da prova, com folga', () => {
+    // O conflito que o planner existe para mostrar: ritmo que termina depois da
+    // prova. Com o inicio confirmado, termina 17 dias antes.
+    expect(datas).toHaveLength(10)
+    const ultima = datas[datas.length - 1]
+    expect(ultima).toBe('2026-10-07')
+    expect(ultima < '2026-10-24').toBe(true)
+  })
+
+  it('todas as aulas caem em dia de aula particular e nenhuma em feriado', () => {
+    for (const d of datas) {
+      expect(DIAS_PARTICULAR).toContain(diaDaSemana(d))
+      expect(FERIADOS[d]).toBeUndefined()
+    }
+  })
+
+  it('o calendario inteiro, fixado — mudar dias ou feriados quebra aqui', () => {
+    expect(datas).toEqual([
+      '2026-09-02',
+      '2026-09-09',
+      '2026-09-14',
+      '2026-09-16',
+      '2026-09-21',
+      '2026-09-23',
+      '2026-09-28',
+      '2026-09-30',
+      '2026-10-05',
+      '2026-10-07',
+    ])
   })
 })
