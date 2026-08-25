@@ -751,7 +751,7 @@ export const ITENS: TechniqueItem[] = [
     "moduloId": "mod-guardas",
     "posicao": "Guarda Gancho (Butterfly)",
     "slot": "Passagem",
-    "categoria": "Passagem",
+    "categoria": "Passagens",
     "nome": "Passagem neutralizando o gancho (pressão)",
     "aliases": [
       "Passagem"
@@ -768,7 +768,7 @@ export const ITENS: TechniqueItem[] = [
     "moduloId": "mod-guardas",
     "posicao": "Guarda Gancho (Butterfly)",
     "slot": "Finalização",
-    "categoria": "Finalização",
+    "categoria": "Finalizações",
     "nome": "Guilhotina ou kimura",
     "aliases": [
       "Finalização 1 (Guilhotina/Kimura)"
@@ -819,7 +819,7 @@ export const ITENS: TechniqueItem[] = [
     "moduloId": "mod-guardas",
     "posicao": "Guarda Aranha",
     "slot": "Passagem",
-    "categoria": "Passagem",
+    "categoria": "Passagens",
     "nome": "Passagem tirando os pés dos bíceps (toureando)",
     "aliases": [
       "Passagem 1"
@@ -904,7 +904,7 @@ export const ITENS: TechniqueItem[] = [
     "moduloId": "mod-guardas",
     "posicao": "Guarda Dela Riva",
     "slot": "Passagem",
-    "categoria": "Passagem",
+    "categoria": "Passagens",
     "nome": "Passagem livrando o gancho (knee cut)",
     "aliases": [
       "Passagem"
@@ -989,7 +989,7 @@ export const ITENS: TechniqueItem[] = [
     "moduloId": "mod-guardas",
     "posicao": "Guarda Laço (Lasso Guard)",
     "slot": "Passagem",
-    "categoria": "Passagem",
+    "categoria": "Passagens",
     "nome": "Passagem livrando o braço enrolado",
     "aliases": [
       "Passagem"

@@ -29,14 +29,43 @@ validar antes da primeira aula.
   "file://$PWD/docs/professor/pautas-aulas.html"
 ```
 
-O tipo de cada técnica vem do campo `kind` do currículo (`raspagem`, `passagem`,
-`finalizacao`, `saida`, `defesa`, `costas`) — não é digitado. A etiqueta é
-identificada pelo TEXTO; a cor só ajuda a varrer a página, e nunca é a única
-pista, porque o documento é lido em papel e possivelmente por quem não
-diferencia cor bem.
+## O sistema de cores
 
-Balanço do plano: 18 raspagens, 14 passagens, 14 finalizações, 6 saídas,
-2 defesas, 2 idas às costas.
+Dois canais, de propósito em intensidades diferentes:
+
+| Canal | Codifica | Valores |
+|-------|----------|---------|
+| **Etiqueta saturada** | tipo de técnica (`kind`) | RASP, PASS, FINAL, SAÍDA, DEF, COSTAS |
+| **Quadradinho** | família de guarda | Fechada, Meia-guarda, Pegada de manga, Gancho, Sem pegada fixa, Pernas entrelaçadas, Posição dominada, Finalização sofrida |
+| **Texto** | papel | eu ataco / eu passo / eu defendo |
+
+Se a família usasse fundo colorido, brigaria com a etiqueta em cima dela — dois
+preenchimentos disputando a mesma área. Um chip e um marcador pequeno convivem
+porque ocupam papéis visuais distintos.
+
+Nenhuma cor é a única pista: a etiqueta traz a sigla e o quadradinho vem colado
+ao nome da família. O documento é lido em papel, no tatame.
+
+Quando o nome da família já está na posição (`Fechada` / `Guarda Fechada`), o
+texto da família é omitido e o quadradinho carrega a informação sozinho — 23 das
+56 linhas caem nesse caso.
+
+### Por que existem duas dimensões
+
+`familiaDaPosicao` e `papelDoKind` vivem em `src/domain/taxonomia.ts`, com teste
+provando a propriedade que as justifica: **toda família de guarda mistura atacar
+e passar.** "Guarda Fechada · Raspagem de tesoura" e "Guarda Fechada · Abrir em
+pé e passar" são lados opostos da luta com o mesmo nome de posição.
+
+A tabela posição → família é **explícita**, não regra de string: classificar
+guarda é conhecimento técnico. Se o professor classificar diferente, muda ali e o
+app e os documentos acompanham.
+
+### Balanço do plano
+
+- **Técnica:** 18 raspagens · 14 passagens · 14 finalizações · 6 saídas · 2 defesas · 2 idas às costas
+- **Família:** 11 Fechada · 9 Gancho · 8 Meia-guarda · 8 Pegada de manga · 8 Pernas entrelaçadas · 6 Posição dominada · 4 Sem pegada · 2 Finalização sofrida
+- **Papel:** 34 eu ataco · 14 eu passo · 8 eu defendo
 
 A versão de impressão força o tema claro (PDF escuro é ilegível no papel) e usa
 `break-inside: avoid` nos cartões, para nenhuma pauta de aula ser partida entre
