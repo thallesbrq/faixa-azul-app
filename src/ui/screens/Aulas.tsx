@@ -14,11 +14,12 @@ import {
   AULOES,
   MINUTOS_POR_AULA,
   auloesDoPacote,
-  gerarPlano,
   pautaDaAula,
+  planoVigente,
   repescagensPendentes,
   saldoDoPacote,
 } from '../../application/aulas'
+import type { AtribuicaoDeItens } from '../../application/aulas'
 import { dataLocalISO, montarPlanner } from '../../application/planner'
 import { progressoPorItem } from '../../application/progresso'
 import { PlannerSemanal } from '../components/PlannerSemanal'
@@ -45,11 +46,18 @@ export interface AulasProps {
   /** Data-alvo da prova, ISO — para o planner medir a folga. */
   dataAlvo: string
   /**
-   * Tela de montagem, montada por quem tem acesso ao estado. Chega pronta para
-   * esta tela nao precisar conhecer atribuicao, anotacoes nem dificuldades — ela
-   * so decide QUAL visao mostrar.
+   * Tela de montagem, montada por quem tem acesso ao estado. Chega pronta
+   * porque esta tela nao precisa conhecer anotacoes nem o callback de arrastar —
+   * ela so decide QUAL visao mostrar.
    */
   montar: React.ReactNode
+  /**
+   * A grade montada pelo professor. Esta tela PRECISA dela, e por isso o
+   * comentario acima encolheu: enquanto o plano vinha so do gerador, a tela
+   * mostrava uma grade que o professor nao montou depois de ele ter montado a
+   * dele. Aqui a montagem tem precedencia; a sugestao e fallback.
+   */
+  atribuicao: AtribuicaoDeItens
 }
 
 type Visao = 'plano' | 'planner' | 'montar'
@@ -69,6 +77,7 @@ export function Aulas({
   aoAbrirItem,
   dataAlvo,
   montar,
+  atribuicao,
 }: AulasProps) {
   const [expandida, setExpandida] = useState<number | null>(null)
   const [visao, setVisao] = useState<Visao>('plano')
@@ -81,8 +90,8 @@ export function Aulas({
   )
 
   const plano = useMemo(
-    () => gerarPlano({ progresso, totalAulas: aulas.length, dificuldades }),
-    [progresso, aulas.length, dificuldades],
+    () => planoVigente({ atribuicao, progresso, totalAulas: aulas.length, dificuldades }),
+    [atribuicao, progresso, aulas.length, dificuldades],
   )
   const repescagens = useMemo(() => repescagensPendentes(validacoes), [validacoes])
   const auloes = useMemo(
@@ -142,10 +151,40 @@ export function Aulas({
 
       {visao === 'montar' ? (
         montar
-      ) : visao === 'planner' ? (
-        <PlannerSemanal planner={planner} hoje={hoje} />
       ) : (
         <>
+          {/*
+            De onde vem a grade. Isto nao e enfeite: o Plano e o Planner sao
+            identicos nas duas fontes, e sem o rotulo o aluno nao tem como saber
+            se esta olhando a decisao do mestre ou um chute do app.
+          */}
+          {plano.fonte === 'montagem' ? (
+            plano.naoAtribuidos.length > 0 ? (
+              <p className="aviso">
+                <span aria-hidden="true">⚠️</span>
+                <span>
+                  Grade montada pelo mestre, mas <strong>{plano.naoAtribuidos.length}</strong>{' '}
+                  {plano.naoAtribuidos.length === 1 ? 'técnica ainda está' : 'técnicas ainda estão'} fora de
+                  qualquer aula. Termine em <strong>Montar</strong> antes de usar isto como plano.
+                </span>
+              </p>
+            ) : (
+              <p className="instrucao">
+                Grade montada pelo mestre — as {plano.aulas.length} aulas cobrem os{' '}
+                {plano.aulas.reduce((s, a) => s + a.itens.length, 0)} itens da prova.
+              </p>
+            )
+          ) : (
+            <p className="instrucao">
+              <strong>Sugestão do app</strong>, não a grade do mestre. Ele ainda não montou nada — abra{' '}
+              <strong>Montar</strong> para distribuir as técnicas, ou use isto como ponto de partida na conversa.
+            </p>
+          )}
+
+          {visao === 'planner' ? (
+            <PlannerSemanal planner={planner} hoje={hoje} />
+          ) : (
+            <>
 
       {/* ---------- Proxima aula: a resposta que a tela existe para dar ---------- */}
       {proxima && planoDaProxima ? (
@@ -375,10 +414,27 @@ export function Aulas({
         </ul>
       </div>
 
+      {/*
+        A nota mudava de veracidade com a fonte: chamar a grade do mestre de
+        "proposta do app" seria falso, e foi por deixar uma frase verdadeira
+        virar mentira depois de uma mudanca que o documento do professor
+        precisou de correcao.
+      */}
       <p className="rodape-nota">
-        O plano é uma <strong>proposta</strong> e se recalcula conforme você estuda: item que você já executa
-        custa menos minutos de aula, então estudar antes é o que faz o pacote cobrir a prova.
+        {plano.fonte === 'montagem' ? (
+          <>
+            A <strong>ordem</strong> e a divisão são do mestre. O que se recalcula conforme você estuda são os
+            minutos estimados: item que você já executa custa ~5 min de aula, item cru custa ~12.
+          </>
+        ) : (
+          <>
+            O plano é uma <strong>proposta</strong> e se recalcula conforme você estuda: item que você já executa
+            custa menos minutos de aula, então estudar antes é o que faz o pacote cobrir a prova.
+          </>
+        )}
       </p>
+            </>
+          )}
         </>
       )}
     </div>

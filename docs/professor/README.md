@@ -3,6 +3,16 @@
 Proposta de pauta das 10 aulas particulares, para o Prof. João Eduardo Gonçalves
 validar antes da primeira aula.
 
+> **Estes PDFs são um retrato, não a fonte da verdade.** Eles congelam a
+> distribuição que o *app* sugeriu em 2026-08-25. Desde a tela **Aulas → Montar**,
+> quem distribui os 56 itens é o professor, e é a montagem dele que o app usa no
+> Plano e no Planner (ver `planoVigente` em `src/application/aulas.ts`).
+>
+> Ou seja: depois que ele montar, **estes arquivos ficam desatualizados** e não
+> se atualizam sozinhos. Servem para o que foram feitos — abrir a conversa e
+> mostrar os requisitos da prova. A grade combinada vive no app, e viaja entre
+> os dois celulares pelo link de compartilhamento.
+
 | Arquivo | Para que serve |
 |---------|----------------|
 | `Pautas das aulas - Thalles Alvim.pdf` | **Só as pautas, 2 páginas.** Cada técnica com o tipo (raspagem, passagem, finalização, saída, defesa, costas). É o documento para levar ao tatame. |

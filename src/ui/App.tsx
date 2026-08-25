@@ -137,6 +137,7 @@ export function App() {
               dificuldades={app.dificuldades}
               dataAlvo={app.estado.planoExame.dataAlvo}
               aoMarcarRealizada={app.marcarAulaRealizada}
+              atribuicao={app.atribuicao}
               montar={
                 <Montar
                   itens={app.itens}

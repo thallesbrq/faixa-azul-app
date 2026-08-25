@@ -9,9 +9,13 @@ import {
   escolherExcedente,
   gerarPlano,
   pautaDaAula,
+  planoDaAtribuicao,
+  planoVigente,
   repescagensPendentes,
   saldoDoPacote,
 } from './aulas'
+import { atribuicaoDoPlano } from './montagem'
+import { ITENS } from '../seed'
 import type { ProgressoDeItem } from './progresso'
 import type { AulaParticular, TechniqueItem, ValidacaoDoProfessor } from '../domain/types'
 
@@ -56,6 +60,11 @@ function curriculo(guardas: number, saidas: number, pontuacao = 0): ProgressoDeI
     }),
   )
   return [...g, ...s]
+}
+
+/** Progresso zerado sobre itens REAIS do seed — para as contagens valerem. */
+function progressoDe(itens: TechniqueItem[]): ProgressoDeItem[] {
+  return itens.map((it) => prog({ item: it }))
 }
 
 describe('custoEmMinutos', () => {
@@ -573,5 +582,100 @@ describe('auloesDoPacote', () => {
 
   it('zero auloes devolve lista vazia', () => {
     expect(auloesDoPacote({ foraDoPlano: [], quantidade: 0 })).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// planoDaAtribuicao / planoVigente — a montagem do professor tem precedencia
+// ---------------------------------------------------------------------------
+
+describe('planoVigente', () => {
+  it('sem montagem, cai na sugestao do gerador e DIZ que e sugestao', () => {
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const p = planoVigente({ atribuicao: new Map(), progresso })
+    expect(p.fonte).toBe('sugestao')
+    expect(p.naoAtribuidos).toEqual([])
+    // Mesmo conteudo que o gerador produziria.
+    expect(p.aulas.flatMap((a) => a.itens).length).toBe(
+      gerarPlano({ progresso }).aulas.flatMap((a) => a.itens).length,
+    )
+  })
+
+  it('com montagem, o plano E a montagem — nao a sugestao', () => {
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const ids = progresso.map((p) => p.item.id)
+    const atribuicao = new Map([[1, [ids[7], ids[0]]]])
+    const p = planoVigente({ atribuicao, progresso })
+
+    expect(p.fonte).toBe('montagem')
+    // A ORDEM do professor, nao a do circulo: ids[7] antes de ids[0].
+    expect(p.aulas[0].itens.map((i) => i.id)).toEqual([ids[7], ids[0]])
+    expect(p.aulas[1].itens).toEqual([])
+  })
+
+  it('MONTAGEM PARCIAL nao volta para a sugestao — trocaria a grade dele sem avisar', () => {
+    // O caso que decide o comportamento: 2 de 56 atribuidos ainda e decisao do
+    // professor, e o gerador nao pode assumir o volante no meio da montagem.
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const ids = progresso.map((p) => p.item.id)
+    const p = planoVigente({ atribuicao: new Map([[3, [ids[0], ids[1]]]]), progresso })
+
+    expect(p.fonte).toBe('montagem')
+    expect(p.naoAtribuidos.length).toBe(progresso.length - 2)
+    expect(p.aulas.flatMap((a) => a.itens).length).toBe(2)
+  })
+
+  it('aula vazia na montagem conta como vazia, nao recebe preenchimento', () => {
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const ids = progresso.map((p) => p.item.id)
+    const p = planoVigente({ atribuicao: new Map([[10, [ids[0]]]]), progresso })
+    expect(p.aulas.filter((a) => a.itens.length === 0).length).toBe(9)
+  })
+
+  it('map com aulas presentes mas todas VAZIAS conta como sem montagem', () => {
+    // Depois de "Limpar tudo" o estado pode guardar as chaves sem itens; se isto
+    // contasse como montagem, a tela mostraria 10 aulas vazias como plano.
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const vazio = new Map([[1, []], [2, []]])
+    expect(planoVigente({ atribuicao: vazio, progresso }).fonte).toBe('sugestao')
+  })
+
+  it('nao vaza o bolsao para os auloes — item esquecido nao e conteudo planejado', () => {
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const ids = progresso.map((p) => p.item.id)
+    const p = planoVigente({ atribuicao: new Map([[1, [ids[0]]]]), progresso })
+    expect(p.foraDoPlano).toEqual([])
+    expect(p.naoAtribuidos.length).toBeGreaterThan(0)
+  })
+
+  it('ignora id atribuido que nao existe mais no curriculo', () => {
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const ids = progresso.map((p) => p.item.id)
+    const p = planoDaAtribuicao({
+      atribuicao: new Map([[1, [ids[0], 'item-que-nao-existe']]]),
+      progresso,
+    })
+    expect(p.aulas[0].itens.map((i) => i.id)).toEqual([ids[0]])
+  })
+
+  it('a conta de minutos e a MESMA do gerador, senao o saldo mudaria de sentido', () => {
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const gerado = gerarPlano({ progresso })
+    const montado = planoDaAtribuicao({
+      atribuicao: atribuicaoDoPlano(gerado.aulas),
+      progresso,
+    })
+    // Mesma distribuicao => mesmos minutos, aula por aula.
+    expect(montado.aulas.map((a) => a.minutosEstimados)).toEqual(
+      gerado.aulas.map((a) => a.minutosEstimados),
+    )
+    expect(montado.naoAtribuidos).toEqual([])
+  })
+
+  it('roundtrip: montar a partir do plano gerado preserva os 56 itens', () => {
+    const progresso = progressoDe(ITENS.filter((i) => i.ativo))
+    const gerado = gerarPlano({ progresso })
+    const montado = planoDaAtribuicao({ atribuicao: atribuicaoDoPlano(gerado.aulas), progresso })
+    expect(montado.aulas.flatMap((a) => a.itens).length).toBe(progresso.length)
   })
 })

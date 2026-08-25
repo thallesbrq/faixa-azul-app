@@ -331,6 +331,138 @@ export function gerarPlano({
   }
 }
 
+/**
+ * Aula -> ids dos itens nela, na ordem em que o professor os pos.
+ *
+ * Tipo estrutural de proposito: e o mesmo formato de `Atribuicao` em
+ * ./montagem, e declarar aqui em vez de importar mantem os dois modulos
+ * independentes — do jeito que `atribuicaoDoPlano` la faz na direcao oposta.
+ */
+export type AtribuicaoDeItens = ReadonlyMap<number, readonly string[]>
+
+export interface PlanoComFonte extends PlanoDeAulas {
+  /**
+   * De onde saiu este plano. A tela PRECISA disto: mostrar a sugestao do
+   * gerador com a mesma cara da grade que o professor montou seria dizer que
+   * ele decidiu algo que ele nao decidiu.
+   */
+  fonte: 'montagem' | 'sugestao'
+  /** Itens do curriculo que ainda nao foram postos em aula nenhuma. */
+  naoAtribuidos: TechniqueItem[]
+}
+
+/**
+ * Converte a montagem do professor no mesmo formato do plano gerado.
+ *
+ * POR QUE ISTO EXISTE. O gerador (`gerarPlano`) era a unica fonte do plano, e
+ * dele saiam a tela de Aulas, o Planner e os dois PDFs. Quando a montagem
+ * manual entrou, essas telas continuaram lendo o gerador — ou seja, o professor
+ * montava a grade e o aluno continuava estudando por OUTRA. Duas verdades
+ * discordando em silencio, que e o pior resultado possivel aqui: ninguem ve o
+ * erro, os dois acham que estao combinados, e a diferenca aparece no tatame.
+ *
+ * A ORDEM DENTRO DA AULA E DELE. O gerador ordena pelo circulo; aqui a
+ * sequencia vem como o professor deixou, porque ela carrega intencao (aquecer
+ * com a raspada, depois a passagem).
+ *
+ * A CONTA DE MINUTOS E A MESMA (`custoEmMinutos`), senao os dois planos nao
+ * seriam comparaveis e o saldo do pacote mudaria de significado conforme a
+ * fonte.
+ *
+ * Item atribuido que nao existe mais no curriculo e ignorado — o curriculo e a
+ * fonte de verdade sobre o que existe, e a atribuicao so diz onde fica.
+ */
+export function planoDaAtribuicao({
+  atribuicao,
+  progresso,
+  totalAulas = 10,
+  minutosPorAula = MINUTOS_POR_AULA,
+  dificuldades = SEM_DIFICULDADE,
+}: {
+  atribuicao: AtribuicaoDeItens
+  progresso: ProgressoDeItem[]
+  totalAulas?: number
+  minutosPorAula?: number
+  dificuldades?: DificuldadePorItem
+}): PlanoComFonte {
+  const porId = new Map(progresso.map((p) => [p.item.id, p]))
+  const custoDe = new Map(
+    progresso.map((p) => [p.item.id, custoEmMinutos(p.pontuacao, false, dificuldades.get(p.item.id))]),
+  )
+
+  const colocados = new Set<string>()
+  const aulas: AulaPlanejada[] = []
+
+  for (let n = 1; n <= totalAulas; n++) {
+    const itens: TechniqueItem[] = []
+    for (const id of atribuicao.get(n) ?? []) {
+      const p = porId.get(id)
+      if (!p) continue
+      itens.push(p.item)
+      colocados.add(id)
+    }
+    const minutos = itens.reduce((s, i) => s + (custoDe.get(i.id) ?? MINUTOS_ITEM_CRU), 0)
+    aulas.push({
+      numero: n,
+      itens,
+      posicoes: [...new Set(itens.map((i) => i.posicao))],
+      minutosEstimados: Math.round(minutos),
+    })
+  }
+
+  const naoAtribuidos = progresso.filter((p) => !colocados.has(p.item.id)).map((p) => p.item)
+  const minutosDeConteudo = progresso.reduce((s, p) => s + (custoDe.get(p.item.id) ?? 0), 0)
+
+  return {
+    aulas,
+    // O que sobrou no bolsao NAO vira conteudo de aulao aqui. O aluno foi
+    // explicito: item fora de aula, com montagem manual, e erro a corrigir
+    // antes de fechar a grade. `naoAtribuidos` e o que a tela avisa; manter
+    // `foraDoPlano` vazio impede que um item esquecido apareca como planejado.
+    foraDoPlano: [],
+    naoAtribuidos,
+    minutosDeConteudo: Math.round(minutosDeConteudo),
+    minutosDisponiveis: totalAulas * minutosPorAula,
+    fonte: 'montagem',
+  }
+}
+
+/**
+ * O plano que as telas devem mostrar: a montagem do professor quando ela
+ * existe, a sugestao do gerador quando nao.
+ *
+ * O CRITERIO E "TEM ALGUMA COISA ATRIBUIDA", nao "esta completa". Uma montagem
+ * pela metade ainda e decisao dele, e voltar para a sugestao do app no meio da
+ * montagem trocaria a grade dele por outra sem avisar. A tela mostra o que
+ * falta; ela nao substitui o que ele fez.
+ */
+export function planoVigente({
+  atribuicao,
+  progresso,
+  totalAulas = 10,
+  minutosPorAula = MINUTOS_POR_AULA,
+  dificuldades = SEM_DIFICULDADE,
+}: {
+  atribuicao: AtribuicaoDeItens
+  progresso: ProgressoDeItem[]
+  totalAulas?: number
+  minutosPorAula?: number
+  dificuldades?: DificuldadePorItem
+}): PlanoComFonte {
+  let algum = false
+  for (const ids of atribuicao.values()) {
+    if (ids.length > 0) {
+      algum = true
+      break
+    }
+  }
+  if (algum) {
+    return planoDaAtribuicao({ atribuicao, progresso, totalAulas, minutosPorAula, dificuldades })
+  }
+  const plano = gerarPlano({ progresso, totalAulas, minutosPorAula, dificuldades })
+  return { ...plano, fonte: 'sugestao', naoAtribuidos: [] }
+}
+
 /** Um aulao de revisao da turma. */
 export interface AulaoPlanejado {
   numero: number
