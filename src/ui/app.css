@@ -1270,3 +1270,264 @@
 .resposta-lista--fraca li {
   color: var(--cor-texto-suave);
 }
+
+/* ---------------------------------------------------------------------------
+   Montar as aulas
+   --------------------------------------------------------------------------- */
+
+.mt-problemas {
+  list-style: none;
+  margin: calc(var(--espacamento-base) * 2) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.mt-problemas li {
+  padding: 6px var(--espacamento-base);
+  border-left: 3px solid var(--amarelo-atencao);
+  background: var(--amarelo-suave);
+  color: var(--amarelo-atencao);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Barra do item escolhido: fica visivel enquanto espera o toque na aula. */
+.mt-selecionado {
+  position: sticky;
+  top: var(--espacamento-base);
+  z-index: 2;
+}
+
+/* Aulas */
+.mt-aulas,
+.mt-lista,
+.mt-espaco {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mt-aulas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+  margin-top: var(--espacamento-base);
+}
+
+.mt-aula {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  overflow: hidden;
+}
+
+.mt-aula-cabeca {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+  padding: var(--espacamento-base);
+  min-height: var(--alvo-toque-min);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+/* Alvo de toque: so vira botao de verdade quando ha item escolhido. Sem isso o
+   professor toca numa aula sem ter escolhido nada e nada acontece, o que parece
+   defeito. */
+.mt-aula-cabeca--alvo {
+  background: var(--laranja-suave);
+  cursor: pointer;
+}
+
+.mt-aula-num {
+  flex-shrink: 0;
+  width: 1.8rem;
+  height: 1.8rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--cor-borda);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mt-aula-conta {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.mt-aula-conta em {
+  font-style: normal;
+  color: var(--amarelo-atencao);
+}
+
+.mt-aula-acao {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--laranja-texto);
+}
+
+/* Item da lista, no bolsao ou dentro da aula */
+.mt-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  border-top: 1px solid var(--cor-borda);
+  flex-wrap: wrap;
+}
+
+.mt-item--escolhido {
+  background: var(--laranja-suave);
+  box-shadow: inset 3px 0 0 var(--laranja);
+}
+
+.mt-toque {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--espacamento-base);
+  padding: 7px var(--espacamento-base);
+  min-height: var(--alvo-toque-min);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mt-nome {
+  font-size: 0.9rem;
+}
+
+.mt-ctx {
+  font-size: 0.74rem;
+  color: var(--cor-texto-suave);
+}
+
+/* Botao de video: discreto sem link, marcado com link. */
+.mt-video {
+  flex-shrink: 0;
+  width: var(--alvo-toque-min);
+  min-height: var(--alvo-toque-min);
+  border: 0;
+  background: none;
+  font-size: 0.8rem;
+  color: var(--cor-borda);
+  cursor: pointer;
+}
+
+.mt-video--tem {
+  color: var(--vermelho-alerta);
+}
+
+.mt-video-form {
+  flex-basis: 100%;
+  padding: 0 var(--espacamento-base) var(--espacamento-base);
+}
+
+.mt-video-form input {
+  width: 100%;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 8px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+/* Grupos do bolsao */
+.mt-grupo {
+  margin-top: calc(var(--espacamento-base) * 1.5);
+}
+
+.mt-grupo-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--cor-texto);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.mt-grupo-titulo small {
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Espacamento por guarda */
+.mt-espaco {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mt-esp {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacamento-base);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: 0.85rem;
+}
+
+.mt-esp:last-child {
+  border-bottom: none;
+}
+
+.mt-esp-aulas {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Guarda concentrada numa aula: sem segunda passagem. Marca por cor E por
+   palavra ("só na aula N"), nunca so por cor. */
+.mt-esp--alerta .mt-esp-aulas {
+  color: var(--amarelo-atencao);
+  font-weight: 600;
+}
+
+/* Etiqueta de tipo de tecnica, compartilhada com os documentos */
+.k {
+  flex-shrink: 0;
+  width: 3.1rem;
+  text-align: center;
+  padding: 1px 0;
+  border-radius: 3px;
+  border: 1px solid;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.k--raspagem { color: #8f5405; background: #fdf2e0; border-color: #8f5405; }
+.k--passagem { color: #1c4a86; background: #e9eff8; border-color: #1c4a86; }
+.k--finalizacao { color: #8d2f3f; background: #fbeaed; border-color: #8d2f3f; }
+.k--saida, .k--defesa { color: #1f6b45; background: #e6f3ec; border-color: #1f6b45; }
+.k--costas { color: #5a4a86; background: #eeebf7; border-color: #5a4a86; }

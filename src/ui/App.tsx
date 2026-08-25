@@ -3,6 +3,7 @@ import { Navegacao } from './components/Navegacao'
 import type { Tela } from './components/Navegacao'
 import { Aulas } from './screens/Aulas'
 import { Curriculo } from './screens/Curriculo'
+import { Montar } from './screens/Montar'
 import { Hoje } from './screens/Hoje'
 import { Progresso } from './screens/Progresso'
 import { Simulado } from './screens/Simulado'
@@ -89,6 +90,19 @@ export function App() {
               dificuldades={app.dificuldades}
               dataAlvo={app.estado.planoExame.dataAlvo}
               aoMarcarRealizada={app.marcarAulaRealizada}
+              montar={
+                <Montar
+                  itens={app.itens}
+                  baralho={app.baralho}
+                  revisoes={app.estado.revisoes}
+                  atribuicao={app.atribuicao}
+                  anotacoes={app.anotacoes}
+                  dificuldades={app.dificuldades}
+                  aoAtribuir={app.atribuirItem}
+                  aoDefinirAtribuicao={app.definirAtribuicao}
+                  aoAnotar={app.anotarItem}
+                />
+              }
             />
           )}
 

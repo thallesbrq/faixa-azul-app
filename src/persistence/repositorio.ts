@@ -31,6 +31,14 @@ export interface AlteracaoAula {
   numero: number
   realizadaEm?: string
   notas?: string
+  /**
+   * Itens desta aula, montados a mao com o professor.
+   *
+   * `undefined` = ainda nao montada. Lista vazia = montada e esvaziada de
+   * proposito. A distincao importa: sem ela, a tela nao sabe diferenciar "o
+   * professor ainda nao chegou nesta aula" de "ele tirou tudo dela".
+   */
+  itemIds?: string[]
 }
 
 /**

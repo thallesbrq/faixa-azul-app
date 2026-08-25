@@ -20,6 +20,10 @@ import {
   saldoDoPacote,
 } from '../../application/aulas'
 import { dataLocalISO, montarPlanner } from '../../application/planner'
+import { progressoPorItem } from '../../application/progresso'
+import { PlannerSemanal } from '../components/PlannerSemanal'
+import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
+import type { AulaParticular } from '../../domain/types'
 
 /**
  * Primeiro dia do pacote — PROVISORIO. O aluno deixou datas e horarios em aberto
@@ -27,10 +31,6 @@ import { dataLocalISO, montarPlanner } from '../../application/planner'
  * tempo. Quando as datas forem combinadas, viram campo no estado.
  */
 const INICIO_DO_PACOTE = '2026-09-02'
-import { progressoPorItem } from '../../application/progresso'
-import { PlannerSemanal } from '../components/PlannerSemanal'
-import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
-import type { AulaParticular } from '../../domain/types'
 
 export interface AulasProps {
   itens: TechniqueItem[]
@@ -44,9 +44,15 @@ export interface AulasProps {
   aoAbrirItem?: (itemId: string) => void
   /** Data-alvo da prova, ISO — para o planner medir a folga. */
   dataAlvo: string
+  /**
+   * Tela de montagem, montada por quem tem acesso ao estado. Chega pronta para
+   * esta tela nao precisar conhecer atribuicao, anotacoes nem dificuldades — ela
+   * so decide QUAL visao mostrar.
+   */
+  montar: React.ReactNode
 }
 
-type Visao = 'plano' | 'planner'
+type Visao = 'plano' | 'planner' | 'montar'
 
 function rotulo(item: TechniqueItem): string {
   return item.nome || item.slot
@@ -62,6 +68,7 @@ export function Aulas({
   aoMarcarRealizada,
   aoAbrirItem,
   dataAlvo,
+  montar,
 }: AulasProps) {
   const [expandida, setExpandida] = useState<number | null>(null)
   const [visao, setVisao] = useState<Visao>('plano')
@@ -123,9 +130,19 @@ export function Aulas({
         >
           Planner
         </button>
+        <button
+          role="tab"
+          aria-selected={visao === 'montar'}
+          className={visao === 'montar' ? 'alternador-item alternador-item--ativo' : 'alternador-item'}
+          onClick={() => setVisao('montar')}
+        >
+          Montar
+        </button>
       </div>
 
-      {visao === 'planner' ? (
+      {visao === 'montar' ? (
+        montar
+      ) : visao === 'planner' ? (
         <PlannerSemanal planner={planner} hoje={hoje} />
       ) : (
         <>

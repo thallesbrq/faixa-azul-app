@@ -114,7 +114,7 @@ describe('guardaDaPosicao', () => {
     }
   })
 
-  it('as 9 guardas cobrem os 50 itens da prova', () => {
+  it('as 9 guardas cobrem os 56 itens do curriculo do app', () => {
     const conta = new Map<Guarda, number>()
     for (const i of ATIVOS) {
       const g = guardaDaPosicao(i.posicao)!
@@ -128,11 +128,12 @@ describe('guardaDaPosicao', () => {
     expect(conta.get('dela-riva')).toBe(5)
     expect(conta.get('laco')).toBe(3)
     expect(conta.get('aberta')).toBe(4)
-    // Uma raspagem e uma passagem de UMA das quatro alternativas.
-    expect(conta.get('complexo')).toBe(2)
+    // As quatro alternativas, com raspagem e passagem cada. A banca cobra 2
+    // (uma das quatro); treinar as quatro e escolha de preparo.
+    expect(conta.get('complexo')).toBe(8)
     // Montada 2 + Costas 1 + 100 kilos 2 + Norte-sul 1 + Armlock 1 + Triangulo 1.
     expect(conta.get('saidas')).toBe(8)
-    expect([...conta.values()].reduce((a, b) => a + b, 0)).toBe(50)
+    expect([...conta.values()].reduce((a, b) => a + b, 0)).toBe(56)
   })
 })
 
@@ -146,11 +147,18 @@ describe('subPosicao', () => {
     expect(subs).toEqual(new Set(['Guarda One Leg', 'Guarda 50-50', 'Guarda X', 'Berimbolo']))
   })
 
-  it('a sub-posicao ATIVA do Complexo tem raspagem e passagem', () => {
-    // E o que a banca pede da entrada unica: "Raspada" e "Passagem", singular.
-    const ativosDoComplexo = ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === 'complexo')
-    expect(new Set(ativosDoComplexo.map((i) => subPosicao(i))).size).toBe(1)
-    expect(new Set(ativosDoComplexo.map((i) => i.kind))).toEqual(new Set(['raspagem', 'passagem']))
+  it('cada sub-posicao do Complexo tem raspagem e passagem', () => {
+    const porSub = new Map<string, Set<string>>()
+    for (const i of ATIVOS.filter((x) => guardaDaPosicao(x.posicao) === 'complexo')) {
+      const s = subPosicao(i)!
+      if (!porSub.has(s)) porSub.set(s, new Set())
+      porSub.get(s)!.add(i.kind)
+    }
+    expect(porSub.size).toBe(4)
+    for (const [sub, kinds] of porSub) {
+      expect(kinds.has('raspagem'), `${sub} sem raspagem`).toBe(true)
+      expect(kinds.has('passagem'), `${sub} sem passagem`).toBe(true)
+    }
   })
 
   it('nas saidas, a sub-posicao e a propria posicao', () => {

@@ -27,28 +27,25 @@ import { MODULOS } from './modulos'
 const MODULOS_ATIVOS = new Set(['mod-guardas', 'mod-saidas'])
 
 /**
- * COMPLEXO MODERNO: uma sub-posicao so.
+ * COMPLEXO MODERNO: as quatro alternativas ficam ATIVAS.
  *
- * O documento da banca traz as quatro como ALTERNATIVAS numa unica entrada:
+ * O curriculo do app mantem os 56 itens. A escolha de treinar uma ou as quatro
+ * alternativas passa a ser feita na MONTAGEM das aulas, com o professor, em vez
+ * de por constante no codigo — e a decisao dele, nao do app.
+ *
+ * O que a banca pede fica registrado aqui porque a informacao vale na hora de
+ * montar: o documento do exame traz UMA entrada,
  *
  *     Guarda One leg / 50-50 / Guarda X / One leg / Berimbolo
  *       • Raspada
  *       • Passagem
  *
- * Raspada e Passagem no singular, uma entrada — a prova pede uma raspagem e uma
- * passagem de UMA das quatro. A importacao expandiu isso em quatro posicoes com
- * raspagem e passagem cada, oito itens onde a banca cobra dois. Foi
- * superdimensionamento meu, descoberto lendo o documento original.
- *
- * Consequencia de corrigir: 50 itens em 10 aulas, exatos 5 por aula. A
- * aritmetica incomoda de 56/10 nao precisava de solucao — precisava de leitura
- * da fonte.
- *
- * As outras tres continuam no seed, desativadas. Se o professor preferir outra,
- * troca este valor. Os rotulos vem do campo `categoria`: "Guarda X",
- * "Guarda One Leg", "Guarda 50-50", "Berimbolo".
+ * com "Raspada" e "Passagem" no SINGULAR. Sao alternativas: a prova cobra uma
+ * raspagem e uma passagem de uma das quatro. Treinar as quatro e escolha de
+ * preparo, nao exigencia — e treinar as quatro e o que faz o curriculo ter 56
+ * itens em vez de 50.
  */
-const SUBPOSICAO_DO_COMPLEXO = 'Guarda X'
+const SUBPOSICAO_DO_COMPLEXO: string | null = null
 
 /** Prefixo da posicao que agrupa as quatro alternativas. */
 const PREFIXO_COMPLEXO = 'Complexo Moderno'
@@ -70,14 +67,16 @@ const CONTEUDOS: TechniqueContent[] = (() => {
  * 1. os 14 itens que ganharam passo a passo depois deixam de "aguardar o
  *    professor" e passam a sugestao nao validada — que e a verdade sobre eles;
  * 2. o foco declarado nas Secoes 4 e 5;
- * 3. uma sub-posicao so do Complexo Moderno, como a banca pede.
+ * 3. opcionalmente, reduzir o Complexo Moderno a uma sub-posicao (desligado).
  */
 const ITENS: TechniqueItem[] = (() => {
   const comPassos = new Set(CONTEUDOS.filter((c) => c.passos.length > 0).map((c) => c.itemId))
 
-  /** As tres alternativas nao escolhidas do Complexo Moderno saem do escopo. */
+  /** Com `SUBPOSICAO_DO_COMPLEXO` nulo, nada e excluido. */
   const foraDoComplexo = (item: TechniqueItem) =>
-    item.posicao.startsWith(PREFIXO_COMPLEXO) && item.categoria !== SUBPOSICAO_DO_COMPLEXO
+    SUBPOSICAO_DO_COMPLEXO !== null &&
+    item.posicao.startsWith(PREFIXO_COMPLEXO) &&
+    item.categoria !== SUBPOSICAO_DO_COMPLEXO
 
   return ITENS_IMPORTADOS.map((item) => ({
     ...item,

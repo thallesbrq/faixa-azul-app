@@ -8,6 +8,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { montarFilaDoDia, moduloDeMaiorRisco } from '../application/fila'
 import { registrarRevisao, revisadosHoje, taxaDeAcertoSemDica } from '../application/revisar'
+import { atribuir } from '../application/montagem'
 import { criarSessao, resumoDoTreino } from '../application/treino'
 import type { EntradaRevisao } from '../application/revisar'
 import { gerarBaralho } from '../domain/cards'
@@ -17,7 +18,7 @@ import { normalizarUrlDeVideo } from '../domain/video'
 import type { Dificuldade, PracticeObservation, ValidationStatus } from '../domain/types'
 import { depositoEmMemoria, depositoLocalStorage } from '../persistence/deposito'
 import { carregar, salvar } from '../persistence/repositorio'
-import type { AlteracaoItem, EstadoPersistido } from '../persistence/repositorio'
+import type { AlteracaoAula, AlteracaoItem, EstadoPersistido } from '../persistence/repositorio'
 import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from '../seed'
 
 /**
@@ -195,6 +196,57 @@ export function useApp() {
     return mapa
   }, [estado.itens])
 
+  /**
+   * Atribuicao manual das aulas (aula -> ids). Vem de `estado.aulas`, onde cada
+   * aula guarda os seus `itemIds` quando ja foi montada.
+   */
+  const atribuicao = useMemo(() => {
+    const m = new Map<number, string[]>()
+    for (const a of estado.aulas) {
+      if (a.itemIds) m.set(a.numero, a.itemIds)
+    }
+    return m
+  }, [estado.aulas])
+
+  /**
+   * Move um item para uma aula, ou de volta ao bolsao com `null`.
+   *
+   * A invariante de um item em um lugar so vive em `atribuir`, no dominio da
+   * aplicacao — aqui e so persistencia. Gravar as dez aulas de uma vez (e nao
+   * so as duas afetadas) mantem o estado como espelho exato da atribuicao, sem
+   * sobra de aula que ficou com lista velha.
+   */
+  const atribuirItem = useCallback(
+    (itemId: string, aula: number | null) => {
+      const proxima = atribuir(atribuicao, itemId, aula)
+      const outras = new Map(estado.aulas.map((a) => [a.numero, a]))
+      const aulas: AlteracaoAula[] = []
+      for (const [numero, itemIds] of proxima) {
+        aulas.push({ ...outras.get(numero), numero, itemIds })
+        outras.delete(numero)
+      }
+      // Aulas que nunca foram tocadas seguem sem itemIds.
+      for (const a of outras.values()) aulas.push(a)
+      atualizar({ ...estado, aulas: aulas.sort((a, b) => a.numero - b.numero) })
+    },
+    [estado, atribuicao, atualizar],
+  )
+
+  /** Substitui a montagem inteira — usado por "sugerir distribuicao" e "limpar". */
+  const definirAtribuicao = useCallback(
+    (nova: ReadonlyMap<number, readonly string[]>) => {
+      const outras = new Map(estado.aulas.map((a) => [a.numero, a]))
+      const aulas: AlteracaoAula[] = []
+      for (const [numero, itemIds] of nova) {
+        aulas.push({ ...outras.get(numero), numero, itemIds: [...itemIds] })
+        outras.delete(numero)
+      }
+      for (const a of outras.values()) aulas.push({ ...a, itemIds: undefined })
+      atualizar({ ...estado, aulas: aulas.sort((a, b) => a.numero - b.numero) })
+    },
+    [estado, atualizar],
+  )
+
   /** Aulas do seed com as alteracoes do aluno aplicadas. */
   const aulas = useMemo(() => {
     const alteracoes = new Map(estado.aulas.map((a) => [a.numero, a]))
@@ -222,6 +274,9 @@ export function useApp() {
     registrarValidacao,
     marcarAulaRealizada,
     registrarSessao,
+    atribuicao,
+    atribuirItem,
+    definirAtribuicao,
     anotarItem,
     anotacoes,
     dificuldades,
