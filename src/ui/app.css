@@ -1531,3 +1531,128 @@
 .k--finalizacao { color: #8d2f3f; background: #fbeaed; border-color: #8d2f3f; }
 .k--saida, .k--defesa { color: #1f6b45; background: #e6f3ec; border-color: #1f6b45; }
 .k--costas { color: #5a4a86; background: #eeebf7; border-color: #5a4a86; }
+
+/* ---------------------------------------------------------------------------
+   Arrastar para montar
+   --------------------------------------------------------------------------- */
+
+/* Alça: o ÚNICO ponto com touch-action none. O resto da linha continua rolando
+   a página, que é o que permite navegar uma lista de 56 itens com o dedo. */
+.mt-alca {
+  flex-shrink: 0;
+  width: 1.5rem;
+  min-height: var(--alvo-toque-min);
+  display: grid;
+  place-items: center;
+  color: var(--cor-borda);
+  font-size: 0.85rem;
+  cursor: grab;
+  user-select: none;
+}
+
+.mt-alca:active {
+  cursor: grabbing;
+  color: var(--laranja);
+}
+
+.mt-item--arrastando {
+  opacity: 0.35;
+}
+
+/* Fantasma seguindo o dedo. pointer-events none é obrigatório: sem isso ele
+   intercepta o próprio ponto do elementFromPoint e o alvo nunca é encontrado. */
+.mt-fantasma {
+  position: fixed;
+  z-index: 50;
+  transform: translate(-50%, -140%);
+  pointer-events: none;
+  max-width: 60vw;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--cor-texto);
+  color: var(--cor-superficie);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.28);
+}
+
+/* Faixa fixa na área do polegar, só enquanto arrasta. */
+.mt-faixa {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--cor-superficie);
+  border-top: 2px solid var(--laranja);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.14);
+}
+
+.mt-faixa-rotulo {
+  display: block;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+  margin-bottom: 6px;
+}
+
+.mt-faixa-alvos {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mt-alvo {
+  flex: 1 1 auto;
+  min-width: 2.4rem;
+  min-height: var(--alvo-toque-min);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mt-alvo small {
+  font-weight: 400;
+  font-size: 0.6rem;
+  color: var(--cor-texto-suave);
+}
+
+/* Sob o dedo: muda cor E tamanho, para funcionar sem depender de percepção de
+   cor e para ser visível com o dedo cobrindo parte do alvo. */
+.mt-alvo--sob {
+  background: var(--laranja);
+  border-color: var(--laranja);
+  color: #fff;
+  transform: scale(1.12);
+}
+
+.mt-alvo--sob small {
+  color: rgb(255 255 255 / 0.85);
+}
+
+.mt-alvo--bolsao {
+  flex-basis: 100%;
+  flex-direction: row;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Aula sob o dedo, quando o arrasto acontece com ela já visível. */
+.mt-aula--sob {
+  border-color: var(--laranja);
+  box-shadow: inset 0 0 0 2px var(--laranja);
+}

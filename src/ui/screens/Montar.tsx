@@ -17,6 +17,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { ATRIBUTO_ALVO, useArrastar } from '../useArrastar'
 import {
   atribuicaoDoPlano,
   espacamentoPorGuarda,
@@ -58,6 +59,111 @@ function rotulo(item: TechniqueItem): string {
   return item.nome || item.slot
 }
 
+
+/**
+ * Uma linha de tecnica, no bolsao ou dentro de uma aula.
+ *
+ * FICA NO NIVEL DO MODULO, nao dentro de `Montar`. Um componente definido dentro
+ * de outro e um TIPO NOVO a cada render, e o React desmonta e remonta a subarvore
+ * inteira quando o pai re-renderiza. Duas consequencias que aconteceram de
+ * verdade antes desta extracao:
+ *
+ * - o no DOM da alca ficava orfao no meio do arraste, e os eventos seguintes
+ *   (mover, soltar) nao chegavam a ninguem;
+ * - o campo de video perdia o foco a cada caractere digitado.
+ */
+function Linha({
+  item,
+  dentroDaAula,
+  escolhido,
+  arrastando,
+  anotacao,
+  editando,
+  urlVideo,
+  propsDaAlca,
+  aoTocar,
+  aoAbrirVideo,
+  aoMudarUrl,
+  aoSalvarVideo,
+  aoCancelarVideo,
+}: {
+  item: TechniqueItem
+  dentroDaAula: boolean
+  escolhido: boolean
+  arrastando: boolean
+  anotacao: AlteracaoItem | undefined
+  editando: boolean
+  urlVideo: string
+  propsDaAlca: (itemId: string) => React.ComponentProps<'span'>
+  aoTocar: (itemId: string) => void
+  aoAbrirVideo: (itemId: string, urlAtual: string) => void
+  aoMudarUrl: (valor: string) => void
+  aoSalvarVideo: (itemId: string) => void
+  aoCancelarVideo: () => void
+}) {
+  const sub = subPosicao(item)
+  const papel = papelDoKind(item.kind)
+
+  return (
+    <li
+      className={['mt-item', escolhido ? 'mt-item--escolhido' : '', arrastando ? 'mt-item--arrastando' : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {/* Alca: o unico lugar com touch-action none, para a lista continuar
+          rolando quando o dedo pega em qualquer outro ponto da linha. */}
+      <span className="mt-alca" aria-hidden="true" {...propsDaAlca(item.id)}>
+        ⠿
+      </span>
+
+      <button className="mt-toque" onClick={() => aoTocar(item.id)} aria-pressed={escolhido}>
+        <span className={`k k--${item.kind}`}>{SIGLA_KIND[item.kind] ?? item.kind}</span>
+        <span className="mt-txt">
+          <span className="mt-nome">{item.nome || item.slot}</span>
+          <span className="mt-ctx">
+            {dentroDaAula ? sub ?? item.posicao : sub ?? ''}
+            {dentroDaAula && (
+              <>
+                {' · '}
+                {papel === 'passando' ? 'eu passo' : papel === 'defendendo' ? 'eu defendo' : 'eu ataco'}
+              </>
+            )}
+          </span>
+        </span>
+      </button>
+
+      <button
+        className={anotacao?.video ? 'mt-video mt-video--tem' : 'mt-video'}
+        onClick={() => aoAbrirVideo(item.id, anotacao?.video ?? '')}
+        aria-label={anotacao?.video ? 'Trocar vídeo' : 'Adicionar vídeo'}
+        title={anotacao?.video ?? 'Adicionar vídeo'}
+      >
+        ▶
+      </button>
+
+      {editando && (
+        <div className="mt-video-form">
+          <input
+            value={urlVideo}
+            onChange={(e) => aoMudarUrl(e.target.value)}
+            placeholder="youtube.com/watch?v=..."
+            inputMode="url"
+            autoComplete="off"
+          />
+          <div className="acoes">
+            <button className="botao botao--principal" onClick={() => aoSalvarVideo(item.id)}>
+              Salvar
+            </button>
+            <button className="botao botao--secundario" onClick={aoCancelarVideo}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
+  )
+}
+
 export function Montar({
   itens,
   baralho,
@@ -73,6 +179,19 @@ export function Montar({
   const [selecionado, setSelecionado] = useState<string | null>(null)
   const [editandoVideo, setEditandoVideo] = useState<string | null>(null)
   const [urlVideo, setUrlVideo] = useState('')
+
+  /**
+   * Arrastar e soltar. O alvo vem como texto no `data-alvo`: "1".."10" para as
+   * aulas e "bolsao" para devolver. Texto em vez de numero porque o atributo do
+   * DOM e string de qualquer jeito, e converter num lugar so evita NaN silencioso.
+   */
+  const { arraste, propsDaAlca } = useArrastar({
+    aoSoltar: (itemId, alvo) => {
+      aoAtribuir(itemId, alvo === 'bolsao' ? null : Number(alvo))
+      setSelecionado(null)
+    },
+    aoTocar: (itemId) => tocarItem(itemId),
+  })
 
   const estado = useMemo(() => montarEstado({ itens, atribuicao }), [itens, atribuicao])
   const espacamento = useMemo(() => espacamentoPorGuarda(estado.aulas), [estado.aulas])
@@ -113,69 +232,29 @@ export function Montar({
     setSelecionado(null)
   }
 
-  function Linha({ item, dentroDaAula }: { item: TechniqueItem; dentroDaAula: boolean }) {
-    const anotacao = anotacoes.get(item.id)
-    const sub = subPosicao(item)
-    const escolhido = selecionado === item.id
-    const editando = editandoVideo === item.id
 
-    return (
-      <li className={escolhido ? 'mt-item mt-item--escolhido' : 'mt-item'}>
-        <button
-          className="mt-toque"
-          onClick={() => tocarItem(item.id)}
-          aria-pressed={escolhido}
-        >
-          <span className={`k k--${item.kind}`}>{SIGLA_KIND[item.kind] ?? item.kind}</span>
-          <span className="mt-txt">
-            <span className="mt-nome">{rotulo(item)}</span>
-            <span className="mt-ctx">
-              {dentroDaAula ? sub ?? item.posicao : sub ?? ''}
-              {dentroDaAula && <> · {papelDoKind(item.kind) === 'passando' ? 'eu passo' : papelDoKind(item.kind) === 'defendendo' ? 'eu defendo' : 'eu ataco'}</>}
-            </span>
-          </span>
-        </button>
-
-        <button
-          className={anotacao?.video ? 'mt-video mt-video--tem' : 'mt-video'}
-          onClick={() => {
-            setUrlVideo(anotacao?.video ?? '')
-            setEditandoVideo(editando ? null : item.id)
-          }}
-          aria-label={anotacao?.video ? 'Trocar vídeo' : 'Adicionar vídeo'}
-          title={anotacao?.video ?? 'Adicionar vídeo'}
-        >
-          ▶
-        </button>
-
-        {editando && (
-          <div className="mt-video-form">
-            <input
-              value={urlVideo}
-              onChange={(e) => setUrlVideo(e.target.value)}
-              placeholder="youtube.com/watch?v=..."
-              inputMode="url"
-              autoComplete="off"
-            />
-            <div className="acoes">
-              <button
-                className="botao botao--principal"
-                onClick={() => {
-                  aoAnotar(item.id, { video: urlVideo })
-                  setEditandoVideo(null)
-                }}
-              >
-                Salvar
-              </button>
-              <button className="botao botao--secundario" onClick={() => setEditandoVideo(null)}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-      </li>
-    )
-  }
+  /** Props comuns da linha, para nao repetir a lista em cada uso. */
+  const propsDaLinha = (item: TechniqueItem, dentroDaAula: boolean) => ({
+    item,
+    dentroDaAula,
+    escolhido: selecionado === item.id,
+    arrastando: arraste?.itemId === item.id,
+    anotacao: anotacoes.get(item.id),
+    editando: editandoVideo === item.id,
+    urlVideo,
+    propsDaAlca,
+    aoTocar: tocarItem,
+    aoAbrirVideo: (id: string, atual: string) => {
+      setUrlVideo(atual)
+      setEditandoVideo((e) => (e === id ? null : id))
+    },
+    aoMudarUrl: setUrlVideo,
+    aoSalvarVideo: (id: string) => {
+      aoAnotar(id, { video: urlVideo })
+      setEditandoVideo(null)
+    },
+    aoCancelarVideo: () => setEditandoVideo(null),
+  })
 
   return (
     <div>
@@ -252,7 +331,13 @@ export function Montar({
           {estado.aulas.map((aula) => {
             const podeReceber = selecionado !== null
             return (
-              <li key={aula.numero} className="mt-aula">
+              <li
+                key={aula.numero}
+                className={
+                  arraste?.alvo === String(aula.numero) ? 'mt-aula mt-aula--sob' : 'mt-aula'
+                }
+                {...{ [ATRIBUTO_ALVO]: String(aula.numero) }}
+              >
                 <button
                   className={podeReceber ? 'mt-aula-cabeca mt-aula-cabeca--alvo' : 'mt-aula-cabeca'}
                   onClick={() => tocarAula(aula.numero)}
@@ -276,7 +361,7 @@ export function Montar({
                 {aula.itens.length > 0 && (
                   <ul className="mt-lista">
                     {aula.itens.map((i) => (
-                      <Linha key={i.id} item={i} dentroDaAula />
+                      <Linha key={i.id} {...propsDaLinha(i, true)} />
                     ))}
                   </ul>
                 )}
@@ -313,6 +398,44 @@ export function Montar({
         </div>
       )}
 
+      {/* ---------- Faixa fixa de destinos, so durante o arraste ----------
+          Existe para o arrasto ser CURTO: sem ela, tirar um item do bolsao (no
+          fim da pagina) e levar para a aula 1 (no topo) exigiria auto-scroll,
+          que e a parte mais fragil desse tipo de codigo. Aqui o destino vem ao
+          dedo, na area do polegar. */}
+      {arraste && (
+        <div className="mt-faixa" role="presentation">
+          <span className="mt-faixa-rotulo">solte numa aula</span>
+          <div className="mt-faixa-alvos">
+            {estado.aulas.map((a) => (
+              <span
+                key={a.numero}
+                {...{ [ATRIBUTO_ALVO]: String(a.numero) }}
+                className={arraste.alvo === String(a.numero) ? 'mt-alvo mt-alvo--sob' : 'mt-alvo'}
+              >
+                {a.numero}
+                <small>{a.itens.length}</small>
+              </span>
+            ))}
+            <span
+              {...{ [ATRIBUTO_ALVO]: 'bolsao' }}
+              className={arraste.alvo === 'bolsao' ? 'mt-alvo mt-alvo--sob mt-alvo--bolsao' : 'mt-alvo mt-alvo--bolsao'}
+            >
+              ↩
+              <small>volta</small>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Fantasma seguindo o dedo. `pointer-events: none` no CSS e obrigatorio:
+          sem isso ele intercepta o proprio ponto e o alvo nunca e encontrado. */}
+      {arraste && (
+        <div className="mt-fantasma" style={{ left: arraste.x, top: arraste.y }}>
+          {rotulo(itens.find((i) => i.id === arraste.itemId) ?? itens[0])}
+        </div>
+      )}
+
       {/* ---------- Bolsao ---------- */}
       <div className="card">
         <h3 className="detalhe-secao">Bolsão ({estado.naoAtribuidos})</h3>
@@ -331,7 +454,7 @@ export function Montar({
                 </h4>
                 <ul className="mt-lista">
                   {grupo.itens.map((i) => (
-                    <Linha key={i.id} item={i} dentroDaAula={false} />
+                    <Linha key={i.id} {...propsDaLinha(i, false)} />
                   ))}
                 </ul>
               </div>
