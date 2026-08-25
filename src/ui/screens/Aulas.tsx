@@ -53,7 +53,19 @@ export interface AulasProps {
   atribuicao: AtribuicaoDeItens
 }
 
-type Visao = 'plano' | 'planner' | 'montar'
+/**
+ * Duas visoes, nao tres. A visao "Plano" trazia a lista das 10 aulas com as
+ * tecnicas de cada uma — e essa lista virou a terceira copia da mesma coisa: o
+ * Montar mostra a grade que o mestre montou, o Planner mostra ela no calendario.
+ * Tres lugares mostrando o mesmo arranjo e tres lugares para discordar.
+ *
+ * O QUE NAO ERA "o plano" e ficou: a pauta da proxima aula, o saldo do pacote e
+ * os auloes. Essas tres nao sao a grade, sao o que fazer com ela, e sairam da
+ * visao removida para dentro do Planner. Em especial `aoMarcarRealizada` so
+ * existia ali dentro: apagar a visao inteira teria deixado "marcar aula feita"
+ * inalcancavel, e e essa marca que define qual e a proxima aula em toda a tela.
+ */
+type Visao = 'planner' | 'montar'
 
 function rotulo(item: TechniqueItem): string {
   return item.nome || item.slot
@@ -72,8 +84,7 @@ export function Aulas({
   montar,
   atribuicao,
 }: AulasProps) {
-  const [expandida, setExpandida] = useState<number | null>(null)
-  const [visao, setVisao] = useState<Visao>('plano')
+  const [visao, setVisao] = useState<Visao>('planner')
   const hoje = dataLocalISO(new Date())
 
   const progresso = useMemo(
@@ -98,6 +109,15 @@ export function Aulas({
 
   /** Proxima aula = a de menor numero ainda nao realizada. */
   const proxima = aulas.find((a) => !a.realizadaEm)
+
+  /**
+   * Ultima aula marcada como feita — a unica com caminho de desfazer.
+   *
+   * Percorre de tras para frente porque marcar fora de ordem e possivel (o aluno
+   * pode marcar a 3 antes da 2 se as aulas trocarem de dia), e nesse caso a
+   * "ultima" e a de maior numero marcado, nao a anterior a `proxima`.
+   */
+  const ultimaFeita = [...aulas].reverse().find((a) => a.realizadaEm)
   const planoDaProxima = proxima ? plano.aulas.find((a) => a.numero === proxima.numero) : undefined
 
   const pauta = useMemo(
@@ -116,14 +136,6 @@ export function Aulas({
   return (
     <div>
       <div className="alternador" role="tablist" aria-label="Visão das aulas">
-        <button
-          role="tab"
-          aria-selected={visao === 'plano'}
-          className={visao === 'plano' ? 'alternador-item alternador-item--ativo' : 'alternador-item'}
-          onClick={() => setVisao('plano')}
-        >
-          Plano
-        </button>
         <button
           role="tab"
           aria-selected={visao === 'planner'}
@@ -173,11 +185,6 @@ export function Aulas({
               <strong>Montar</strong> para distribuir as técnicas, ou use isto como ponto de partida na conversa.
             </p>
           )}
-
-          {visao === 'planner' ? (
-            <PlannerSemanal planner={planner} hoje={hoje} />
-          ) : (
-            <>
 
       {/* ---------- Proxima aula: a resposta que a tela existe para dar ---------- */}
       {proxima && planoDaProxima ? (
@@ -240,6 +247,29 @@ export function Aulas({
           </p>
         </div>
       )}
+
+      {/*
+        DESFAZER. O "Desmarcar como feita" ficava dentro da lista das 10 aulas,
+        que saiu — e marcar aula errada e facil (um toque), enquanto a marca
+        define qual e a proxima aula em toda a tela. Sem caminho de volta, o
+        unico jeito de corrigir seria limpar o app. So a ultima feita aparece:
+        e a que se erra, e listar as dez de novo traria de volta o que foi
+        removido.
+      */}
+      {ultimaFeita && (
+        <p className="rodape-nota" style={{ marginTop: 0 }}>
+          Aula {ultimaFeita.numero} está marcada como feita.{' '}
+          <button
+            className="link-desfazer"
+            onClick={() => aoMarcarRealizada(ultimaFeita.numero, false)}
+          >
+            Desmarcar
+          </button>
+        </p>
+      )}
+
+      {/* ---------- O calendario: o "quando" da rotina ---------- */}
+      <PlannerSemanal planner={planner} hoje={hoje} />
 
       {/* ---------- Saldo: a verdade desconfortavel, quando existe ---------- */}
       <div className="card">
@@ -354,59 +384,6 @@ export function Aulas({
         </div>
       )}
 
-      {/* ---------- Plano completo, para mostrar ao professor ---------- */}
-      <div className="card">
-        <h3 className="detalhe-secao">Plano das {aulas.length} aulas</h3>
-        <p className="instrucao">
-          Uma saída em toda aula desde a primeira, e cada posição dividida em duas passagens afastadas — a
-          segunda cai quando a memória já começou a falhar, que é onde ela fixa melhor.
-        </p>
-        <ul className="lista-aulas">
-          {plano.aulas.map((a) => {
-            const registro = aulas.find((x) => x.numero === a.numero)
-            const feita = Boolean(registro?.realizadaEm)
-            const aberta = expandida === a.numero
-            return (
-              <li key={a.numero} className={feita ? 'aula-linha aula-linha--feita' : 'aula-linha'}>
-                <button
-                  className="aula-cabeca"
-                  onClick={() => setExpandida(aberta ? null : a.numero)}
-                  aria-expanded={aberta}
-                >
-                  <span className="aula-numero">{feita ? '✓' : a.numero}</span>
-                  <span className="aula-titulo">
-                    {a.posicoes.join(' + ') || 'sem itens'}
-                    <small>
-                      {a.itens.length} itens · {a.minutosEstimados} min
-                    </small>
-                  </span>
-                  <span aria-hidden="true">{aberta ? '▾' : '▸'}</span>
-                </button>
-                {aberta && (
-                  <>
-                    <ul className="resposta-lista">
-                      {a.itens.map((i) => (
-                        <li key={i.id}>
-                          {rotulo(i)} <small>— {i.posicao}</small>
-                        </li>
-                      ))}
-                    </ul>
-                    {feita && (
-                      <button
-                        className="botao botao--secundario"
-                        onClick={() => aoMarcarRealizada(a.numero, false)}
-                      >
-                        Desmarcar como feita
-                      </button>
-                    )}
-                  </>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-
       {/*
         A nota mudava de veracidade com a fonte: chamar a grade do mestre de
         "proposta do app" seria falso, e foi por deixar uma frase verdadeira
@@ -426,8 +403,6 @@ export function Aulas({
           </>
         )}
       </p>
-            </>
-          )}
         </>
       )}
     </div>

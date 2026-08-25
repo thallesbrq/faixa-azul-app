@@ -749,72 +749,6 @@
   flex-shrink: 0;
 }
 
-/* Lista das 10 aulas */
-.lista-aulas {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacamento-base);
-}
-
-.aula-linha {
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-card);
-  overflow: hidden;
-}
-
-.aula-linha--feita .aula-numero {
-  background: var(--laranja);
-  color: #fff;
-  border-color: var(--laranja);
-}
-
-.aula-cabeca {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--espacamento-base);
-  padding: var(--espacamento-base);
-  background: none;
-  border: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.aula-numero {
-  flex-shrink: 0;
-  width: 1.9rem;
-  height: 1.9rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--cor-borda);
-  border-radius: 50%;
-  font-size: 0.85rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.aula-titulo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.aula-titulo small {
-  color: var(--cor-texto-suave);
-  font-size: 0.78rem;
-}
-
-.aula-linha .resposta-lista,
-.aula-linha .botao {
-  margin: 0 var(--espacamento-base) var(--espacamento-base);
-}
-
 /* Acoes empilhadas: quando as opcoes tem rotulos longos e nao sao equivalentes
    entre si, lado a lado encurta o texto e sugere simetria que nao existe. */
 .acoes--coluna {
@@ -1728,4 +1662,18 @@
 .versao .acoes .botao {
   flex: 1 1 auto;
   width: auto;
+}
+
+/* Desfazer discreto dentro de uma nota. E `button` e nao `a` porque nao navega
+   para lugar nenhum — leitor de tela deve anunciar botao. O sublinhado e o
+   ponteiro fazem o trabalho que a aparencia de link fazia. */
+.link-desfazer {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--laranja-texto);
+  text-decoration: underline;
+  cursor: pointer;
 }

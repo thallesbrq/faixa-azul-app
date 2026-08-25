@@ -18,7 +18,15 @@ import './app.css'
 export function App() {
   const app = useApp()
   const atualizacao = useAtualizacao()
-  const [tela, setTela] = useState<Tela>('hoje')
+  /**
+   * Abre em Aulas, nao em Hoje. Escolha do aluno: com as datas confirmadas e a
+   * grade montada pelo mestre, a primeira pergunta ao abrir o app passou a ser
+   * "qual e a proxima aula e o que levo nela", nao "o que revisar agora".
+   *
+   * O custo: a sessao de revisao ficou um toque mais longe. Se o uso mostrar que
+   * o estudo diario e o que mais abre, isto volta.
+   */
+  const [tela, setTela] = useState<Tela>('aulas')
   const [revisando, setRevisando] = useState(false)
   /**
    * Em variavel local so por legibilidade — o valor e usado varias vezes no
