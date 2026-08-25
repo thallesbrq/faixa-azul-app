@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { ROTULO_FAMILIA, ROTULO_PAPEL, familiaDaPosicao, papelDoKind } from './taxonomia'
-import type { Familia } from './taxonomia'
+import {
+  ORDEM_GUARDA,
+  ROTULO_GUARDA,
+  ROTULO_PAPEL,
+  guardaDaPosicao,
+  papelDoKind,
+  subPosicao,
+} from './taxonomia'
+import type { Guarda } from './taxonomia'
 import { ITENS } from '../seed'
 import type { TechniqueKind } from './types'
+
+const ATIVOS = ITENS.filter((i) => i.ativo)
 
 describe('papelDoKind', () => {
   it('passagem e o unico kind em que o aluno esta em cima', () => {
@@ -39,73 +48,140 @@ describe('papelDoKind', () => {
   })
 })
 
-describe('familiaDaPosicao', () => {
-  it('classifica as oito familias do escopo', () => {
-    const esperado: [string, Familia][] = [
+describe('guardaDaPosicao', () => {
+  it('sao exatamente as guardas do curriculo, nem uma mais nem uma menos', () => {
+    // Correcao do aluno: eu havia inventado familias tecnicas (agrupando Aranha
+    // com Laco, Dela Riva com Gancho). O curriculo do exame ja tem a sua
+    // classificacao, e e ela que a academia fala.
+    expect(ORDEM_GUARDA).toEqual([
+      'fechada',
+      'meia',
+      'gancho',
+      'aranha',
+      'dela-riva',
+      'laco',
+      'aberta',
+      'complexo',
+      'saidas',
+    ])
+  })
+
+  it('classifica cada posicao na sua propria guarda', () => {
+    const esperado: [string, Guarda][] = [
       ['Guarda Fechada', 'fechada'],
       ['Meia Guarda (Tradicional e Escudo)', 'meia'],
-      ['Guarda Aranha', 'pegada-manga'],
-      ['Guarda Laço (Lasso Guard)', 'pegada-manga'],
-      ['Guarda Dela Riva', 'gancho'],
       ['Guarda Gancho (Butterfly)', 'gancho'],
-      ['Guarda Aberta', 'sem-pegada'],
-      ['Complexo Moderno (One Leg, 50-50, Guarda X, Berimbolo)', 'pernas'],
-      ['Saída da Montada', 'dominada'],
-      ['Defesas de Finalização', 'finalizacao-sofrida'],
+      ['Guarda Aranha', 'aranha'],
+      ['Guarda Dela Riva', 'dela-riva'],
+      ['Guarda Laço (Lasso Guard)', 'laco'],
+      ['Guarda Aberta', 'aberta'],
+      ['Complexo Moderno (One Leg, 50-50, Guarda X, Berimbolo)', 'complexo'],
+      ['Saída da Montada', 'saidas'],
+      ['Saída dos 100 Kilos', 'saidas'],
+      ['Saída das Costas', 'saidas'],
+      ['Saída do Norte-Sul', 'saidas'],
+      ['Defesas de Finalização', 'saidas'],
     ]
-    for (const [posicao, familia] of esperado) {
-      expect(familiaDaPosicao(posicao), posicao).toBe(familia)
+    for (const [posicao, guarda] of esperado) {
+      expect(guardaDaPosicao(posicao), posicao).toBe(guarda)
     }
   })
 
-  it('Aranha e Laço sao a mesma familia — as duas pegam manga', () => {
-    expect(familiaDaPosicao('Guarda Aranha')).toBe(familiaDaPosicao('Guarda Laço (Lasso Guard)'))
+  it('Aranha e Laço NAO sao agrupadas — sao guardas distintas no curriculo', () => {
+    // Era exatamente o erro da versao anterior.
+    expect(guardaDaPosicao('Guarda Aranha')).not.toBe(guardaDaPosicao('Guarda Laço (Lasso Guard)'))
   })
 
-  it('Dela Riva e Gancho sao a mesma familia — as duas usam gancho', () => {
-    expect(familiaDaPosicao('Guarda Dela Riva')).toBe(familiaDaPosicao('Guarda Gancho (Butterfly)'))
+  it('Dela Riva e Gancho NAO sao agrupadas', () => {
+    expect(guardaDaPosicao('Guarda Dela Riva')).not.toBe(guardaDaPosicao('Guarda Gancho (Butterfly)'))
   })
 
-  it('devolve null para posicao desconhecida, em vez de inventar', () => {
-    expect(familiaDaPosicao('Guarda Que Nao Existe')).toBeNull()
+  it('devolve null para posicao fora do curriculo, em vez de inventar', () => {
+    expect(guardaDaPosicao('Guarda Que Nao Existe')).toBeNull()
   })
 
-  it('TODA posicao ativa do curriculo esta classificada', () => {
+  it('TODA posicao ativa esta classificada', () => {
     // Rede de seguranca: um item novo no seed com posicao nova apareceria sem
     // rotulo no documento do professor, e ninguem notaria.
-    const semFamilia = ITENS.filter((i) => i.ativo && familiaDaPosicao(i.posicao) === null)
-    expect(semFamilia.map((i) => i.posicao)).toEqual([])
+    const sem = ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === null)
+    expect(sem.map((i) => i.posicao)).toEqual([])
   })
 
-  it('toda familia usada tem rotulo legivel', () => {
-    for (const i of ITENS.filter((x) => x.ativo)) {
-      const f = familiaDaPosicao(i.posicao)
-      if (f) expect(ROTULO_FAMILIA[f], `familia "${f}" sem rotulo`).toBeTruthy()
+  it('toda guarda usada tem rotulo legivel', () => {
+    for (const i of ATIVOS) {
+      const g = guardaDaPosicao(i.posicao)!
+      expect(ROTULO_GUARDA[g], `guarda "${g}" sem rotulo`).toBeTruthy()
     }
+  })
+
+  it('as 9 guardas cobrem os 50 itens da prova', () => {
+    const conta = new Map<Guarda, number>()
+    for (const i of ATIVOS) {
+      const g = guardaDaPosicao(i.posicao)!
+      conta.set(g, (conta.get(g) ?? 0) + 1)
+    }
+    // Contagem conferida item a item contra o documento da banca.
+    expect(conta.get('fechada')).toBe(11)
+    expect(conta.get('meia')).toBe(8)
+    expect(conta.get('gancho')).toBe(4)
+    expect(conta.get('aranha')).toBe(5)
+    expect(conta.get('dela-riva')).toBe(5)
+    expect(conta.get('laco')).toBe(3)
+    expect(conta.get('aberta')).toBe(4)
+    // Uma raspagem e uma passagem de UMA das quatro alternativas.
+    expect(conta.get('complexo')).toBe(2)
+    // Montada 2 + Costas 1 + 100 kilos 2 + Norte-sul 1 + Armlock 1 + Triangulo 1.
+    expect(conta.get('saidas')).toBe(8)
+    expect([...conta.values()].reduce((a, b) => a + b, 0)).toBe(50)
   })
 })
 
-describe('as duas dimensoes sao independentes', () => {
-  it('a mesma familia contem papeis diferentes — o motivo de existirem duas', () => {
-    // A Guarda Fechada tem raspagem (atacando) E passagem (passando). Se familia
-    // e papel fossem redundantes, uma das duas nao precisaria existir.
-    const daFechada = ITENS.filter((i) => i.ativo && familiaDaPosicao(i.posicao) === 'fechada')
-    const papeis = new Set(daFechada.map((i) => papelDoKind(i.kind)))
-    expect(papeis.size).toBeGreaterThan(1)
-    expect(papeis.has('atacando')).toBe(true)
-    expect(papeis.has('passando')).toBe(true)
+describe('subPosicao', () => {
+  it('as quatro sub-posicoes do Complexo existem no seed', () => {
+    // O dado ja estava no campo `categoria` desde a importacao — nao precisou
+    // inventar nada, precisou olhar. Nenhuma foi apagada ao reduzir o escopo.
+    const subs = new Set(
+      ITENS.filter((i) => guardaDaPosicao(i.posicao) === 'complexo').map((i) => subPosicao(i)),
+    )
+    expect(subs).toEqual(new Set(['Guarda One Leg', 'Guarda 50-50', 'Guarda X', 'Berimbolo']))
   })
 
-  it('TODA familia de guarda mistura atacar e passar', () => {
-    // Foi o que motivou a taxonomia: o rotulo da posicao, sozinho, nao diz de
-    // que lado da luta o aluno esta.
-    const guardas: Familia[] = ['fechada', 'meia', 'pegada-manga', 'gancho', 'sem-pegada', 'pernas']
-    for (const f of guardas) {
-      const itens = ITENS.filter((i) => i.ativo && familiaDaPosicao(i.posicao) === f)
-      const papeis = new Set(itens.map((i) => papelDoKind(i.kind)))
-      expect(papeis.has('atacando'), `familia "${f}" sem item de ataque`).toBe(true)
-      expect(papeis.has('passando'), `familia "${f}" sem item de passagem`).toBe(true)
+  it('a sub-posicao ATIVA do Complexo tem raspagem e passagem', () => {
+    // E o que a banca pede da entrada unica: "Raspada" e "Passagem", singular.
+    const ativosDoComplexo = ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === 'complexo')
+    expect(new Set(ativosDoComplexo.map((i) => subPosicao(i))).size).toBe(1)
+    expect(new Set(ativosDoComplexo.map((i) => i.kind))).toEqual(new Set(['raspagem', 'passagem']))
+  })
+
+  it('nas saidas, a sub-posicao e a propria posicao', () => {
+    expect(subPosicao({ posicao: 'Saída da Montada', categoria: 'Saídas' })).toBe('Saída da Montada')
+  })
+
+  it('guarda sem subdivisao devolve null — o rotulo dela ja diz tudo', () => {
+    expect(subPosicao({ posicao: 'Guarda Fechada', categoria: 'Raspadas' })).toBeNull()
+    expect(subPosicao({ posicao: 'Guarda Aranha', categoria: 'Raspadas' })).toBeNull()
+  })
+})
+
+describe('guarda e papel sao dimensoes independentes', () => {
+  it('TODA guarda do curriculo mistura atacar e passar', () => {
+    // O motivo de as duas dimensoes existirem: o nome da guarda, sozinho, nao
+    // diz de que lado da luta o aluno esta.
+    const guardas: Guarda[] = ['fechada', 'meia', 'gancho', 'aranha', 'dela-riva', 'laco', 'aberta', 'complexo']
+    for (const g of guardas) {
+      const papeis = new Set(
+        ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === g).map((i) => papelDoKind(i.kind)),
+      )
+      expect(papeis.has('atacando'), `guarda "${g}" sem item de ataque`).toBe(true)
+      expect(papeis.has('passando'), `guarda "${g}" sem item de passagem`).toBe(true)
     }
+  })
+
+  it('nas Saidas o aluno esta sempre defendendo', () => {
+    const papeis = new Set(
+      ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === 'saidas').map((i) => papelDoKind(i.kind)),
+    )
+    expect([...papeis]).toEqual(['defendendo'])
   })
 })
 

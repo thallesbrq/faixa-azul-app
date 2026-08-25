@@ -1,40 +1,51 @@
 /**
- * Taxonomia das posicoes — os rotulos de contexto que a lista de tecnicas nao
- * carrega por si.
+ * Taxonomia das posicoes — os rotulos de contexto da lista de tecnicas.
  *
- * POR QUE ISTO EXISTE. O rotulo "Guarda Fechada" numa lista de tecnicas e
- * ambiguo de um jeito que importa no tatame: dentro da MESMA posicao ha itens em
- * que o aluno esta embaixo atacando (raspagem, finalizacao) e itens em que ele
- * esta em cima passando. Sao lados opostos da luta com o mesmo nome. Conferindo
- * o curriculo, TODAS as oito posicoes de guarda misturam os dois papeis.
+ * HISTORICO DESTA DECISAO, porque ela ja foi errada uma vez. Eu havia inventado
+ * uma classificacao por familia tecnica ("pegada de manga", "gancho", "pernas
+ * entrelacadas"), agrupando Aranha com Laco e Dela Riva com Gancho. O aluno
+ * corrigiu: as guardas devem ser EXATAMENTE as do curriculo do exame. Inventar
+ * taxonomia sobre um documento que ja tem a sua e criar uma segunda linguagem
+ * que ninguem na academia fala.
  *
- * Duas dimensoes resolvem isso, e elas sao independentes:
+ * As nove guardas do curriculo:
+ *   Guarda Fechada · Meia Guarda · Guarda Gancho · Guarda Aranha ·
+ *   Guarda Dela Riva · Guarda Laco · Guarda Aberta ·
+ *   Complexo Moderno (One Leg, 50-50, Guarda X, Berimbolo) · Saidas
  *
- * - PAPEL: de que lado eu estou. Derivado do `kind`, tres valores.
- * - FAMILIA: que tipo de guarda e, tecnicamente. Nao e derivavel de nada — e
- *   conhecimento de jiu-jitsu, e por isso e uma tabela explicita, para ser
- *   corrigida pelo professor em vez de adivinhada por regra.
+ * O Complexo Moderno tem SUB-POSICOES, e elas ja estavam nos dados desde a
+ * importacao, no campo `categoria`: Guarda One Leg, Guarda 50-50, Guarda X e
+ * Berimbolo. Nao precisou inventar nada — precisou olhar.
+ *
+ * PAPEL continua existindo como dimensao separada, e o motivo e concreto: todas
+ * as oito guardas contem itens em que o aluno esta embaixo atacando E itens em
+ * que ele esta em cima passando. "Guarda Fechada · Raspagem de tesoura" e
+ * "Guarda Fechada · Abrir em pe e passar" sao lados opostos da luta com o mesmo
+ * nome de posicao.
  *
  * Modulo puro: sem React, sem I/O.
  */
 
-import type { TechniqueKind } from './types'
+import type { TechniqueItem, TechniqueKind } from './types'
 
-/** De que lado da luta o aluno esta. */
+// ---------------------------------------------------------------------------
+// Papel: de que lado da luta o aluno esta
+// ---------------------------------------------------------------------------
+
 export type Papel = 'atacando' | 'passando' | 'defendendo'
 
 export const ROTULO_PAPEL: Record<Papel, string> = {
-  atacando: 'Embaixo, atacando',
-  passando: 'Em cima, passando',
-  defendendo: 'Embaixo, defendendo',
+  atacando: 'eu ataco',
+  passando: 'eu passo',
+  defendendo: 'eu defendo',
 }
 
 /**
  * Papel a partir do tipo da tecnica.
  *
  * `costas` conta como atacando: ir as costas parte de uma guarda, com o aluno
- * embaixo. `movimentacao` cai no padrao por nao ter lado definido — sao itens
- * de Fundamentos, que estao desativados neste escopo.
+ * embaixo. `movimentacao` e os demais caem no padrao por nao terem lado
+ * definido — sao itens de Fundamentos, fora deste escopo.
  */
 export function papelDoKind(kind: TechniqueKind): Papel {
   if (kind === 'passagem') return 'passando'
@@ -42,53 +53,89 @@ export function papelDoKind(kind: TechniqueKind): Papel {
   return 'atacando'
 }
 
-/** Familia tecnica da posicao. */
-export type Familia =
+// ---------------------------------------------------------------------------
+// Guarda: as do curriculo, nem uma mais nem uma menos
+// ---------------------------------------------------------------------------
+
+export type Guarda =
   | 'fechada'
   | 'meia'
-  | 'pegada-manga'
   | 'gancho'
-  | 'sem-pegada'
-  | 'pernas'
-  | 'dominada'
-  | 'finalizacao-sofrida'
+  | 'aranha'
+  | 'dela-riva'
+  | 'laco'
+  | 'aberta'
+  | 'complexo'
+  | 'saidas'
 
-export const ROTULO_FAMILIA: Record<Familia, string> = {
-  fechada: 'Fechada',
-  meia: 'Meia-guarda',
-  'pegada-manga': 'Pegada de manga',
-  gancho: 'Gancho',
-  'sem-pegada': 'Sem pegada fixa',
-  pernas: 'Pernas entrelaçadas',
-  dominada: 'Posição dominada',
-  'finalizacao-sofrida': 'Finalização sofrida',
+/** Rotulo curto, para caber na linha de um documento denso. */
+export const ROTULO_GUARDA: Record<Guarda, string> = {
+  fechada: 'Guarda Fechada',
+  meia: 'Meia Guarda',
+  gancho: 'Guarda Gancho',
+  aranha: 'Guarda Aranha',
+  'dela-riva': 'Guarda Dela Riva',
+  laco: 'Guarda Laço',
+  aberta: 'Guarda Aberta',
+  complexo: 'Complexo Moderno',
+  saidas: 'Saídas',
+}
+
+/** Ordem do curriculo do exame, para legendas e agrupamentos. */
+export const ORDEM_GUARDA: Guarda[] = [
+  'fechada',
+  'meia',
+  'gancho',
+  'aranha',
+  'dela-riva',
+  'laco',
+  'aberta',
+  'complexo',
+  'saidas',
+]
+
+/**
+ * Posicao -> guarda do curriculo.
+ *
+ * Comparacao por prefixo porque os rotulos importados carregam parenteses
+ * longos ("Guarda Laço (Lasso Guard)"). A ordem importa: "Guarda Gancho" tem de
+ * ser testado antes de qualquer prefixo mais curto que o contenha.
+ */
+const GUARDA_POR_PREFIXO: [string, Guarda][] = [
+  ['Guarda Fechada', 'fechada'],
+  ['Meia Guarda', 'meia'],
+  ['Guarda Gancho', 'gancho'],
+  ['Guarda Aranha', 'aranha'],
+  ['Guarda Dela Riva', 'dela-riva'],
+  ['Guarda Laço', 'laco'],
+  ['Guarda Aberta', 'aberta'],
+  ['Complexo Moderno', 'complexo'],
+  ['Saída', 'saidas'],
+  ['Defesas de Finalização', 'saidas'],
+]
+
+/** `null` quando a posicao nao esta no curriculo mapeado. */
+export function guardaDaPosicao(posicao: string): Guarda | null {
+  for (const [prefixo, guarda] of GUARDA_POR_PREFIXO) {
+    if (posicao.startsWith(prefixo)) return guarda
+  }
+  return null
 }
 
 /**
- * Posicao -> familia. Tabela EXPLICITA de proposito: classificar guarda e
- * conhecimento tecnico, nao regra de string. Se o Prof. Joao Eduardo classificar
- * diferente, muda aqui e o app e os documentos acompanham.
+ * Sub-posicao dentro da guarda, quando a guarda tem subdivisao no curriculo.
  *
- * Comparacao por prefixo porque os rotulos importados carregam parenteses
- * longos ("Guarda Laço (Lasso Guard)").
+ * Vale para dois casos, e nos dois o dado ja existia:
+ * - Complexo Moderno: `categoria` traz One Leg, 50-50, Guarda X ou Berimbolo.
+ * - Saidas: cada uma e uma posicao propria (da Montada, dos 100 Kilos, ...), e
+ *   ai a subdivisao e a propria `posicao`.
+ *
+ * Devolve `null` para as guardas que nao se subdividem — nesses casos o rotulo
+ * da guarda ja e a informacao completa.
  */
-const FAMILIA_POR_PREFIXO: [string, Familia][] = [
-  ['Guarda Fechada', 'fechada'],
-  ['Meia Guarda', 'meia'],
-  ['Guarda Aranha', 'pegada-manga'],
-  ['Guarda Laço', 'pegada-manga'],
-  ['Guarda Dela Riva', 'gancho'],
-  ['Guarda Gancho', 'gancho'],
-  ['Guarda Aberta', 'sem-pegada'],
-  ['Complexo Moderno', 'pernas'],
-  ['Defesas de Finalização', 'finalizacao-sofrida'],
-  ['Saída', 'dominada'],
-]
-
-/** `null` quando a posicao nao esta classificada — a UI mostra sem rotulo. */
-export function familiaDaPosicao(posicao: string): Familia | null {
-  for (const [prefixo, familia] of FAMILIA_POR_PREFIXO) {
-    if (posicao.startsWith(prefixo)) return familia
-  }
+export function subPosicao(item: Pick<TechniqueItem, 'posicao' | 'categoria'>): string | null {
+  const guarda = guardaDaPosicao(item.posicao)
+  if (guarda === 'complexo') return item.categoria
+  if (guarda === 'saidas') return item.posicao
   return null
 }

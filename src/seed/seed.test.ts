@@ -91,8 +91,36 @@ describe('foco declarado nas Secoes 4 e 5', () => {
     expect(new Set(ativos.map((i) => i.moduloId))).toEqual(new Set(['mod-guardas', 'mod-saidas']))
   })
 
-  it('sao 56 itens ativos: 48 de guardas + 8 de saidas', () => {
-    expect(ativos).toHaveLength(56)
+  it('sao 50 itens ativos — exatamente o que o documento da banca pede', () => {
+    // Conferido item a item contra o PDF do exame: 11 Fechada + 8 Meia Guarda
+    // + 4 Gancho + 5 Aranha + 5 Dela Riva + 3 Laco + 4 Aberta + 2 do complexo
+    // + 8 Saidas = 50. A importacao trazia 56 porque expandiu a entrada unica
+    // do complexo (One leg / 50-50 / Guarda X / Berimbolo, "Raspada" e
+    // "Passagem" no singular) em quatro posicoes de dois itens cada.
+    expect(ativos).toHaveLength(50)
+  })
+
+  it('50 itens em 10 aulas dao exatos 5 por aula', () => {
+    // Nao e coincidencia bonita: e o efeito de o escopo passar a ser o da prova.
+    expect(ativos.length % 10).toBe(0)
+    expect(ativos.length / 10).toBe(5)
+  })
+
+  it('so uma sub-posicao do complexo esta ativa, e as outras NAO foram apagadas', () => {
+    const doComplexo = ITENS.filter((i) => i.posicao.startsWith('Complexo Moderno'))
+    const ativosDoComplexo = doComplexo.filter((i) => i.ativo)
+
+    // As quatro alternativas continuam no seed: trocar de escolha e mudar uma
+    // constante, nao reimportar o curriculo.
+    expect(new Set(doComplexo.map((i) => i.categoria))).toEqual(
+      new Set(['Guarda One Leg', 'Guarda 50-50', 'Guarda X', 'Berimbolo']),
+    )
+    expect(doComplexo).toHaveLength(8)
+
+    // Ativa, so uma — com a raspagem e a passagem que a banca pede.
+    expect(new Set(ativosDoComplexo.map((i) => i.categoria)).size).toBe(1)
+    expect(ativosDoComplexo).toHaveLength(2)
+    expect(new Set(ativosDoComplexo.map((i) => i.kind))).toEqual(new Set(['raspagem', 'passagem']))
   })
 
   it('todo item ativo tem passo a passo', () => {
