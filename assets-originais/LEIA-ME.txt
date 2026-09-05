@@ -1,0 +1,8 @@
+Icones originais, com o brasao completo da Rilion Gracie.
+
+Guardados porque sao ativos que nao consigo refazer a partir do codigo: o
+brasao veio pronto, e o triangulo dos icones atuais foi RECORTADO daqui
+(caixa 146,170 a 366,289 no icon-512 original).
+
+O logo do cabecalho do app continua sendo o brasao completo
+(public/logo-rilion.png) — so o icone virou o triangulo.
