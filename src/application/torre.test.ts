@@ -54,9 +54,9 @@ describe('resumoDoAluno', () => {
   it('conta itens validados SEM duplicar o mesmo item validado duas vezes', () => {
     const e = aluno({
       validacoes: [
-        { id: 'v1', itemId: 'i1', status: 'validado_pelo_professor' },
-        { id: 'v2', itemId: 'i1', status: 'validado_pelo_professor' },
-        { id: 'v3', itemId: 'i2', status: 'validado_pelo_professor' },
+        { id: 'v1', itemId: 'i1', novoStatus: 'validado_pelo_professor' },
+        { id: 'v2', itemId: 'i1', novoStatus: 'validado_pelo_professor' },
+        { id: 'v3', itemId: 'i2', novoStatus: 'validado_pelo_professor' },
       ] as never,
     })
     expect(resumoDoAluno(e, ctx).itensValidados).toBe(2)

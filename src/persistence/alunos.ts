@@ -36,12 +36,15 @@ export interface RepositorioDeAlunos {
 }
 
 export class QuotaEstourada extends Error {
-  constructor(readonly nome: string) {
+  readonly nome: string
+
+  constructor(nome: string) {
     super(
       `Não foi possível guardar ${nome}: o armazenamento do navegador está cheio. ` +
         'Remova um aluno já concluído ou exporte antes de continuar.',
     )
     this.name = 'QuotaEstourada'
+    this.nome = nome
   }
 }
 

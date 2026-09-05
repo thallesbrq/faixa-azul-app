@@ -8,7 +8,7 @@
  *
  * O QUE A LISTA PRECISA RESPONDER, e por isso cada campo existe:
  * - quem esta parado (`diasSemEstudar`)
- * - quem tem coisa esperando o professor (`aguardandoValidacao`)
+ * - quem tem duvida esperando resposta (`duvidasAbertas`)
  * - onde cada um esta no pacote (`aulasFeitas`)
  * - se a grade dele ja foi montada (`itensNaGrade`)
  *
@@ -71,7 +71,7 @@ export function resumoDoAluno(
     totalDeRevisoes: estado.eventos.length,
     itensValidados: new Set(
       estado.validacoes
-        .filter((v) => v.status === 'validado_pelo_professor')
+        .filter((v) => v.novoStatus === 'validado_pelo_professor')
         .map((v) => v.itemId),
     ).size,
     duvidasAbertas: estado.duvidas.filter((d) => d.status !== 'respondida').length,
