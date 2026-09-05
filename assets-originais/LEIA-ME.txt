@@ -1,8 +1,19 @@
-Icones originais, com o brasao completo da Rilion Gracie.
+Fontes dos icones — nao vao para o site (ficam fora de public/ de proposito:
+o Vite publica tudo que esta em public/ E o workbox poe no precache, o que
+custaria ~215 KB em toda instalacao para nada).
 
-Guardados porque sao ativos que nao consigo refazer a partir do codigo: o
-brasao veio pronto, e o triangulo dos icones atuais foi RECORTADO daqui
-(caixa 146,170 a 366,289 no icon-512 original).
+logo-rilion-fonte.png  Lockup enviado pelo aluno em 05/09/2026, 1254x1254,
+                       fundo preto puro. E DAQUI que os icones sao gerados.
+                       O triangulo COM o contorno cinza esta na caixa
+                       (303, 213) a (987, 686) — 684x473, proporcao 1,45.
+                       Laranja #FE7109, contorno #797979.
 
-O logo do cabecalho do app continua sendo o brasao completo
-(public/logo-rilion.png) — so o icone virou o triangulo.
+icon-*.png             Icones ANTERIORES, com o brasao oval "GRACIE ELITE /
+apple-touch-icon.png   BRASIL". Guardados para poder voltar atras.
+
+O logo do cabecalho DENTRO do app continua sendo public/logo-rilion.png (o
+brasao oval). So o icone virou o triangulo.
+
+Para regerar os icones, ver a mensagem do commit correspondente: as fracoes sao
+76% para os icones normais e 62% para o maskable — este ultimo menor porque o
+sistema recorta as bordas e a area segura e o circulo central de 80% do lado.
