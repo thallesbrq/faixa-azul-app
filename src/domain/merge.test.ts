@@ -3,6 +3,7 @@ import {
   contar,
   escolherPorDono,
   houveMudanca,
+  mesclarCampos,
   relatorioVazio,
   unirLogs,
   unirPorChave,
@@ -225,5 +226,99 @@ describe('relatorio', () => {
     expect(r.novos.eventos).toBe(12)
     expect(r.substituidos.aulas).toBe(1)
     expect(houveMudanca(r)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// dono POR CAMPO — o caso que dono por registro perdia
+// ---------------------------------------------------------------------------
+
+describe('mesclarCampos', () => {
+  type Aula = { numero: number; itemIds?: string[]; realizadaEm?: string; notas?: string }
+  const DONOS = {
+    itemIds: 'professor',
+    notas: 'professor',
+    realizadaEm: 'aluno',
+  } as const
+
+  const m = (por: Origem, iso: string, versao = 1): Marca => ({
+    alteradoEm: iso,
+    alteradoPor: por,
+    versao,
+  })
+
+  it('A GRADE do professor e o "aula feita" do aluno CONVIVEM', () => {
+    // O cenario que motivou dono por campo: com dono por registro, "o professor
+    // vence" apagaria realizadaEm toda vez que ele mandasse a grade.
+    const local: Aula = { numero: 3, itemIds: [], realizadaEm: '2026-09-02T11:00:00Z' }
+    const recebido: Aula = { numero: 3, itemIds: ['a', 'b'], realizadaEm: undefined }
+
+    const r = mesclarCampos(
+      local,
+      recebido,
+      DONOS,
+      { itemIds: m('aluno', '2026-09-01T08:00:00Z'), realizadaEm: m('aluno', '2026-09-02T11:00:00Z') },
+      { itemIds: m('professor', '2026-09-02T10:00:00Z') },
+    )
+
+    expect(r.valor.itemIds).toEqual(['a', 'b'])
+    expect(r.valor.realizadaEm).toBe('2026-09-02T11:00:00Z')
+    expect(r.substituidos).toEqual(['itemIds'])
+  })
+
+  it('o professor NAO consegue desmarcar a aula mandando a grade', () => {
+    // Mesmo com a data do professor mais nova, realizadaEm e do aluno.
+    const local: Aula = { numero: 1, realizadaEm: '2026-09-01T09:00:00Z' }
+    const recebido: Aula = { numero: 1, realizadaEm: undefined }
+    const r = mesclarCampos(
+      local,
+      recebido,
+      DONOS,
+      { realizadaEm: m('aluno', '2026-09-01T09:00:00Z') },
+      { realizadaEm: m('professor', '2026-09-05T09:00:00Z') },
+    )
+    expect(r.valor.realizadaEm).toBe('2026-09-01T09:00:00Z')
+  })
+
+  it('campo sem marca do lado recebido nao mexe no local', () => {
+    // Dado anterior as marcas nunca sobrescreve dado novo por omissao.
+    const local: Aula = { numero: 1, notas: 'minha nota' }
+    const recebido: Aula = { numero: 1, notas: undefined }
+    const r = mesclarCampos(local, recebido, DONOS, { notas: m('professor', '2026-09-01T09:00:00Z') }, {})
+    expect(r.valor.notas).toBe('minha nota')
+    expect(r.substituidos).toEqual([])
+  })
+
+  it('campo novo do lado recebido preenche o que aqui nunca existiu', () => {
+    const local: Aula = { numero: 1 }
+    const recebido: Aula = { numero: 1, notas: 'chegar 10 min antes' }
+    const r = mesclarCampos(local, recebido, DONOS, {}, { notas: m('professor', '2026-09-01T09:00:00Z') })
+    expect(r.valor.notas).toBe('chegar 10 min antes')
+    expect(r.marcas.notas?.alteradoPor).toBe('professor')
+  })
+
+  it('nao depende da ordem: os dois aparelhos chegam ao mesmo resultado', () => {
+    const a: Aula = { numero: 2, itemIds: ['x'], realizadaEm: '2026-09-02T11:00:00Z' }
+    const b: Aula = { numero: 2, itemIds: ['y', 'z'], realizadaEm: undefined }
+    const ma = { itemIds: m('aluno', '2026-09-01T08:00:00Z'), realizadaEm: m('aluno', '2026-09-02T11:00:00Z') }
+    const mb = { itemIds: m('professor', '2026-09-02T10:00:00Z') }
+
+    const daAluno = mesclarCampos(a, b, DONOS, ma, mb)
+    const doProf = mesclarCampos(b, a, DONOS, mb, ma)
+
+    expect(daAluno.valor.itemIds).toEqual(doProf.valor.itemIds)
+    expect(daAluno.valor.realizadaEm).toEqual(doProf.valor.realizadaEm)
+  })
+
+  it('e idempotente: mesclar o resultado de novo nao muda nada', () => {
+    const local: Aula = { numero: 1, itemIds: ['a'] }
+    const recebido: Aula = { numero: 1, itemIds: ['b', 'c'] }
+    const ml = { itemIds: m('aluno', '2026-09-01T08:00:00Z') }
+    const mr = { itemIds: m('professor', '2026-09-02T10:00:00Z') }
+
+    const uma = mesclarCampos(local, recebido, DONOS, ml, mr)
+    const duas = mesclarCampos(uma.valor, recebido, DONOS, uma.marcas, mr)
+    expect(duas.valor).toEqual(uma.valor)
+    expect(duas.substituidos).toEqual([])
   })
 })

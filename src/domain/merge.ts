@@ -94,22 +94,86 @@ export function unirPorChave<T>(
 }
 
 /**
- * Escolhe entre duas versoes do mesmo registro.
+ * Qual das duas marcas vence, dado quem e o dono daquilo.
  *
- * `dono` e quem manda naquele campo. Se um dos lados foi escrito pelo dono e o
- * outro nao, o do dono vence — sem olhar a hora. So quando OS DOIS vem do mesmo
- * lado (ou nenhum e do dono) e que a data desempata.
+ * Se um dos lados foi escrito pelo dono e o outro nao, o do dono vence — sem
+ * olhar a hora. So quando OS DOIS vem do mesmo lado (ou nenhum e do dono) e que
+ * a data desempata.
  */
+export function marcaVencedora(local: Marca, recebido: Marca, dono: Origem): 'local' | 'recebido' {
+  const localEhDono = local.alteradoPor === dono
+  const recebidoEhDono = recebido.alteradoPor === dono
+  if (localEhDono && !recebidoEhDono) return 'local'
+  if (recebidoEhDono && !localEhDono) return 'recebido'
+  return maisRecente(local, recebido) === local ? 'local' : 'recebido'
+}
+
+/** Escolhe entre duas versoes do mesmo registro de dono unico. */
 export function escolherPorDono<T extends { marca: Marca }>(
   local: T,
   recebido: T,
   dono: Origem,
 ): T {
-  const localEhDono = local.marca.alteradoPor === dono
-  const recebidoEhDono = recebido.marca.alteradoPor === dono
-  if (localEhDono && !recebidoEhDono) return local
-  if (recebidoEhDono && !localEhDono) return recebido
-  return maisRecente(local.marca, recebido.marca) === local.marca ? local : recebido
+  return marcaVencedora(local.marca, recebido.marca, dono) === 'local' ? local : recebido
+}
+
+// ---------------------------------------------------------------------------
+// Dono POR CAMPO
+// ---------------------------------------------------------------------------
+
+/** Marca de cada campo que pode ser alterado. */
+export type Marcas<K extends string> = Partial<Record<K, Marca>>
+
+/**
+ * Junta dois registros cujos campos tem DONOS DIFERENTES.
+ *
+ * POR QUE ISTO PRECISA EXISTIR, e nao basta dono por registro: `AlteracaoAula`
+ * tem tres campos e tres donos. `itemIds` e a grade, do professor;
+ * `realizadaEm` e o aluno dizendo que a aula aconteceu; `notas` e a observacao
+ * do professor sobre a aula.
+ *
+ * Com dono por registro, "o professor vence" apagaria o `realizadaEm` do aluno
+ * TODA VEZ que ele mandasse a grade — em silencio, sempre, e o aluno veria as
+ * aulas voltarem a "nao realizada" sem entender. Com dono por campo, a grade
+ * dele e a marcacao dela convivem, porque de fato nao se contradizem.
+ *
+ * Campo sem marca do lado recebido nao mexe no local: dado antigo (anterior as
+ * marcas) nunca sobrescreve dado novo por omissao.
+ */
+export function mesclarCampos<T extends object, K extends Extract<keyof T, string>>(
+  local: T,
+  recebido: T,
+  donos: Record<K, Origem>,
+  marcasLocais: Marcas<K> | undefined,
+  marcasRecebidas: Marcas<K> | undefined,
+): { valor: T; marcas: Marcas<K>; substituidos: K[] } {
+  const valor = { ...local }
+  const marcas: Marcas<K> = { ...marcasLocais }
+  const substituidos: K[] = []
+
+  for (const campo of Object.keys(donos) as K[]) {
+    const ml = marcasLocais?.[campo]
+    const mr = marcasRecebidas?.[campo]
+
+    // Nada chegou sobre este campo: o local segue como esta.
+    if (!mr) continue
+
+    // Chegou marca e aqui nao havia: o recebido preenche.
+    if (!ml) {
+      valor[campo] = recebido[campo]
+      marcas[campo] = mr
+      substituidos.push(campo)
+      continue
+    }
+
+    if (marcaVencedora(ml, mr, donos[campo]) === 'recebido') {
+      valor[campo] = recebido[campo]
+      marcas[campo] = mr
+      substituidos.push(campo)
+    }
+  }
+
+  return { valor, marcas, substituidos }
 }
 
 // ---------------------------------------------------------------------------
