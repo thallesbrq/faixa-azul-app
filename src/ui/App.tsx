@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AvisoDeVersao } from './components/AvisoDeVersao'
 import { Navegacao } from './components/Navegacao'
 import type { Tela } from './components/Navegacao'
@@ -11,6 +11,13 @@ import { Progresso } from './screens/Progresso'
 import { Simulado } from './screens/Simulado'
 import { Revisao } from './screens/Revisao'
 import { Treino } from './screens/Treino'
+import { Perfil } from './screens/Perfil'
+import { Torre } from './screens/Torre'
+import { abasDoPapel } from './components/Navegacao'
+import { useTorre } from './useTorre'
+import { deposito } from './useApp'
+import { baixarArquivo } from './baixarArquivo'
+import { empacotar, nomeDoArquivo } from '../application/juncao'
 import { armazenamentoPersistente, useApp } from './useApp'
 import { useAtualizacao } from './useAtualizacao'
 import './app.css'
@@ -27,6 +34,20 @@ export function App() {
    * o estudo diario e o que mais abre, isto volta.
    */
   const [tela, setTela] = useState<Tela>('aulas')
+  const torre = useTorre(deposito)
+  const papel = app.estado.perfil.papel
+
+  /**
+   * Trocar de papel troca as abas — e a aba aberta pode deixar de existir.
+   *
+   * Sem isto, marcar "do professor" estando em Simulado deixaria a tela em
+   * branco: a aba some da barra, mas `tela` continua apontando para ela. Volta
+   * para a primeira aba do papel novo.
+   */
+  useEffect(() => {
+    const disponiveis = abasDoPapel(papel).map((a) => a.id)
+    if (!disponiveis.includes(tela)) setTela(disponiveis[0])
+  }, [papel, tela])
   const [revisando, setRevisando] = useState(false)
   /**
    * Em variavel local so por legibilidade — o valor e usado varias vezes no
@@ -193,7 +214,38 @@ export function App() {
             />
           )}
 
-          <Navegacao atual={tela} aoTrocar={setTela} />
+          {tela === 'perfil' && (
+            <Perfil
+              nome={app.estado.perfil.nome}
+              papel={papel}
+              id={app.estado.perfil.id}
+              aoDefinir={app.definirPerfil}
+              aoExportar={app.exportarArquivo}
+              aoImportar={app.importarArquivo}
+              totalDeItens={app.itens.length}
+            />
+          )}
+
+          {tela === 'torre' && (
+            <Torre
+              lista={torre.lista}
+              atencao={torre.atencao}
+              espaco={torre.espaco}
+              aoImportar={(texto, forcarId) => torre.importar(texto, new Date(), forcarId)}
+              aoRemover={torre.remover}
+              aoDevolver={(id) => {
+                const estado = torre.ler(id)
+                if (!estado) return
+                const agora = new Date()
+                baixarArquivo(
+                  nomeDoArquivo(estado, agora),
+                  JSON.stringify(empacotar(estado, agora), null, 2),
+                )
+              }}
+            />
+          )}
+
+          <Navegacao atual={tela} aoTrocar={setTela} papel={papel} />
         </>
       )}
     </div>

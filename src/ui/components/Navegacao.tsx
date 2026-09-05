@@ -7,7 +7,7 @@
  * tecnica, onde a correcao do professor e registrada.
  */
 
-export type Tela = 'aulas' | 'hoje' | 'curriculo' | 'simulado' | 'progresso'
+export type Tela = 'aulas' | 'hoje' | 'curriculo' | 'simulado' | 'progresso' | 'perfil' | 'torre'
 
 /**
  * A ORDEM AQUI E A ORDEM NA BARRA — e agora ela concorda com a tela que abre.
@@ -20,18 +20,45 @@ export type Tela = 'aulas' | 'hoje' | 'curriculo' | 'simulado' | 'progresso'
  * A ordem do tipo `Tela` acompanha por leitura, nao por necessidade — a uniao nao
  * tem ordem semantica.
  */
-const ABAS: { id: Tela; rotulo: string; icone: string }[] = [
+const ABAS_DO_ALUNO: { id: Tela; rotulo: string; icone: string }[] = [
   { id: 'aulas', rotulo: 'Aulas', icone: '🥋' },
   { id: 'hoje', rotulo: 'Hoje', icone: '🎯' },
   { id: 'curriculo', rotulo: 'Currículo', icone: '📋' },
   { id: 'simulado', rotulo: 'Simulado', icone: '⏱️' },
   { id: 'progresso', rotulo: 'Progresso', icone: '📈' },
+  { id: 'perfil', rotulo: 'Perfil', icone: '👤' },
 ]
 
-export function Navegacao({ atual, aoTrocar }: { atual: Tela; aoTrocar: (t: Tela) => void }) {
+/**
+ * O PAPEL TROCA O APP, nao acrescenta uma aba.
+ *
+ * O professor nao esta se preparando para a prova: simulado, revisao do dia e
+ * progresso pessoal nao servem para nada no aparelho dele. Manter as sete abas
+ * deixaria cada uma com 53px no 375px e enterraria a Central — que e a unica
+ * razao de ele abrir o app — no meio de telas que ele nunca usa.
+ */
+const ABAS_DO_PROFESSOR: { id: Tela; rotulo: string; icone: string }[] = [
+  { id: 'torre', rotulo: 'Central', icone: '🗼' },
+  { id: 'curriculo', rotulo: 'Currículo', icone: '📋' },
+  { id: 'perfil', rotulo: 'Perfil', icone: '👤' },
+]
+
+export function abasDoPapel(papel: 'aluno' | 'professor') {
+  return papel === 'professor' ? ABAS_DO_PROFESSOR : ABAS_DO_ALUNO
+}
+
+export function Navegacao({
+  atual,
+  aoTrocar,
+  papel,
+}: {
+  atual: Tela
+  aoTrocar: (t: Tela) => void
+  papel: 'aluno' | 'professor'
+}) {
   return (
     <nav className="navegacao" aria-label="Navegação principal">
-      {ABAS.map((aba) => (
+      {abasDoPapel(papel).map((aba) => (
         <button
           key={aba.id}
           className={`nav-item ${atual === aba.id ? 'nav-item--ativo' : ''}`}

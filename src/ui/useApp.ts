@@ -22,16 +22,25 @@ import { aplicarValidacoes, criarValidacao } from '../domain/validacao'
 import { normalizarUrlDeVideo } from '../domain/video'
 import type { Dificuldade, PracticeObservation, ValidationStatus } from '../domain/types'
 import { depositoEmMemoria, depositoLocalStorage } from '../persistence/deposito'
-import { carregar, salvar } from '../persistence/repositorio'
+import { VERSAO_ATUAL, carregar, migrar, salvar } from '../persistence/repositorio'
 import type { AlteracaoAula, AlteracaoItem, EstadoPersistido } from '../persistence/repositorio'
 import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from '../seed'
+import {
+  EXPLICACAO_DA_RECUSA as RECUSA_DO_ARQUIVO,
+  abrirEnvelope,
+  empacotar,
+  mesclarEstados,
+  nomeDoArquivo,
+} from '../application/juncao'
+import type { Origem } from '../domain/procedencia'
+import { baixarArquivo } from './baixarArquivo'
 
 /**
  * Sem localStorage o app segue funcionando na sessao, mas o progresso nao
  * sobrevive ao fechamento — e a UI avisa, em vez de perder dados em silencio.
  */
 const depositoDoNavegador = depositoLocalStorage()
-const deposito = depositoDoNavegador ?? depositoEmMemoria()
+export const deposito = depositoDoNavegador ?? depositoEmMemoria()
 export const armazenamentoPersistente = depositoDoNavegador !== null
 
 export function useApp() {
@@ -301,6 +310,52 @@ export function useApp() {
   )
 
   /** Aulas do seed com as alteracoes do aluno aplicadas. */
+  // -------------------------------------------------------------------------
+  // Perfil, exportacao e importacao de arquivo
+  // -------------------------------------------------------------------------
+
+  const definirPerfil = useCallback(
+    (nome: string, papel: Origem) => {
+      atualizar({ ...estado, perfil: { ...estado.perfil, nome, papel } })
+    },
+    [estado, atualizar],
+  )
+
+  /** Baixa o estado como arquivo, para mandar ao professor. */
+  const exportarArquivo = useCallback(() => {
+    const agora = new Date()
+    baixarArquivo(nomeDoArquivo(estado, agora), JSON.stringify(empacotar(estado, agora), null, 2))
+  }, [estado])
+
+  /**
+   * Recebe o arquivo do professor e JUNTA com o que ja existe aqui.
+   *
+   * Passa o proprio id como `perfilEsperado`: importar o arquivo de um colega
+   * misturaria dois progressos num estado so, sem separacao possivel depois.
+   */
+  const importarArquivo = useCallback(
+    (texto: string): { ok: boolean; mensagem: string } => {
+      const aberto = abrirEnvelope(texto, VERSAO_ATUAL, estado.perfil.id)
+      if (!aberto.ok) return { ok: false, mensagem: RECUSA_DO_ARQUIVO[aberto.motivo] }
+
+      const recebido = migrar(
+        aberto.envelope.estado as unknown as Record<string, unknown>,
+        new Date(),
+      )
+      const juncao = mesclarEstados({ local: estado, recebido })
+      atualizar(juncao.estado)
+
+      if (!juncao.mudou) return { ok: true, mensagem: 'Nada novo — você já estava atualizado.' }
+
+      const partes = [
+        ...Object.entries(juncao.relatorio.novos).map(([k, n]) => `${n} ${k}`),
+        ...Object.entries(juncao.relatorio.substituidos).map(([k]) => `${k} atualizadas`),
+      ]
+      return { ok: true, mensagem: `Importado: ${partes.join(', ')}.` }
+    },
+    [estado, atualizar],
+  )
+
   const aulas = useMemo(() => {
     const alteracoes = new Map(estado.aulas.map((a) => [a.numero, a]))
     return AULAS.map((aula) => {
@@ -326,6 +381,9 @@ export function useApp() {
     definirDataAlvo,
     registrarValidacao,
     marcarAulaRealizada,
+    definirPerfil,
+    exportarArquivo,
+    importarArquivo,
     registrarSessao,
     atribuicao,
     codigoDaMontagem,

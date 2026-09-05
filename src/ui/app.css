@@ -1677,3 +1677,120 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------
+   Torre — a central do professor
+   ---------------------------------------------------------------------------
+   A situacao do aluno aparece em COR e em TEXTO (o selo), nunca so em cor —
+   mesma regra das notas de avaliacao (RNF-04). Quem nao distingue vermelho de
+   verde le "parado" do mesmo jeito.
+   --------------------------------------------------------------------------- */
+.torre-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+}
+
+.torre-aluno {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-left: 4px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  overflow: hidden;
+}
+
+.torre-aluno--parado { border-left-color: var(--vermelho-alerta); }
+.torre-aluno--nunca-estudou { border-left-color: var(--amarelo-atencao); }
+.torre-aluno--em-dia { border-left-color: var(--verde-sucesso); }
+
+.torre-abrir {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espacamento-base);
+  padding: calc(var(--espacamento-base) * 1.5);
+  min-height: var(--alvo-toque-min);
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.torre-nome {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 700;
+  font-size: 1rem;
+  min-width: 0;
+}
+
+.torre-nome small {
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+
+.torre-numeros {
+  display: flex;
+  gap: calc(var(--espacamento-base) * 2);
+  flex-shrink: 0;
+}
+
+.torre-num {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.torre-num small {
+  font-weight: 400;
+  font-size: 0.65rem;
+  color: var(--cor-texto-suave);
+}
+
+.torre-detalhe {
+  padding: 0 calc(var(--espacamento-base) * 1.5) calc(var(--espacamento-base) * 1.5);
+  border-top: 1px solid var(--cor-borda);
+  padding-top: calc(var(--espacamento-base) * 1.5);
+}
+
+.torre-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacamento-base);
+  padding: var(--espacamento-base) calc(var(--espacamento-base) * 1.5);
+  border-top: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  font-size: 0.72rem;
+}
+
+.torre-selo {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--cor-borda);
+}
+
+.torre-selo--parado { color: var(--vermelho-alerta); border-color: var(--vermelho-alerta); }
+.torre-selo--nunca-estudou { color: var(--amarelo-atencao); border-color: var(--amarelo-atencao); }
+.torre-selo--em-dia { color: var(--verde-sucesso); border-color: var(--verde-sucesso); }
+
+.torre-idade {
+  color: var(--cor-texto-suave);
+  margin-right: auto;
+}
