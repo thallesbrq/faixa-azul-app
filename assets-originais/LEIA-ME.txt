@@ -17,3 +17,12 @@ brasao oval). So o icone virou o triangulo.
 Para regerar os icones, ver a mensagem do commit correspondente: as fracoes sao
 76% para os icones normais e 62% para o maskable — este ultimo menor porque o
 sistema recorta as bordas e a area segura e o circulo central de 80% do lado.
+
+logo-rilion-oval.png   Logo ANTERIOR do cabecalho (brasao oval, 125x96,
+                       transparente). Guardado para poder voltar atras.
+
+O logo do cabecalho agora sai da MESMA fonte que os icones: caixa do conteudo
+inteiro (triangulo + RILIONGRACIE + JIU-JITSU) em (120, 212) a (1133, 989),
+1013x777, proporcao 1,30 — a mesma do oval anterior, entao a troca nao mexeu no
+layout. Sai num painel preto com cantos arredondados, e nao em PNG transparente,
+porque o lockup e desenhado para fundo escuro.

@@ -69,8 +69,8 @@ export function App() {
           className="topo-logo"
           src={`${import.meta.env.BASE_URL}logo-rilion.png`}
           alt="Rilion Gracie Garopaba"
-          width={125}
-          height={96}
+          width={158}
+          height={126}
         />
         <div className="topo-textos">
           <h1>Faixa Azul</h1>
