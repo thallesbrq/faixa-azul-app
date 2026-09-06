@@ -1,0 +1,265 @@
+/**
+ * Testes das regras do Firestore.
+ *
+ * POR QUE ESTES TESTES EXISTEM, quando decidimos testar tela a mao: falha de
+ * regra e SILENCIOSA. Nada quebra, nenhuma tela fica vermelha — apenas alguem
+ * le o que nao devia. Nao ha como conferir isso olhando o app. E a checagem
+ * certa nao e navegar: e "este usuario alcanca esta linha?", que roda em
+ * milissegundos contra o emulador.
+ *
+ * Rodam sem rede e sem conta no Firebase: o emulador usa um id de projeto
+ * falso. `npm run test:regras`.
+ */
+
+import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
+import {
+  assertFails,
+  assertSucceeds,
+  initializeTestEnvironment,
+  type RulesTestEnvironment,
+} from '@firebase/rules-unit-testing'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore'
+import { readFileSync } from 'node:fs'
+
+const ACADEMIA = 'rilion-garopaba'
+const OUTRA_ACADEMIA = 'outra-academia'
+
+const PROF = 'prof-joao'
+const PROF_DE_FORA = 'prof-de-outra'
+const ALUNO_A = 'aluno-a'
+const ALUNO_B = 'aluno-b'
+const ALUNO_DESATIVADO = 'aluno-desativado'
+
+let amb: RulesTestEnvironment
+
+beforeAll(async () => {
+  amb = await initializeTestEnvironment({
+    projectId: 'faixa-azul-testes',
+    firestore: {
+      rules: readFileSync('firestore.rules', 'utf8'),
+      host: '127.0.0.1',
+      port: 8080,
+    },
+  })
+})
+
+afterAll(async () => {
+  await amb.cleanup()
+})
+
+/** Semeia os cadastros ignorando as regras — e o unico jeito de partir de um
+ *  estado realista sem depender das proprias regras que estamos testando. */
+beforeEach(async () => {
+  await amb.clearFirestore()
+  await amb.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'pessoas', PROF), {
+      nome: 'João Eduardo', papel: 'professor', academiaId: ACADEMIA, ativo: true,
+    })
+    await setDoc(doc(db, 'pessoas', PROF_DE_FORA), {
+      nome: 'Outro Professor', papel: 'professor', academiaId: OUTRA_ACADEMIA, ativo: true,
+    })
+    await setDoc(doc(db, 'pessoas', ALUNO_A), {
+      nome: 'Thalles', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+    })
+    await setDoc(doc(db, 'pessoas', ALUNO_B), {
+      nome: 'Outro Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+    })
+    await setDoc(doc(db, 'pessoas', ALUNO_DESATIVADO), {
+      nome: 'Ex-aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: false,
+    })
+
+    await setDoc(doc(db, 'estados', ALUNO_A), { dados: { versao: 2 }, versao: 1 })
+    await setDoc(doc(db, 'estados', ALUNO_B), { dados: { versao: 2 }, versao: 1 })
+    await setDoc(doc(db, 'estados', ALUNO_DESATIVADO), { dados: { versao: 2 }, versao: 1 })
+    await setDoc(doc(db, 'resumos', ALUNO_A), { aulasFeitas: 3 })
+    await setDoc(doc(db, 'resumos', ALUNO_B), { aulasFeitas: 0 })
+    await setDoc(doc(db, 'grades', ALUNO_A, 'aulas', '1'), { itemIds: ['x'] })
+    await setDoc(doc(db, 'validacoes', 'v1'), { alunoUid: ALUNO_A, itemId: 'i1' })
+    await setDoc(doc(db, 'indicacoes', ALUNO_A, 'itens', 'i1'), { video: 'https://v' })
+  })
+})
+
+const como = (uid: string) => amb.authenticatedContext(uid).firestore()
+const anonimo = () => amb.unauthenticatedContext().firestore()
+
+// ---------------------------------------------------------------------------
+// O caso que mais importa: um aluno nao alcanca o outro
+// ---------------------------------------------------------------------------
+
+describe('isolamento entre alunos', () => {
+  it('aluno A NAO le o estado de B', async () => {
+    await assertFails(getDoc(doc(como(ALUNO_A), 'estados', ALUNO_B)))
+  })
+
+  it('aluno A NAO escreve no estado de B', async () => {
+    await assertFails(setDoc(doc(como(ALUNO_A), 'estados', ALUNO_B), { dados: {}, versao: 9 }))
+  })
+
+  it('aluno A NAO le o resumo de B', async () => {
+    await assertFails(getDoc(doc(como(ALUNO_A), 'resumos', ALUNO_B)))
+  })
+
+  it('aluno A le e escreve o PROPRIO estado', async () => {
+    await assertSucceeds(getDoc(doc(como(ALUNO_A), 'estados', ALUNO_A)))
+    await assertSucceeds(setDoc(doc(como(ALUNO_A), 'estados', ALUNO_A), { dados: {}, versao: 2 }))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Posse: o aluno nao escreve no que e do professor
+// ---------------------------------------------------------------------------
+
+describe('posse das escritas do professor', () => {
+  it('aluno NAO escreve a propria grade', async () => {
+    // E o que dispensa merge entre aluno e professor: nao ha dois escritores.
+    await assertFails(
+      setDoc(doc(como(ALUNO_A), 'grades', ALUNO_A, 'aulas', '1'), { itemIds: ['trapaca'] }),
+    )
+  })
+
+  it('aluno LE a propria grade', async () => {
+    await assertSucceeds(getDoc(doc(como(ALUNO_A), 'grades', ALUNO_A, 'aulas', '1')))
+  })
+
+  it('aluno NAO cria validacao para si mesmo', async () => {
+    // Validar a si proprio seria o aluno se graduando sozinho.
+    await assertFails(
+      addDoc(collection(como(ALUNO_A), 'validacoes'), { alunoUid: ALUNO_A, itemId: 'i2' }),
+    )
+  })
+
+  it('aluno NAO escreve indicacao de video', async () => {
+    await assertFails(
+      setDoc(doc(como(ALUNO_A), 'indicacoes', ALUNO_A, 'itens', 'i9'), { video: 'https://x' }),
+    )
+  })
+
+  it('professor escreve grade, validacao e indicacao do aluno dele', async () => {
+    await assertSucceeds(
+      setDoc(doc(como(PROF), 'grades', ALUNO_A, 'aulas', '2'), { itemIds: ['a', 'b'] }),
+    )
+    await assertSucceeds(
+      addDoc(collection(como(PROF), 'validacoes'), { alunoUid: ALUNO_A, itemId: 'i3' }),
+    )
+    await assertSucceeds(
+      setDoc(doc(como(PROF), 'indicacoes', ALUNO_A, 'itens', 'i4'), { video: 'https://y' }),
+    )
+  })
+
+  it('professor NAO escreve o estado do aluno', async () => {
+    // Se conseguisse, voltaria a existir corrida com a escrita do aluno.
+    await assertFails(
+      setDoc(doc(como(PROF), 'estados', ALUNO_A), { dados: {}, versao: 99 }),
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Validacao e append-only
+// ---------------------------------------------------------------------------
+
+describe('validacao e append-only', () => {
+  it('nem o professor edita uma validacao registrada', async () => {
+    // Historico de validacao reescrevivel nao serve como evidencia de grau.
+    await assertFails(updateDoc(doc(como(PROF), 'validacoes', 'v1'), { itemId: 'outro' }))
+  })
+
+  it('nem o professor apaga uma validacao', async () => {
+    await assertFails(deleteDoc(doc(como(PROF), 'validacoes', 'v1')))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Isolamento entre academias — hoje ha uma, e a regra ja esta de pe
+// ---------------------------------------------------------------------------
+
+describe('isolamento entre academias', () => {
+  it('professor de OUTRA academia nao le estado, resumo nem cadastro', async () => {
+    await assertFails(getDoc(doc(como(PROF_DE_FORA), 'estados', ALUNO_A)))
+    await assertFails(getDoc(doc(como(PROF_DE_FORA), 'resumos', ALUNO_A)))
+    await assertFails(getDoc(doc(como(PROF_DE_FORA), 'pessoas', ALUNO_A)))
+  })
+
+  it('professor de OUTRA academia nao escreve grade', async () => {
+    await assertFails(
+      setDoc(doc(como(PROF_DE_FORA), 'grades', ALUNO_A, 'aulas', '1'), { itemIds: ['x'] }),
+    )
+  })
+
+  it('professor da academia le estado e resumo dos alunos dele', async () => {
+    await assertSucceeds(getDoc(doc(como(PROF), 'estados', ALUNO_A)))
+    await assertSucceeds(getDoc(doc(como(PROF), 'resumos', ALUNO_A)))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Escalada de privilegio
+// ---------------------------------------------------------------------------
+
+describe('escalada de privilegio', () => {
+  it('aluno NAO se promove a professor', async () => {
+    // Sem esta trava, um update no proprio cadastro daria acesso a turma toda.
+    await assertFails(
+      updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { papel: 'professor' }),
+    )
+  })
+
+  it('aluno NAO se muda de academia', async () => {
+    await assertFails(
+      updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { academiaId: OUTRA_ACADEMIA }),
+    )
+  })
+
+  it('aluno NAO se reativa sozinho', async () => {
+    await assertFails(
+      updateDoc(doc(como(ALUNO_DESATIVADO), 'pessoas', ALUNO_DESATIVADO), { ativo: true }),
+    )
+  })
+
+  it('aluno ATUALIZA o proprio nome', async () => {
+    await assertSucceeds(
+      updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { nome: 'Thalles Alvim' }),
+    )
+  })
+
+  it('ninguem se cadastra sozinho — nao existe porta aberta', async () => {
+    await assertFails(
+      setDoc(doc(como('intruso'), 'pessoas', 'intruso'), {
+        nome: 'Intruso', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Desativado e anonimo
+// ---------------------------------------------------------------------------
+
+describe('aluno desativado', () => {
+  it('perde acesso ao proprio estado', async () => {
+    // E o que faz "desativar" na central significar algo: sem isto ele
+    // continuaria sincronizando, apenas invisivel para o professor.
+    await assertFails(getDoc(doc(como(ALUNO_DESATIVADO), 'estados', ALUNO_DESATIVADO)))
+    await assertFails(
+      setDoc(doc(como(ALUNO_DESATIVADO), 'estados', ALUNO_DESATIVADO), { dados: {}, versao: 2 }),
+    )
+  })
+})
+
+describe('anonimo', () => {
+  it('nao alcanca NADA', async () => {
+    await assertFails(getDoc(doc(anonimo(), 'estados', ALUNO_A)))
+    await assertFails(getDoc(doc(anonimo(), 'resumos', ALUNO_A)))
+    await assertFails(getDoc(doc(anonimo(), 'pessoas', ALUNO_A)))
+    await assertFails(getDoc(doc(anonimo(), 'grades', ALUNO_A, 'aulas', '1')))
+  })
+})
+
+describe('colecao desconhecida', () => {
+  it('nasce negada', async () => {
+    // Colecao criada no futuro sem regra propria nao pode nascer aberta.
+    await assertFails(setDoc(doc(como(PROF), 'qualquer_coisa', 'x'), { a: 1 }))
+    await assertFails(getDoc(doc(como(ALUNO_A), 'qualquer_coisa', 'x')))
+  })
+})

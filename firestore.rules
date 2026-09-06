@@ -1,0 +1,169 @@
+rules_version = '2';
+
+// ---------------------------------------------------------------------------
+// Regras de acesso ao Firestore.
+//
+// ESTE ARQUIVO E A UNICA FRONTEIRA DE SEGURANCA DO PRODUTO.
+//
+// O bundle JavaScript vai para o navegador de qualquer pessoa, e a chave de API
+// do Firebase vai dentro dele — repositorio privado nao muda isso. Portanto
+// nada no cliente protege nada. Se uma regra aqui estiver errada, um aluno le o
+// progresso de outro, e NADA QUEBRA: nao ha erro, nao ha tela vermelha, so
+// alguem vendo o que nao devia. Por isso cada regra tem teste em
+// firestore.rules.test.ts, e o CI barra o deploy se um deles falhar.
+//
+// PRINCIPIO: a posse e desenhada para que o conflito nao exista.
+//   - o ALUNO escreve so o proprio estado
+//   - o PROFESSOR escreve so grade, validacao e indicacao
+//   - nenhum dos dois consegue escrever no campo do outro
+// Assim a disputa aluno-professor deixa de ser problema de merge e passa a ser
+// impossivel por construcao.
+//
+// CUSTO DE LEITURA: checar "quem sou eu" exige um get() em `pessoas`, e cada
+// get() dentro de uma regra e uma leitura cobrada. Com 20 alunos e uma academia
+// isso e irrisorio. A alternativa mais barata seria por o papel numa custom
+// claim do token (zero leitura), mas isso exige Cloud Functions, que exige o
+// plano Blaze. Fica registrado como a otimizacao a fazer se o custo aparecer.
+// ---------------------------------------------------------------------------
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------------------------------------- ajudas
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function souEu(uid) {
+      return autenticado() && request.auth.uid == uid;
+    }
+
+    /**
+     * O Firestore limita a DEZ acessos a documento por avaliacao de regra, e
+     * cada `get()` conta (e e cobrado como leitura).
+     *
+     * A versao anterior destas ajudas chamava `meuCadastro()` dentro de
+     * `souProfessor()`, que era chamada dentro de `mesmaAcademiaQue()`, que
+     * fazia outro `exists()` e outro `get()` — somando seis ou mais acessos por
+     * avaliacao e encostando no limite. Estas duas funcoes amarram o resultado
+     * com `let` e gastam no MAXIMO dois acessos cada.
+     *
+     * Documento inexistente faz `get()` devolver null e o acesso a `.data`
+     * falhar; no Firestore, erro em regra e NEGACAO — que e o comportamento
+     * desejado aqui.
+     */
+    function souAtivo() {
+      let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
+      return autenticado() && eu != null && eu.data.ativo == true;
+    }
+
+    // O professor so alcanca quem esta na MESMA academia. Hoje existe uma so,
+    // entao a comparacao e sempre verdadeira — e esta escrita de proposito:
+    // quando aparecer a segunda academia, o isolamento ja esta aqui, e nao
+    // dependera de alguem lembrar de acrescentar.
+    function mesmaAcademiaQue(uid) {
+      let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
+      let ele = get(/databases/$(database)/documents/pessoas/$(uid));
+      return autenticado()
+        && eu != null && ele != null
+        && eu.data.papel == 'professor'
+        && eu.data.ativo == true
+        && eu.data.academiaId == ele.data.academiaId;
+    }
+
+    function souProfessor() {
+      let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
+      return autenticado() && eu != null
+        && eu.data.papel == 'professor' && eu.data.ativo == true;
+    }
+
+    function meuCadastro() {
+      return get(/databases/$(database)/documents/pessoas/$(request.auth.uid)).data;
+    }
+
+    // ------------------------------------------------------------- pessoas
+
+    match /pessoas/{uid} {
+      // Cada um le o proprio cadastro; o professor le os da academia dele.
+      allow read: if souEu(uid) || mesmaAcademiaQue(uid);
+
+      // Criar pessoa e do professor: nao existe cadastro aberto. Sem isto,
+      // qualquer conta autenticada poderia se inscrever na academia sozinha.
+      allow create: if souProfessor()
+        && request.resource.data.academiaId == meuCadastro().academiaId
+        && request.resource.data.papel in ['aluno', 'professor'];
+
+      // O aluno atualiza o proprio NOME e nada mais. Sem essa restricao ele
+      // mudaria o proprio papel para 'professor' e passaria a ver a turma.
+      allow update: if (
+          souEu(uid)
+          && request.resource.data.papel == resource.data.papel
+          && request.resource.data.academiaId == resource.data.academiaId
+          && request.resource.data.ativo == resource.data.ativo
+        ) || mesmaAcademiaQue(uid);
+
+      // Apagar e do professor (a saida do aluno passa pela central).
+      allow delete: if mesmaAcademiaQue(uid);
+    }
+
+    // ------------------------------------------------------------- estados
+    // O blob do aluno. Escrita EXCLUSIVA dele.
+
+    match /estados/{uid} {
+      allow read: if (souEu(uid) && souAtivo()) || mesmaAcademiaQue(uid);
+
+      // O professor NAO escreve aqui. E o que dispensa merge entre os dois.
+      allow create, update: if souEu(uid) && souAtivo();
+
+      // Nem o proprio aluno apaga: a saida e desativacao pela central, com
+      // expurgo depois do prazo. Apagar por conta propria contornaria isso.
+      allow delete: if mesmaAcademiaQue(uid);
+    }
+
+    // ------------------------------------------------------------- resumos
+    // Derivado do estado, gravado pelo proprio aluno ao sincronizar. E o que a
+    // central lista — sem ele, abrir a central custaria baixar 20 blobs.
+
+    match /resumos/{uid} {
+      allow read: if souEu(uid) || mesmaAcademiaQue(uid);
+      allow create, update: if souEu(uid) && souAtivo();
+      allow delete: if mesmaAcademiaQue(uid);
+    }
+
+    // -------------------------------------------------------------- grades
+    // A grade das 10 aulas de cada aluno. Escrita EXCLUSIVA do professor.
+
+    match /grades/{alunoUid}/aulas/{numero} {
+      allow read: if souEu(alunoUid) || mesmaAcademiaQue(alunoUid);
+      allow write: if mesmaAcademiaQue(alunoUid);
+    }
+
+    // ---------------------------------------------------------- validacoes
+    // Append-only: o professor registra, ninguem edita nem apaga. Historico de
+    // validacao que pode ser reescrito nao serve como evidencia de graduacao.
+
+    match /validacoes/{id} {
+      allow read: if souEu(resource.data.alunoUid) || mesmaAcademiaQue(resource.data.alunoUid);
+      allow create: if mesmaAcademiaQue(request.resource.data.alunoUid);
+      allow update, delete: if false;
+    }
+
+    // ---------------------------------------------------------- indicacoes
+    // O video que o PROFESSOR indica. Fica separado do item do aluno para as
+    // duas escolhas conviverem em vez de uma sobrescrever a outra.
+
+    match /indicacoes/{alunoUid}/itens/{itemId} {
+      allow read: if souEu(alunoUid) || mesmaAcademiaQue(alunoUid);
+      allow write: if mesmaAcademiaQue(alunoUid);
+    }
+
+    // ------------------------------------------------------------- o resto
+    // Nada mais existe. Sem esta negacao final, uma colecao criada no futuro
+    // nasceria sem regra — e no Firestore ausencia de regra e negacao, mas
+    // deixar explicito impede que alguem "conserte" isso com um match aberto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
