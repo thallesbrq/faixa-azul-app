@@ -18,13 +18,13 @@ import {
   planoVigente,
   repescagensPendentes,
   saldoDoPacote,
-} from '../../application/aulas'
-import type { AtribuicaoDeItens } from '../../application/aulas'
-import { INICIO_DO_PACOTE, dataLocalISO, montarPlanner } from '../../application/planner'
-import { progressoPorItem } from '../../application/progresso'
+} from '@faixa-azul/core/application/aulas'
+import type { AtribuicaoDeItens } from '@faixa-azul/core/application/aulas'
+import { INICIO_DO_PACOTE, dataLocalISO, montarPlanner } from '@faixa-azul/core/application/planner'
+import { progressoPorItem } from '@faixa-azul/core/application/progresso'
 import { PlannerSemanal } from '../components/PlannerSemanal'
-import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '../../domain/types'
-import type { AulaParticular } from '../../domain/types'
+import type { Card, Dificuldade, ReviewState, TechniqueItem, ValidacaoDoProfessor } from '@faixa-azul/core/domain/types'
+import type { AulaParticular } from '@faixa-azul/core/domain/types'
 
 export interface AulasProps {
   itens: TechniqueItem[]

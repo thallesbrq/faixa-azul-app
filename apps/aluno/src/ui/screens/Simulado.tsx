@@ -10,9 +10,9 @@
  */
 
 import { useMemo, useState } from 'react'
-import { montarSimulado, relatorioDoSimulado } from '../../application/simulado'
-import type { ConfigSimulado, ModoSimulado } from '../../application/simulado'
-import type { Card, Modulo, Rating, ReviewEvent, TechniqueItem } from '../../domain/types'
+import { montarSimulado, relatorioDoSimulado } from '@faixa-azul/core/application/simulado'
+import type { ConfigSimulado, ModoSimulado } from '@faixa-azul/core/application/simulado'
+import type { Card, Modulo, Rating, ReviewEvent, TechniqueItem } from '@faixa-azul/core/domain/types'
 import { Revisao } from './Revisao'
 
 type Fase = 'config' | 'executando' | 'relatorio'

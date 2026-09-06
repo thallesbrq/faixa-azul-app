@@ -8,9 +8,9 @@
  */
 
 import { useMemo, useState } from 'react'
-import type { Dificuldade, Modulo, TechniqueContent, TechniqueItem, ValidationStatus } from '../../domain/types'
-import type { RequisitoProva } from '../../domain/types'
-import type { AlteracaoItem } from '../../persistence/repositorio'
+import type { Dificuldade, Modulo, TechniqueContent, TechniqueItem, ValidationStatus } from '@faixa-azul/core/domain/types'
+import type { RequisitoProva } from '@faixa-azul/core/domain/types'
+import type { AlteracaoItem } from '@faixa-azul/core/persistence/repositorio'
 import { DetalheTecnica } from '../components/DetalheTecnica'
 
 const ROTULO_STATUS: Record<ValidationStatus, string> = {
@@ -40,7 +40,7 @@ export interface CurriculoProps {
   conteudos: TechniqueContent[]
   modulos: Modulo[]
   requisitos: RequisitoProva[]
-  validacoes: import('../../domain/types').ValidacaoDoProfessor[]
+  validacoes: import('@faixa-azul/core/domain/types').ValidacaoDoProfessor[]
   anotacoes: ReadonlyMap<string, AlteracaoItem>
   aoAnotar: (
     itemId: string,

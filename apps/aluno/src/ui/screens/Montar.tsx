@@ -17,20 +17,20 @@
  */
 
 import { useMemo, useState } from 'react'
-import { linkDaMontagem } from '../../domain/compartilhar'
+import { linkDaMontagem } from '@faixa-azul/core/domain/compartilhar'
 import { ATRIBUTO_ALVO, useArrastar } from '../useArrastar'
 import {
   atribuicaoDoPlano,
   espacamentoPorGuarda,
   montarEstado,
   tamanhosSugeridos,
-} from '../../application/montagem'
-import type { Atribuicao, Problema } from '../../application/montagem'
-import { gerarPlano } from '../../application/aulas'
-import { progressoPorItem } from '../../application/progresso'
-import { ROTULO_GUARDA, papelDoKind, subPosicao } from '../../domain/taxonomia'
-import type { Card, Dificuldade, ReviewState, TechniqueItem } from '../../domain/types'
-import type { AlteracaoItem } from '../../persistence/repositorio'
+} from '@faixa-azul/core/application/montagem'
+import type { Atribuicao, Problema } from '@faixa-azul/core/application/montagem'
+import { gerarPlano } from '@faixa-azul/core/application/aulas'
+import { progressoPorItem } from '@faixa-azul/core/application/progresso'
+import { ROTULO_GUARDA, papelDoKind, subPosicao } from '@faixa-azul/core/domain/taxonomia'
+import type { Card, Dificuldade, ReviewState, TechniqueItem } from '@faixa-azul/core/domain/types'
+import type { AlteracaoItem } from '@faixa-azul/core/persistence/repositorio'
 
 const SIGLA_KIND: Record<string, string> = {
   raspagem: 'RASP',

@@ -19,7 +19,7 @@
 
 import type { EstadoPersistido } from './repositorio'
 import type { Deposito } from './deposito'
-import type { ResumoDoAluno } from '../application/torre'
+import type { ResumoDoAluno } from '../domain/resumo'
 
 const PREFIXO = 'faixa_azul_aluno_'
 const CHAVE_INDICE = 'faixa_azul_torre_indice'

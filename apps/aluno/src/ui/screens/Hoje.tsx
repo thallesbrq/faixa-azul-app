@@ -4,8 +4,8 @@
  * Uma decisao por tela: o que fazer agora. Tudo o mais e contexto curto.
  */
 
-import type { Modulo } from '../../domain/types'
-import type { FilaDoDia } from '../../application/fila'
+import type { Modulo } from '@faixa-azul/core/domain/types'
+import type { FilaDoDia } from '@faixa-azul/core/application/fila'
 
 export interface HojeProps {
   diasAteProva: number

@@ -6,33 +6,33 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { montarFilaDoDia, moduloDeMaiorRisco } from '../application/fila'
-import { registrarRevisao, revisadosHoje, taxaDeAcertoSemDica } from '../application/revisar'
-import { atribuir } from '../application/montagem'
+import { montarFilaDoDia, moduloDeMaiorRisco } from '@faixa-azul/core/application/fila'
+import { registrarRevisao, revisadosHoje, taxaDeAcertoSemDica } from '@faixa-azul/core/application/revisar'
+import { atribuir } from '@faixa-azul/core/application/montagem'
 import {
   codificarMontagem,
   codigoDoHash,
   decodificarMontagem,
-} from '../domain/compartilhar'
-import { criarSessao, resumoDoTreino } from '../application/treino'
-import type { EntradaRevisao } from '../application/revisar'
-import { gerarBaralho } from '../domain/cards'
-import { diasAteProva as calcularDiasAteProva } from '../domain/scheduler'
-import { aplicarValidacoes, criarValidacao } from '../domain/validacao'
-import { normalizarUrlDeVideo } from '../domain/video'
-import type { Dificuldade, PracticeObservation, ValidationStatus } from '../domain/types'
-import { depositoEmMemoria, depositoLocalStorage } from '../persistence/deposito'
-import { VERSAO_ATUAL, carregar, migrar, salvar } from '../persistence/repositorio'
-import type { AlteracaoAula, AlteracaoItem, EstadoPersistido } from '../persistence/repositorio'
-import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from '../seed'
+} from '@faixa-azul/core/domain/compartilhar'
+import { criarSessao, resumoDoTreino } from '@faixa-azul/core/application/treino'
+import type { EntradaRevisao } from '@faixa-azul/core/application/revisar'
+import { gerarBaralho } from '@faixa-azul/core/domain/cards'
+import { diasAteProva as calcularDiasAteProva } from '@faixa-azul/core/domain/scheduler'
+import { aplicarValidacoes, criarValidacao } from '@faixa-azul/core/domain/validacao'
+import { normalizarUrlDeVideo } from '@faixa-azul/core/domain/video'
+import type { Dificuldade, PracticeObservation, ValidationStatus } from '@faixa-azul/core/domain/types'
+import { depositoEmMemoria, depositoLocalStorage } from '@faixa-azul/core/persistence/deposito'
+import { VERSAO_ATUAL, carregar, migrar, salvar } from '@faixa-azul/core/persistence/repositorio'
+import type { AlteracaoAula, AlteracaoItem, EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
+import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from '@faixa-azul/core/seed'
 import {
   EXPLICACAO_DA_RECUSA as RECUSA_DO_ARQUIVO,
   abrirEnvelope,
   empacotar,
   mesclarEstados,
   nomeDoArquivo,
-} from '../application/juncao'
-import type { Origem } from '../domain/procedencia'
+} from '@faixa-azul/core/application/juncao'
+import type { Origem } from '@faixa-azul/core/domain/procedencia'
 import { baixarArquivo } from './baixarArquivo'
 
 /**

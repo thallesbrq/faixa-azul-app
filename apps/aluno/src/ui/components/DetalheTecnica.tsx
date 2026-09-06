@@ -7,9 +7,9 @@
  */
 
 import { useState } from 'react'
-import { custoEmMinutos } from '../../application/aulas'
-import { idDoYoutube, normalizarUrlDeVideo, origemDoVideo } from '../../domain/video'
-import type { AlteracaoItem } from '../../persistence/repositorio'
+import { custoEmMinutos } from '@faixa-azul/core/application/aulas'
+import { idDoYoutube, normalizarUrlDeVideo, origemDoVideo } from '@faixa-azul/core/domain/video'
+import type { AlteracaoItem } from '@faixa-azul/core/persistence/repositorio'
 import type {
   Dificuldade,
   RequisitoProva,
@@ -17,7 +17,7 @@ import type {
   TechniqueItem,
   ValidacaoDoProfessor,
   ValidationStatus,
-} from '../../domain/types'
+} from '@faixa-azul/core/domain/types'
 
 export interface DetalheTecnicaProps {
   item: TechniqueItem

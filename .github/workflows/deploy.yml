@@ -49,7 +49,10 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          # O app do aluno agora e um pacote do monorepo, entao o build sai em
+          # apps/aluno/dist e nao mais na raiz. Apontar para a raiz publicaria
+          # um diretorio que nao existe mais no CI.
+          path: apps/aluno/dist
 
   deploy:
     needs: build

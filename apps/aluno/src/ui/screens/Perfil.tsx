@@ -12,7 +12,7 @@
  */
 
 import { useRef, useState } from 'react'
-import type { Origem } from '../../domain/procedencia'
+import type { Origem } from '@faixa-azul/core/domain/procedencia'
 
 export interface PerfilProps {
   nome: string

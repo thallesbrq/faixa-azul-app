@@ -8,13 +8,13 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { QuotaEstourada, repositorioDeAlunos } from '../persistence/alunos'
-import type { Deposito } from '../persistence/deposito'
-import { VERSAO_ATUAL, migrar } from '../persistence/repositorio'
-import type { EstadoPersistido } from '../persistence/repositorio'
-import { abrirEnvelope, mesclarEstados } from '../application/juncao'
-import { EXPLICACAO_DA_RECUSA } from '../application/juncao'
-import { ordenarPorAtencao, precisamDeAtencao, resumoDoAluno } from '../application/torre'
+import { QuotaEstourada, repositorioDeAlunos } from '@faixa-azul/core/persistence/alunos'
+import type { Deposito } from '@faixa-azul/core/persistence/deposito'
+import { VERSAO_ATUAL, migrar } from '@faixa-azul/core/persistence/repositorio'
+import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
+import { abrirEnvelope, mesclarEstados } from '@faixa-azul/core/application/juncao'
+import { EXPLICACAO_DA_RECUSA } from '@faixa-azul/core/application/juncao'
+import { ordenarPorAtencao, precisamDeAtencao, resumoDoAluno } from '@faixa-azul/core/application/torre'
 
 export type ResultadoDaImportacao =
   | { ok: true; nome: string; novo: boolean; mudou: boolean }

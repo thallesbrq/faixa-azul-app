@@ -14,9 +14,9 @@ import {
   progressoPorModulo,
   progressoPorPosicao,
   prontidao,
-} from '../../application/progresso'
-import type { NivelDominio, ProgressoDeGrupo } from '../../application/progresso'
-import type { Card, Modulo, ReviewState, TechniqueItem } from '../../domain/types'
+} from '@faixa-azul/core/application/progresso'
+import type { NivelDominio, ProgressoDeGrupo } from '@faixa-azul/core/application/progresso'
+import type { Card, Modulo, ReviewState, TechniqueItem } from '@faixa-azul/core/domain/types'
 
 const ROTULO_NIVEL: Record<NivelDominio, string> = {
   nao_iniciado: 'não iniciado',

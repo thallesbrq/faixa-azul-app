@@ -1,0 +1,15 @@
+{
+  "name": "@faixa-azul/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Dominio, aplicacao, persistencia e seed. Sem React. Compartilhado pelo app do aluno e pela central do professor.",
+  "exports": {
+    "./seed": "./src/seed/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

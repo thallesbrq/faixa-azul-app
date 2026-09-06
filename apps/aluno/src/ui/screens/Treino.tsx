@@ -11,8 +11,8 @@
  */
 
 import { useMemo, useState } from 'react'
-import { criarObservacao } from '../../application/treino'
-import type { PracticeObservation, TechniqueItem } from '../../domain/types'
+import { criarObservacao } from '@faixa-azul/core/application/treino'
+import type { PracticeObservation, TechniqueItem } from '@faixa-azul/core/domain/types'
 
 const RESISTENCIAS: { id: PracticeObservation['resistencia']; rotulo: string }[] = [
   { id: 'sem', rotulo: 'sem' },

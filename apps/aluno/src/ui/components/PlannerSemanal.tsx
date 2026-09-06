@@ -12,9 +12,9 @@
  */
 
 import { useState } from 'react'
-import { HORARIO_AULA } from '../../application/planner'
-import type { DiaDoPlanner, Planner } from '../../application/planner'
-import type { TechniqueItem } from '../../domain/types'
+import { HORARIO_AULA } from '@faixa-azul/core/application/planner'
+import type { DiaDoPlanner, Planner } from '@faixa-azul/core/application/planner'
+import type { TechniqueItem } from '@faixa-azul/core/domain/types'
 
 const ROTULO_ESTUDO: Record<DiaDoPlanner['estudo']['papel'], string> = {
   prepara: 'prepara',

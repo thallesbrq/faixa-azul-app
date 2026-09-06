@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import type { Card, Rating } from '../../domain/types'
+import type { Card, Rating } from '@faixa-azul/core/domain/types'
 
 const ROTULO_TIPO: Record<Card['type'], string> = {
   explicacao: 'Explique',

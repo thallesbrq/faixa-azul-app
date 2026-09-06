@@ -11,8 +11,8 @@
  */
 
 import { useRef, useState } from 'react'
-import type { ResumoDoAluno } from '../../application/torre'
-import { situacaoDoAluno } from '../../application/torre'
+import type { ResumoDoAluno } from '@faixa-azul/core/application/torre'
+import { situacaoDoAluno } from '@faixa-azul/core/application/torre'
 import type { ResultadoDaImportacao } from '../useTorre'
 
 const ROTULO_SITUACAO = {

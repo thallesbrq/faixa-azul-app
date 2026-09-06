@@ -17,27 +17,12 @@
 
 import type { EstadoPersistido } from '../persistence/repositorio'
 
-export interface ResumoDoAluno {
-  id: string
-  nome: string
-  /** Quando o ALUNO exportou. E a idade real da informacao. */
-  exportadoEm: string
-  /** Quando o professor importou. Pode ser bem depois. */
-  importadoEm: string
-  aulasFeitas: number
-  totalDeAulas: number
-  /** Quantos itens ja estao distribuidos nas aulas. */
-  itensNaGrade: number
-  totalDeRevisoes: number
-  itensValidados: number
-  /**
-   * Itens que o aluno marcou como executados mas o professor ainda nao viu.
-   * E a fila de trabalho dele.
-   */
-  duvidasAbertas: number
-  /** `null` quando o aluno nunca estudou. */
-  diasSemEstudar: number | null
-}
+// A FORMA do resumo mora no dominio (ver domain/resumo); aqui esta o CALCULO.
+// Importado para uso local e reexportado para nao quebrar quem ja importava
+// `ResumoDoAluno` daqui.
+import type { ResumoDoAluno } from '../domain/resumo'
+export type { ResumoDoAluno }
+
 
 const DIA_MS = 24 * 60 * 60 * 1000
 
