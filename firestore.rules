@@ -19,6 +19,13 @@ rules_version = '2';
 // Assim a disputa aluno-professor deixa de ser problema de merge e passa a ser
 // impossivel por construcao.
 //
+// SOBRE O LOG DO EMULADOR: ele reporta `evaluation error` em algumas negacoes,
+// alem de `false`. Duas causas reais foram encontradas e corrigidas (ordem da
+// guarda de autenticacao, e `.data` sem guarda de nulo). Restaram entradas que
+// eu NAO consegui atribuir — nenhuma delas muda resultado: as 23 assercoes
+// cobrem cada caminho de permitir e negar, e todas passam. Fica registrado como
+// observacao aberta, e nao como coisa entendida.
+//
 // CUSTO DE LEITURA: checar "quem sou eu" exige um get() em `pessoas`, e cada
 // get() dentro de uma regra e uma leitura cobrada. Com 20 alunos e uma academia
 // isso e irrisorio. A alternativa mais barata seria por o papel numa custom
@@ -40,22 +47,41 @@ service cloud.firestore {
     }
 
     /**
-     * O Firestore limita a DEZ acessos a documento por avaliacao de regra, e
-     * cada `get()` conta (e e cobrado como leitura).
+     * DUAS CAMADAS DE PROPOSITO: a de fora guarda, a de dentro consulta.
      *
-     * A versao anterior destas ajudas chamava `meuCadastro()` dentro de
-     * `souProfessor()`, que era chamada dentro de `mesmaAcademiaQue()`, que
-     * fazia outro `exists()` e outro `get()` — somando seis ou mais acessos por
-     * avaliacao e encostando no limite. Estas duas funcoes amarram o resultado
-     * com `let` e gastam no MAXIMO dois acessos cada.
+     * `let` em regra do Firestore e avaliado ANTES do `return` — nao ha
+     * curto-circuito dentro da mesma funcao. Na primeira versao destas ajudas os
+     * `let` ficavam junto do `return autenticado() && ...`, e com requisicao
+     * anonima o caminho `pessoas/$(request.auth.uid)` era montado com uid nulo:
+     * a regra ERRAVA em vez de NEGAR. O emulador negava do mesmo jeito (erro em
+     * regra e negacao) e os 23 testes passavam — negando pelo motivo errado.
      *
-     * Documento inexistente faz `get()` devolver null e o acesso a `.data`
-     * falhar; no Firestore, erro em regra e NEGACAO — que e o comportamento
-     * desejado aqui.
+     * Negacao por erro e fragil: ela nao expressa a decisao, so acontece. Uma
+     * edicao futura que mude a ordem das clausulas pode transformar erro em
+     * permissao sem nenhum teste reclamar.
+     *
+     * Com a guarda numa funcao de FORA, o `&&` curto-circuita antes de chamar a
+     * de dentro, e nenhum `get()` e montado sem auth.
+     *
+     * Custo: o Firestore permite dez acessos a documento por avaliacao e cobra
+     * cada um. As funcoes internas gastam no maximo dois.
      */
     function souAtivo() {
+      return autenticado() && euAtivo();
+    }
+
+    function euAtivo() {
       let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
-      return autenticado() && eu != null && eu.data.ativo == true;
+      return eu != null && eu.data.ativo == true;
+    }
+
+    function souProfessor() {
+      return autenticado() && euProfessor();
+    }
+
+    function euProfessor() {
+      let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
+      return eu != null && eu.data.papel == 'professor' && eu.data.ativo == true;
     }
 
     // O professor so alcanca quem esta na MESMA academia. Hoje existe uma so,
@@ -63,23 +89,24 @@ service cloud.firestore {
     // quando aparecer a segunda academia, o isolamento ja esta aqui, e nao
     // dependera de alguem lembrar de acrescentar.
     function mesmaAcademiaQue(uid) {
+      return autenticado() && euProfessorDaAcademiaDe(uid);
+    }
+
+    function euProfessorDaAcademiaDe(uid) {
       let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
       let ele = get(/databases/$(database)/documents/pessoas/$(uid));
-      return autenticado()
-        && eu != null && ele != null
+      return eu != null && ele != null
         && eu.data.papel == 'professor'
         && eu.data.ativo == true
         && eu.data.academiaId == ele.data.academiaId;
     }
 
-    function souProfessor() {
+    // Sem guarda de nulo, `.data` sobre um get() que nao achou nada faz a regra
+    // ERRAR. Erro em regra e negacao, entao o efeito visivel e o mesmo — mas a
+    // decisao deixa de estar escrita e passa a ser acidente.
+    function minhaAcademia() {
       let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
-      return autenticado() && eu != null
-        && eu.data.papel == 'professor' && eu.data.ativo == true;
-    }
-
-    function meuCadastro() {
-      return get(/databases/$(database)/documents/pessoas/$(request.auth.uid)).data;
+      return eu != null ? eu.data.academiaId : '';
     }
 
     // ------------------------------------------------------------- pessoas
@@ -91,7 +118,7 @@ service cloud.firestore {
       // Criar pessoa e do professor: nao existe cadastro aberto. Sem isto,
       // qualquer conta autenticada poderia se inscrever na academia sozinha.
       allow create: if souProfessor()
-        && request.resource.data.academiaId == meuCadastro().academiaId
+        && request.resource.data.academiaId == minhaAcademia()
         && request.resource.data.papel in ['aluno', 'professor'];
 
       // O aluno atualiza o proprio NOME e nada mais. Sem essa restricao ele
