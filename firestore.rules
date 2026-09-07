@@ -22,7 +22,7 @@ rules_version = '2';
 // SOBRE O LOG DO EMULADOR: ele reporta `evaluation error` em algumas negacoes,
 // alem de `false`. Duas causas reais foram encontradas e corrigidas (ordem da
 // guarda de autenticacao, e `.data` sem guarda de nulo). Restaram entradas que
-// eu NAO consegui atribuir — nenhuma delas muda resultado: as 46 assercoes
+// eu NAO consegui atribuir — nenhuma delas muda resultado: as 51 assercoes
 // cobrem cada caminho de permitir e negar, e todas passam. Fica registrado como
 // observacao aberta, e nao como coisa entendida.
 //
@@ -163,9 +163,9 @@ service cloud.firestore {
       // 1. o professor cria direto (uid ja conhecido, ex. recadastro)
       // 2. a PROPRIA pessoa cria, e SO se houver convite para o e-mail dela
       //
-      // No caminho 2, papel, academia e TURMA vem DO CONVITE e nao do que o
-      // cliente mandou. Sem isso, quem tem convite de aluno se cadastraria como
-      // professor e veria a turma toda.
+      // No caminho 2, papel, academia, TURMA e META vem DO CONVITE e nao do que
+      // o cliente mandou. Sem isso, quem tem convite de aluno se cadastraria
+      // como professor e veria a turma toda.
       allow create: if (
           souProfessor()
           && request.resource.data.academiaId == minhaAcademia()
@@ -198,6 +198,18 @@ service cloud.firestore {
           && request.resource.data.papel == c.data.papel
           && request.resource.data.academiaId == c.data.academiaId
           && request.resource.data.get('turma', '') == c.data.get('turma', '')
+          /**
+           * META, pelo mesmo `get(..., '')` e pelo mesmo motivo da turma: todo
+           * convite criado antes deste campo nao tem a chave, e comparar
+           * `c.data.meta` direto faria a regra ERRAR nesses convites — negando
+           * um convite legitimo em silencio, com ele visivel na tela do
+           * professor.
+           *
+           * E a meta decide contra QUE PROVA o aluno e medido, entao deixa-la
+           * escolhida pelo cliente seria deixar o proprio aluno escolher o
+           * exame dele.
+           */
+          && request.resource.data.get('meta', '') == c.data.get('meta', '')
           && request.resource.data.ativo == true;
       }
 
@@ -217,7 +229,10 @@ service cloud.firestore {
        * porque nenhum teste falava de um campo que ainda nao existia.
        *
        * `hasOnly(['nome'])` inverte o padrao: campo novo nasce PROTEGIDO, e
-       * abrir um exige escrever aqui de propósito. E o mesmo defeito de forma
+       * abrir um exige escrever aqui de propósito. ISSO JA SE PAGOU: quando
+       * `meta` entrou (ADR-016), o aluno ficou impedido de trocar a propria
+       * meta — que decide contra que prova ele e medido — sem uma linha de
+       * regra nova. Com a enumeracao antiga, teria escapado igual a `turma`. E o mesmo defeito de forma
        * que a guarda de autenticacao tinha (ver `souAtivo`): a decisao precisa
        * estar escrita, nao ser consequencia de a lista estar em dia.
        */

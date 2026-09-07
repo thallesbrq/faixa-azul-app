@@ -19,6 +19,7 @@
 import type { FirebaseApp } from 'firebase/app'
 import type { Origem } from '../domain/procedencia'
 import { SEM_TURMA } from '../domain/turmas'
+import { SEM_META } from '../domain/metas'
 import { FalhaDaNuvem } from './cliente'
 
 export interface Cadastro {
@@ -41,6 +42,16 @@ export interface Cadastro {
    * comentario existe para quem for tentado a reabrir a distincao.
    */
   turma: string
+  /**
+   * A proxima graduacao que ele persegue: '1grau' ... 'azul'. `SEM_META` ('')
+   * quando o professor ainda nao definiu.
+   *
+   * META E DO ALUNO, NAO DA TURMA (ADR-016, decisao 3): o 1o grau vem antes do
+   * azul, e um faixa branca novo e alguem com tres graus cabem na MESMA turma de
+   * iniciantes. Se o curriculo fosse da turma, um dos dois seria medido contra a
+   * prova errada. Ver domain/metas.
+   */
+  meta: string
 }
 
 export interface Convite {
@@ -50,6 +61,8 @@ export interface Convite {
   academiaId: string
   /** Turma em que a pessoa NASCE. As regras exigem que o cadastro coincida. */
   turma: string
+  /** Meta em que a pessoa NASCE. As regras tambem exigem que coincida. */
+  meta: string
   convidadoEm: string
 }
 
@@ -68,6 +81,7 @@ export interface Dados {
     nome: string
     papel: Origem
     turma: string
+    meta: string
   }): Promise<void>
   listarConvites(): Promise<Convite[]>
   cancelarConvite(email: string): Promise<void>
@@ -79,6 +93,12 @@ export interface Dados {
    * turma nao ser opiniao de quem esta sendo medido.
    */
   atualizarTurma(uid: string, turma: string): Promise<void>
+  /**
+   * Troca a meta de alguem. So o professor: as regras negam ao proprio aluno
+   * pelo mesmo `hasOnly(['nome'])` que ja protegia a turma — a lista de
+   * PERMISSAO fez o campo novo nascer protegido sem uma linha de regra nova.
+   */
+  atualizarMeta(uid: string, meta: string): Promise<void>
 }
 
 /** Normaliza o e-mail: ele e o ID do documento, e caixa diferente viraria dois. */
@@ -99,6 +119,8 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
     // Cadastro criado antes deste campo existir nao tem a chave. '' e o valor
     // certo: "sem turma" e o que ele de fato e, ate o professor atribuir.
     turma: typeof d.turma === 'string' ? d.turma : SEM_TURMA,
+    // Cadastro anterior a este campo nao tem a chave: '' e o que ele de fato e.
+    meta: typeof d.meta === 'string' ? d.meta : SEM_META,
   })
 
   return {
@@ -122,14 +144,16 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
         // Convite antigo nao tem turma, e as regras comparam com `get('turma','')`
         // dos dois lados — entao '' aqui e o unico valor que elas aceitam.
         turma: typeof c.turma === 'string' ? c.turma : SEM_TURMA,
+        meta: typeof c.meta === 'string' ? c.meta : SEM_META,
       }
 
-      // Papel, academia e TURMA vem DO CONVITE. As regras recusariam outra coisa.
+      // Papel, academia, TURMA e META vem DO CONVITE. As regras recusam outra coisa.
       await fs.setDoc(fs.doc(db, 'pessoas', uid), {
         nome: cadastro.nome,
         papel: cadastro.papel,
         academiaId: cadastro.academiaId,
         turma: cadastro.turma,
+        meta: cadastro.meta,
         ativo: true,
         criadoEm: new Date().toISOString(),
       })
@@ -146,12 +170,13 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
       return cadastro
     },
 
-    async convidar({ email, nome, papel, turma }) {
+    async convidar({ email, nome, papel, turma, meta }) {
       await fs.setDoc(fs.doc(db, 'convites', idDoEmail(email)), {
         nome: nome.trim(),
         papel,
         academiaId: minhaAcademia,
         turma,
+        meta,
         convidadoEm: new Date().toISOString(),
       })
     },
@@ -166,6 +191,7 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
           papel: x.papel === 'professor' ? 'professor' : 'aluno',
           academiaId: typeof x.academiaId === 'string' ? x.academiaId : minhaAcademia,
           turma: typeof x.turma === 'string' ? x.turma : SEM_TURMA,
+          meta: typeof x.meta === 'string' ? x.meta : SEM_META,
           convidadoEm: typeof x.convidadoEm === 'string' ? x.convidadoEm : '',
         } satisfies Convite
       })
@@ -186,6 +212,10 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
 
     async atualizarTurma(uid, turma) {
       await fs.updateDoc(fs.doc(db, 'pessoas', uid), { turma })
+    },
+
+    async atualizarMeta(uid, meta) {
+      await fs.updateDoc(fs.doc(db, 'pessoas', uid), { meta })
     },
   }
 }

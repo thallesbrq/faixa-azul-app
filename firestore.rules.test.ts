@@ -60,10 +60,10 @@ beforeEach(async () => {
       nome: 'Outro Professor', papel: 'professor', academiaId: OUTRA_ACADEMIA, ativo: true,
     })
     await setDoc(doc(db, 'pessoas', ALUNO_A), {
-      nome: 'Thalles', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1A',
+      nome: 'Thalles', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1A', meta: 'azul',
     })
     await setDoc(doc(db, 'pessoas', ALUNO_B), {
-      nome: 'Outro Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1B',
+      nome: 'Outro Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1B', meta: '1grau',
     })
     // SEM `turma` de proposito: e o estado de todo cadastro que existe hoje, e
     // as regras tem de continuar funcionando para ele.
@@ -245,6 +245,24 @@ describe('escalada de privilegio', () => {
     // Apagar tambem e mudar: sem turma, ele sai da media e da grade.
     await assertFails(
       updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { turma: '' }),
+    )
+  })
+
+  it('aluno NAO troca a propria META', async () => {
+    // A meta decide contra QUE PROVA ele e medido. Autoatribuicao deixaria o
+    // aluno escolher o proprio exame.
+    //
+    // Nenhuma regra nova foi escrita para isto: `hasOnly(['nome'])` fez o campo
+    // nascer protegido. Com a enumeracao antiga, `meta` teria escapado igual a
+    // `turma` teria escapado.
+    await assertFails(
+      updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { meta: '1grau' }),
+    )
+  })
+
+  it('professor TROCA a meta do aluno', async () => {
+    await assertSucceeds(
+      updateDoc(doc(como(PROF), 'pessoas', ALUNO_A), { meta: '1grau' }),
     )
   })
 
@@ -478,6 +496,49 @@ describe('convites', () => {
       await assertSucceeds(
         setDoc(doc(dele, 'convites', 'novo.aluno2@exemplo.com'), {
           papel: 'aluno', academiaId: ACADEMIA, turma: 'RG1A',
+        }),
+      )
+    })
+  })
+
+  describe('convite com meta', () => {
+    const EMAIL_META = 'convidado.meta@exemplo.com'
+    const UID_META = 'uid-meta'
+
+    beforeEach(async () => {
+      await amb.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'convites', EMAIL_META), {
+          papel: 'aluno', academiaId: ACADEMIA, turma: 'RG1A', meta: '1grau',
+          convidadoEm: '2026-09-07T00:00:00Z',
+        })
+      })
+    })
+
+    it('nasce na meta do convite', async () => {
+      await assertSucceeds(
+        setDoc(doc(comEmail(UID_META, EMAIL_META), 'pessoas', UID_META), {
+          nome: 'Convidado', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+          turma: 'RG1A', meta: '1grau',
+        }),
+      )
+    })
+
+    it('NAO nasce em outra meta que nao a do convite', async () => {
+      // Sem esta trava, quem foi convidado para o 1o grau se poria no azul — e o
+      // progresso dele passaria a ser medido contra a prova errada.
+      await assertFails(
+        setDoc(doc(comEmail(UID_META, EMAIL_META), 'pessoas', UID_META), {
+          nome: 'Convidado', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+          turma: 'RG1A', meta: 'azul',
+        }),
+      )
+    })
+
+    it('NAO nasce sem meta quando o convite tem uma', async () => {
+      await assertFails(
+        setDoc(doc(comEmail(UID_META, EMAIL_META), 'pessoas', UID_META), {
+          nome: 'Convidado', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+          turma: 'RG1A',
         }),
       )
     })

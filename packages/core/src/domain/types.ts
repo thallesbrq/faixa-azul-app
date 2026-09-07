@@ -57,6 +57,15 @@ export type TechniqueKind =
   | 'movimentacao'
   | 'queda'
   | 'defesa_pessoal'
+  /**
+   * MANTER a posicao por cima, e nao sair dela nem chegar nela.
+   *
+   * Entrou com o curriculo do 1o grau (ADR-016), que exige "posicao individual:
+   * 100kg lateral, 100kg norte-sul, montada, dominio de costas com gancho". O
+   * curriculo de azul nao tem esse tipo — ele cobra as SAIDAS dessas posicoes,
+   * que e o lado de baixo da mesma situacao.
+   */
+  | 'dominio'
 
 // ---------------------------------------------------------------------------
 // Curriculo

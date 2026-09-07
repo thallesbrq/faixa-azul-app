@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  medeCurriculoDeAzul,
   nomeDaTurma,
   ROTULO_SEM_TURMA,
   SEM_TURMA,
@@ -13,19 +12,11 @@ describe('turmas', () => {
     expect(TURMAS.map((t) => t.id)).toEqual(['RG1A', 'RG1B', 'RG2'])
   })
 
-  it('so as turmas de iniciantes medem o curriculo de azul', () => {
-    // A regra de negocio do ADR-015: RG2 e intermediario/avancado, e medi-la
-    // contra o exame de azul mostraria a turma inteira em vermelho por nao usar
-    // um app de preparacao para uma prova que ja fizeram.
-    expect(medeCurriculoDeAzul('RG1A')).toBe(true)
-    expect(medeCurriculoDeAzul('RG1B')).toBe(true)
-    expect(medeCurriculoDeAzul('RG2')).toBe(false)
-  })
-
-  it('turma desconhecida NAO mede curriculo — escolha conservadora', () => {
-    // Numero errado com aparencia de certo e pior que lacuna visivel.
-    expect(medeCurriculoDeAzul('RG9')).toBe(false)
-    expect(medeCurriculoDeAzul(SEM_TURMA)).toBe(false)
+  it('turma NAO decide mais o curriculo — quem decide e a meta', () => {
+    // `medeCurriculoDeAzul` vivia aqui e foi removido (ADR-016, decisao 3):
+    // dois alunos da mesma turma podem perseguir graduacoes diferentes. Este
+    // teste existe para o campo nao voltar por conveniencia.
+    expect(TURMAS.every((t) => !('medeCurriculoDeAzul' in t))).toBe(true)
   })
 
   it('sem turma tem rotulo proprio, e nao fica em branco', () => {

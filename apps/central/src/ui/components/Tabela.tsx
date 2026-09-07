@@ -64,8 +64,10 @@ export function Tabela({
 
   const explicacao = (l: LinhaDaCentral): string | null => {
     if (l.motivo === 'sem-dados') return 'Este aluno ainda não sincronizou nenhuma vez.'
-    if (l.motivo === 'turma-sem-curriculo')
-      return 'Turma sem currículo próprio: o exame de azul não é a meta dela.'
+    if (l.motivo === 'meta-sem-curriculo')
+      return 'A meta deste aluno ainda não tem currículo — a lista não chegou.'
+    if (l.motivo === 'medido-por-atestado')
+      return 'Meta medida pelo seu atestado, e não por cartões. Ver a aba do 1º grau.'
     return null
   }
 

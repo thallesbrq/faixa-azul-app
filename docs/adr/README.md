@@ -26,3 +26,4 @@ supervisão), **009** (IA como assistente controlado — aqui: IA fora do produt
 | [013](ADR-013-ferramentas-existentes.md) | Triagem das ferramentas já construídas |
 | [014](ADR-014-vite5-node21.md) | Vite 5 fixado por incompatibilidade do Node 21 |
 | [015](ADR-015-central-do-aluno-dash.md) | Central do Aluno: dash de turmas |
+| [016](ADR-016-primeiro-grau-e-programa-da-turma.md) | 1º grau: currículo próprio, programa da turma e atestado |

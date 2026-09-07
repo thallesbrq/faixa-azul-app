@@ -12,8 +12,8 @@
  */
 
 import { useMemo, useState } from 'react'
-import { CARTOES_TEORIA, CONTEUDOS, ITENS, REQUISITOS } from '@faixa-azul/core/seed'
-import { medeCurriculoDeAzul, nomeDaTurma, SEM_TURMA, TURMAS } from '@faixa-azul/core/domain/turmas'
+import { curriculoDaMeta, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
+import { nomeDaTurma, TURMAS } from '@faixa-azul/core/domain/turmas'
 import { ROTULO_GRUPO } from '@faixa-azul/core/domain/taxonomia'
 import {
   cartoesDaTurma,
@@ -36,18 +36,15 @@ import { MontarGrade } from './MontarGrade'
 import { horaCurta } from './formato'
 
 /**
- * O curriculo de hoje: o exame de azul.
+ * As COLUNAS da tabela vem do curriculo de azul, e nao da meta de cada aluno.
  *
- * Passado como PARAMETRO e nao importado la dentro (ver application/central):
- * quando o curriculo de roxa chegar, esta constante vira uma escolha por turma
- * e nada mais muda.
+ * Por que uma escolha so aqui: a tabela e uma grade — as colunas tem de ser as
+ * mesmas para todas as linhas. Derivar por aluno daria uma tabela com colunas
+ * diferentes por linha, que nao e tabela. O azul e o curriculo mais amplo (56
+ * itens ativos contra 29), entao ele define o conjunto; quem persegue o 1o grau
+ * mostra `—` nessas colunas, com o motivo escrito.
  */
-const CURRICULO_DE_AZUL: Curriculo = {
-  itens: ITENS,
-  conteudos: CONTEUDOS,
-  requisitos: REQUISITOS,
-  cartoesTeoria: CARTOES_TEORIA,
-}
+const CURRICULO_DAS_COLUNAS: Curriculo = CURRICULO_AZUL
 
 export function App() {
   const sessao = useSessaoDoProfessor()
@@ -89,10 +86,10 @@ function Central({
   const { estado, recarregar } = useLinhas({
     app: sessao.app,
     dados: sessao.dados,
-    curriculo: CURRICULO_DE_AZUL,
+    curriculoDaMeta,
   })
 
-  const grupos = useMemo(() => gruposComItens(CURRICULO_DE_AZUL), [])
+  const grupos = useMemo(() => gruposComItens(CURRICULO_DAS_COLUNAS), [])
 
   /**
    * TODOS OS HOOKS ANTES DE QUALQUER `return`, e isto nao e estilo.
@@ -168,11 +165,17 @@ function Central({
               app={sessao.app}
               alunoUid={linha.uid}
               estadoDoAluno={estado.estados.get(linha.uid) ?? null}
-              itens={CURRICULO_DE_AZUL.itens}
+              itens={CURRICULO_DAS_COLUNAS.itens}
             />
           }
-          curriculo={CURRICULO_DE_AZUL}
+          curriculo={curriculoDaMeta(linha.meta) ?? CURRICULO_DAS_COLUNAS}
           aoVoltar={() => irPara({ tela: 'turmas' })}
+          aoTrocarMeta={async (meta) => {
+            await sessao.dados.atualizarMeta(linha.uid, meta)
+            // Reler e obrigatorio: a meta troca a MEDIDA do progresso, entao a
+            // tela inteira passa a falar de outra coisa.
+            await recarregar()
+          }}
           aoTrocarTurma={async (turma) => {
             await sessao.dados.atualizarTurma(linha.uid, turma)
             // Recarrega porque trocar de turma muda se o progresso E MEDIDO:
@@ -186,7 +189,14 @@ function Central({
   }
 
   const titulo = turma === null ? 'Todas as turmas' : nomeDaTurma(turma)
-  const semCurriculo = turma !== null && turma !== SEM_TURMA && !medeCurriculoDeAzul(turma)
+  /**
+   * A NOTA DE "SEM CURRICULO" SAIU DO TOPO DA TURMA.
+   *
+   * Ela existia porque a turma decidia o curriculo, e uma turma inteira caia no
+   * mesmo caso. Agora quem decide e a META de cada aluno, e uma turma pode ter
+   * alunos em situacoes diferentes — a explicacao passou a viver na LINHA
+   * (`explicacao` em Tabela.tsx), que e onde a informacao de fato varia.
+   */
 
   return (
     <>
@@ -249,13 +259,6 @@ function Central({
 
         {/* A explicacao da RG2 aparece UMA vez, no topo, e nao repetida em cada
             celula vazia da tabela. */}
-        {semCurriculo && (
-          <p className="nota-turma">
-            Esta é turma de {TURMAS.find((t) => t.id === turma)?.descricao.toLowerCase()}. O
-            currículo do exame de azul não é a meta dela, então progresso e técnicas aparecem
-            como <strong>—</strong>. Atividade, dúvidas e aulas continuam valendo.
-          </p>
-        )}
 
         <Cartoes cartoes={cartoes} />
 

@@ -18,25 +18,27 @@
  */
 
 /**
- * As turmas da Rilion Gracie Garopaba.
+ * As turmas da Rilion Gracie Garopaba. Turma e HORARIO, e nada mais.
  *
- * RG1A e RG1B sao turmas de INICIANTES: o curriculo do exame de azul e a meta
- * delas. RG2 e intermediario/avancado, e o curriculo de azul NAO e meta dela —
- * ver ADR-015, decisao 6. Por isso `medeCurriculoDeAzul` existe: sem ele, a
- * central mostraria a turma avancada inteira em vermelho, o que estaria
- * tecnicamente correto e factualmente errado.
+ * `medeCurriculoDeAzul` FOI REMOVIDO DAQUI (ADR-016, decisao 3). A turma decidia
+ * contra que curriculo o aluno era medido — e isso quebrava no primeiro caso
+ * real: o 1o grau vem antes do azul, entao um faixa branca novo e alguem com
+ * tres graus cabem na MESMA turma de iniciantes e precisam de provas
+ * diferentes. Quem decide agora e a META do aluno (ver domain/metas).
+ *
+ * Manter a funcao seria pior que remove-la: um nome que afirma decidir algo, e
+ * que nao decide mais nada, e a forma mais eficiente de alguem confiar nele.
  */
 export const TURMAS = [
-  { id: 'RG1A', nome: 'RG1A', descricao: 'Iniciantes', medeCurriculoDeAzul: true },
-  { id: 'RG1B', nome: 'RG1B', descricao: 'Iniciantes', medeCurriculoDeAzul: true },
-  { id: 'RG2', nome: 'RG2', descricao: 'Intermediário / avançado', medeCurriculoDeAzul: false },
+  { id: 'RG1A', nome: 'RG1A', descricao: 'Iniciantes' },
+  { id: 'RG1B', nome: 'RG1B', descricao: 'Iniciantes' },
+  { id: 'RG2', nome: 'RG2', descricao: 'Intermediário / avançado' },
 ] as const
 
 export interface Turma {
   id: string
   nome: string
   descricao: string
-  medeCurriculoDeAzul: boolean
 }
 
 /** O que um cadastro sem turma guarda. Nunca `undefined`: o campo sempre existe. */
@@ -61,16 +63,4 @@ export function turmaPorId(id: string): Turma | null {
 export function nomeDaTurma(id: string): string {
   if (id === SEM_TURMA) return ROTULO_SEM_TURMA
   return turmaPorId(id)?.nome ?? id
-}
-
-/**
- * A turma mede progresso contra o curriculo de azul?
- *
- * Turma desconhecida responde `false`, e essa e a escolha conservadora: medir
- * alguem contra um curriculo que pode nao ser o dele produz um numero errado
- * com aparencia de certo. Nao medir produz um `—`, que e visivelmente uma
- * lacuna. Ver ADR-015, decisao 6.
- */
-export function medeCurriculoDeAzul(id: string): boolean {
-  return turmaPorId(id)?.medeCurriculoDeAzul ?? false
 }

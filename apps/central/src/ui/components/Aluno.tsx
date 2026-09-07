@@ -25,12 +25,12 @@ import { faixaDaPontuacao } from '@faixa-azul/core/application/progresso'
 import { detalheDoAluno } from '@faixa-azul/core/application/central'
 import type { Curriculo, LinhaDaCentral } from '@faixa-azul/core/application/central'
 import {
-  medeCurriculoDeAzul,
   nomeDaTurma,
   ROTULO_SEM_TURMA,
   SEM_TURMA,
   TURMAS,
 } from '@faixa-azul/core/domain/turmas'
+import { METAS, metaPorId, nomeDaMeta, ROTULO_SEM_META, SEM_META } from '@faixa-azul/core/domain/metas'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import { atividade, corDaFaixa, porcento } from '../formato'
 
@@ -92,6 +92,11 @@ export interface AlunoProps {
   /** So o professor consegue: as regras negam ao proprio aluno. */
   aoTrocarTurma: (turma: string) => Promise<void>
   /**
+   * Trocar a meta. Mais consequente que a turma: a meta decide contra QUE prova
+   * ele e medido e por qual medida — cartoes ou atestado.
+   */
+  aoTrocarMeta: (meta: string) => Promise<void>
+  /**
    * A aba Aulas. Chega como no filho pronto e nao como dados: a montagem tem
    * estado proprio (`useGrade`), e ele so deve existir quando a aba esta aberta
    * — carregar a grade de um aluno que ninguem abriu seria leitura desperdicada.
@@ -99,7 +104,15 @@ export interface AlunoProps {
   aulas: ReactNode
 }
 
-export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma, aulas }: AlunoProps) {
+export function Aluno({
+  linha,
+  estado,
+  curriculo,
+  aoVoltar,
+  aoTrocarTurma,
+  aoTrocarMeta,
+  aulas,
+}: AlunoProps) {
   /**
    * DUAS ABAS (ADR-015, decisao 11), e a de Aulas so existe agora que tem
    * conteudo. Na entrega 1 ela ficou de fora de proposito: uma aba que abre
@@ -109,6 +122,8 @@ export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma, aulas
   const agora = useMemo(() => new Date(), [])
   const [trocando, setTrocando] = useState(false)
   const [avisoDaTurma, setAvisoDaTurma] = useState<string | null>(null)
+  const [trocandoMeta, setTrocandoMeta] = useState(false)
+  const [avisoDaMeta, setAvisoDaMeta] = useState<string | null>(null)
   const detalhe = useMemo(
     () => (estado ? detalheDoAluno({ estado, curriculo, agora }) : null),
     [estado, curriculo, agora],
@@ -151,13 +166,15 @@ export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma, aulas
                 setAvisoDaTurma(null)
                 try {
                   await aoTrocarTurma(nova)
-                  // Diz a CONSEQUENCIA e nao so "salvo": trocar entre uma turma
-                  // que mede o curriculo e uma que nao mede faz o progresso
-                  // aparecer ou virar `—`, e isso assusta se nao for anunciado.
+                  /**
+                   * A MENSAGEM MUDOU PORQUE A REGRA MUDOU. Ela dizia que trocar
+                   * de turma fazia o progresso aparecer ou virar `—` — e isso
+                   * era verdade enquanto a turma decidia o curriculo. Agora
+                   * quem decide e a META, e manter a frase antiga faria a tela
+                   * afirmar uma consequencia que nao acontece mais.
+                   */
                   setAvisoDaTurma(
-                    medeCurriculoDeAzul(nova)
-                      ? `Agora na ${nomeDaTurma(nova)} — o progresso passa a ser medido.`
-                      : `Agora na ${nomeDaTurma(nova)} — sem currículo próprio, o progresso aparece como —.`,
+                    `Agora na ${nomeDaTurma(nova)}. A turma é horário — o que é medido depende da meta.`,
                   )
                 } catch (err) {
                   setAvisoDaTurma((err as Error)?.message ?? 'Não foi possível trocar a turma.')
@@ -181,11 +198,66 @@ export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma, aulas
               )}
             </select>
           </label>
+
+          {/*
+            META AO LADO DA TURMA, e nao em outra tela: as duas sao "quem esse
+            aluno e para o sistema", e trocar uma sem ver a outra e o caminho
+            para por alguem na RG1A buscando o azul sem perceber.
+
+            O aviso diz a MEDIDA e nao so o nome: sair de `azul` para `1grau`
+            troca progresso por cartoes por progresso por atestado, e o numero
+            da tabela muda de natureza. Sem anunciar, parece que zerou.
+          */}
+          <label className="troca-turma">
+            <span>Buscando</span>
+            <select
+              value={linha.meta}
+              disabled={trocandoMeta}
+              onChange={async (e) => {
+                const nova = e.target.value
+                setTrocandoMeta(true)
+                setAvisoDaMeta(null)
+                try {
+                  await aoTrocarMeta(nova)
+                  const m = metaPorId(nova)
+                  setAvisoDaMeta(
+                    m === null
+                      ? `Meta agora é ${nomeDaMeta(nova)} — sem currículo, o progresso aparece como —.`
+                      : m.medidaDoProgresso === 'cartoes'
+                        ? `Agora buscando ${m.nome} — o progresso passa a vir dos cartões dele.`
+                        : `Agora buscando ${m.nome} — o progresso passa a vir do que VOCÊ atesta, e não dos cartões.`,
+                  )
+                } catch (err) {
+                  setAvisoDaMeta((err as Error)?.message ?? 'Não foi possível trocar a meta.')
+                } finally {
+                  setTrocandoMeta(false)
+                }
+              }}
+            >
+              <option value={SEM_META}>{ROTULO_SEM_META}</option>
+              {METAS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+              {/* Meta desconhecida vinda do banco continua no seletor: sem esta
+                  opcao, ABRIR a tela reatribuiria o aluno em silencio. Mesmo
+                  defeito que o seletor de turma teve e que foi verificado. */}
+              {linha.meta !== SEM_META && !METAS.some((m) => m.id === linha.meta) && (
+                <option value={linha.meta}>{linha.meta}</option>
+              )}
+            </select>
+          </label>
         </div>
 
         {avisoDaTurma && (
           <p className="apoio" style={{ marginTop: 10, marginBottom: 0 }}>
             {avisoDaTurma}
+          </p>
+        )}
+        {avisoDaMeta && (
+          <p className="apoio" style={{ marginTop: 10, marginBottom: 0 }}>
+            {avisoDaMeta}
           </p>
         )}
 
@@ -244,14 +316,14 @@ export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma, aulas
         <section className="cartao">
           <h3>Sem dados ainda</h3>
           <p className="apoio" style={{ marginBottom: 0 }}>
-            {linha.motivo === 'turma-sem-curriculo'
-              ? 'Turma sem currículo próprio: o exame de azul não é a meta dela. Progresso aparecerá quando houver currículo desta faixa.'
+            {linha.motivo !== null && linha.motivo !== 'sem-dados'
+              ? 'A meta deste aluno ainda não tem currículo, ou é medida pelo seu atestado. Progresso por cartões aparece quando houver lista com passo a passo.'
               : 'Este aluno entrou na conta mas nunca sincronizou. Nada aqui é zero — é ausência de informação. Se isso persistir, vale confirmar com ele se o app está aberto e com internet.'}
           </p>
         </section>
       )}
 
-      {aba === 'progresso' && detalhe && linha.motivo === 'turma-sem-curriculo' && (
+      {aba === 'progresso' && detalhe && linha.motivo !== null && linha.motivo !== 'sem-dados' && (
         <section className="cartao">
           <h3>Turma sem currículo próprio</h3>
           <p className="apoio" style={{ marginBottom: 0 }}>

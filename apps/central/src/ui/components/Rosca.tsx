@@ -71,8 +71,8 @@ export function Rosca({ media, titulo }: { media: MediaDaTurma; titulo: string }
 
       <p className="rosca-apoio">
         {media.progresso === null ? (
-          media.fora['turma-sem-curriculo'] > 0 && media.fora['sem-dados'] === 0 ? (
-            'Sem currículo desta faixa ainda'
+          media.fora['meta-sem-curriculo'] > 0 && media.fora['sem-dados'] === 0 ? (
+            'Sem currículo desta meta ainda'
           ) : media.total === 0 ? (
             'Nenhum aluno nesta turma'
           ) : (
@@ -94,9 +94,9 @@ export function Rosca({ media, titulo }: { media: MediaDaTurma; titulo: string }
           {media.fora['sem-dados'] === 1 ? 'aluno nunca sincronizou' : 'alunos nunca sincronizaram'}
         </p>
       )}
-      {media.fora['turma-sem-curriculo'] > 0 && media.progresso !== null && (
+      {media.fora['meta-sem-curriculo'] > 0 && media.progresso !== null && (
         <p className="rosca-nota">
-          {media.fora['turma-sem-curriculo']} em turma sem currículo próprio
+          {media.fora['meta-sem-curriculo']} em meta sem currículo próprio
         </p>
       )}
     </div>

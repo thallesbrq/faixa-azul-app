@@ -15,7 +15,7 @@ import { Perfil } from './screens/Perfil'
 import { Academia } from './screens/Academia'
 import { abasDoPapel } from './components/Navegacao'
 import { useAcademia } from './useAcademia'
-import { CARTOES_TEORIA, CONTEUDOS, ITENS, REQUISITOS } from '@faixa-azul/core/seed'
+import { curriculoDaMeta } from '@faixa-azul/core/seed/curriculos'
 import { useSessao } from './useSessao'
 import { Entrar } from './components/Entrar'
 import { Convidar } from './components/Convidar'
@@ -26,14 +26,6 @@ import { deposito } from './useApp'
 import { armazenamentoPersistente, useApp } from './useApp'
 import { useAtualizacao } from './useAtualizacao'
 import './app.css'
-
-/** O curriculo de hoje. Ver a nota em application/central sobre o de roxa. */
-const CURRICULO_DE_AZUL = {
-  itens: ITENS,
-  conteudos: CONTEUDOS,
-  requisitos: REQUISITOS,
-  cartoesTeoria: CARTOES_TEORIA,
-}
 
 export function App() {
   const app = useApp()
@@ -67,7 +59,7 @@ export function App() {
   const academia = useAcademia({
     obterDados: sessao.obterDados,
     souProfessor: souProfessorNaNuvem,
-    curriculo: CURRICULO_DE_AZUL,
+    curriculoDaMeta,
   })
 
   /**

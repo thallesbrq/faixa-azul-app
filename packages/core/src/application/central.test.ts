@@ -85,18 +85,32 @@ describe('gruposComItens', () => {
 // A turma que nao mede o curriculo de azul (decisao 6)
 // ---------------------------------------------------------------------------
 
-describe('turma sem curriculo', () => {
+describe('a META decide, e nao a turma', () => {
   const c = curriculo([item({ id: 'a', kind: 'raspagem' })])
-
-  it('RG2 nao recebe progresso, mas recebe atividade', () => {
-    // Medir a turma avancada contra o exame de azul a mostraria inteira em
-    // vermelho — correto tecnicamente, errado de fato.
-    const l = linhaDoAluno({
-      uid: 'u1', nome: 'Avancado', turma: 'RG2',
+  const linhaCom = (meta: string, turma = 'RG1A') =>
+    linhaDoAluno({
+      uid: 'u1', nome: 'Aluno', turma, meta,
       estado: estado(), curriculo: c, agora: AGORA,
     })
+
+  it('DOIS ALUNOS NA MESMA TURMA, metas diferentes, medidas diferentes', () => {
+    // E a razao de a meta ser do aluno (ADR-016, decisao 3): um faixa branca
+    // novo e alguem com tres graus cabem na RG1A. Se o curriculo fosse da
+    // turma, um dos dois seria medido contra a prova errada.
+    const paraAzul = linhaCom('azul', 'RG1A')
+    const paraGrau = linhaCom('1grau', 'RG1A')
+
+    expect(paraAzul.progresso).toBe(0)
+    expect(paraAzul.motivo).toBeNull()
+
+    expect(paraGrau.progresso).toBeNull()
+    expect(paraGrau.motivo).toBe('medido-por-atestado')
+  })
+
+  it('meta SEM curriculo (2o grau) nao recebe progresso, mas recebe atividade', () => {
+    const l = linhaCom('2grau', 'RG2')
     expect(l.progresso).toBeNull()
-    expect(l.motivo).toBe('turma-sem-curriculo')
+    expect(l.motivo).toBe('meta-sem-curriculo')
     expect(l.porGrupo).toEqual({})
     expect(l.validado).toBeNull()
     // Atividade e duvida nao dependem de qual e a prova:
@@ -104,24 +118,26 @@ describe('turma sem curriculo', () => {
     expect(l.situacao).toBe('nunca-estudou')
   })
 
-  it('RG1A recebe progresso', () => {
-    const l = linhaDoAluno({
-      uid: 'u1', nome: 'Iniciante', turma: 'RG1A',
-      estado: estado(), curriculo: c, agora: AGORA,
-    })
-    expect(l.progresso).toBe(0)
-    expect(l.motivo).toBeNull()
-    expect(l.faixa).toBe('baixa')
+  it('meta VAZIA (nao definida) tambem nao e medida', () => {
+    expect(linhaCom('').motivo).toBe('meta-sem-curriculo')
   })
 
-  it('turma vazia (nao atribuida) tambem nao e medida', () => {
-    // Conservador: medir contra um curriculo que talvez nao seja o dele produz
-    // numero errado com aparencia de certo.
+  it('meta desconhecida nao e medida — conservador', () => {
+    expect(linhaCom('roxa').motivo).toBe('meta-sem-curriculo')
+  })
+
+  it('curriculo nulo vence a meta: sem lista, sem numero', () => {
+    // Cinto e suspensorio: a meta diz que tem curriculo, mas quem chama nao
+    // passou um. Medir com `null` explodiria; inventar zero seria pior.
     const l = linhaDoAluno({
-      uid: 'u1', nome: 'Sem turma', turma: '',
-      estado: estado(), curriculo: c, agora: AGORA,
+      uid: 'u1', nome: 'A', turma: 'RG1A', meta: 'azul',
+      estado: estado(), curriculo: null, agora: AGORA,
     })
-    expect(l.motivo).toBe('turma-sem-curriculo')
+    expect(l.motivo).toBe('meta-sem-curriculo')
+  })
+
+  it('a meta viaja na linha, para a tela poder dizer qual e', () => {
+    expect(linhaCom('1grau').meta).toBe('1grau')
   })
 })
 
@@ -131,7 +147,7 @@ describe('turma sem curriculo', () => {
 
 describe('mediaDaTurma', () => {
   const comProgresso = (p: number, over: Partial<LinhaDaCentral> = {}): LinhaDaCentral => ({
-    ...linhaSemDados({ uid: `u${p}`, nome: `A${p}`, turma: 'RG1A' }),
+    ...linhaSemDados({ uid: `u${p}`, nome: `A${p}`, turma: 'RG1A', meta: 'azul' }),
     progresso: p,
     motivo: null,
     situacao: 'em-dia',
@@ -145,7 +161,7 @@ describe('mediaDaTurma', () => {
     const m = mediaDaTurma([
       comProgresso(0.8),
       comProgresso(0.4),
-      linhaSemDados({ uid: 'u3', nome: 'Ausente', turma: 'RG1A' }),
+      linhaSemDados({ uid: 'u3', nome: 'Ausente', turma: 'RG1A', meta: 'azul' }),
     ])
     expect(m.progresso).toBeCloseTo(0.6)
     expect(m.considerados).toBe(2)
@@ -162,11 +178,11 @@ describe('mediaDaTurma', () => {
 
   it('turma inteira sem curriculo devolve null, com o motivo', () => {
     const m = mediaDaTurma([
-      { ...linhaSemDados({ uid: 'a', nome: 'A', turma: 'RG2' }), motivo: 'turma-sem-curriculo' },
-      { ...linhaSemDados({ uid: 'b', nome: 'B', turma: 'RG2' }), motivo: 'turma-sem-curriculo' },
+      { ...linhaSemDados({ uid: 'a', nome: 'A', turma: 'RG2', meta: '2grau' }), motivo: 'meta-sem-curriculo' },
+      { ...linhaSemDados({ uid: 'b', nome: 'B', turma: 'RG2', meta: '2grau' }), motivo: 'meta-sem-curriculo' },
     ])
     expect(m.progresso).toBeNull()
-    expect(m.fora['turma-sem-curriculo']).toBe(2)
+    expect(m.fora['meta-sem-curriculo']).toBe(2)
     expect(m.fora['sem-dados']).toBe(0)
   })
 
@@ -190,7 +206,7 @@ describe('mediaDaTurma', () => {
 
 describe('cartoesDaTurma', () => {
   const linha = (over: Partial<LinhaDaCentral>): LinhaDaCentral => ({
-    ...linhaSemDados({ uid: 'u', nome: 'A', turma: 'RG1A' }),
+    ...linhaSemDados({ uid: 'u', nome: 'A', turma: 'RG1A', meta: 'azul' }),
     ...over,
   })
 
@@ -259,7 +275,7 @@ describe('cartoesDaTurma', () => {
 
 describe('ordenarLinhas', () => {
   const l = (nome: string, over: Partial<LinhaDaCentral>): LinhaDaCentral => ({
-    ...linhaSemDados({ uid: nome, nome, turma: 'RG1A' }),
+    ...linhaSemDados({ uid: nome, nome, turma: 'RG1A', meta: 'azul' }),
     ...over,
   })
 
@@ -317,7 +333,7 @@ describe('mesma derivacao do app do aluno', () => {
     const itens = [item({ id: 'a', kind: 'raspagem' })]
     const c = curriculo(itens)
     const l = linhaDoAluno({
-      uid: 'u', nome: 'A', turma: 'RG1A',
+      uid: 'u', nome: 'A', turma: 'RG1A', meta: 'azul',
       estado: estado(), curriculo: c, agora: AGORA,
     })
     // Sem revisao nenhuma o dominio e zero — e zero, nao null: sincronizou.
@@ -328,7 +344,7 @@ describe('mesma derivacao do app do aluno', () => {
   it('nome do cadastro manda sobre o do perfil local', () => {
     // Quem se renomeia no aparelho nao renomeia a linha da central.
     const l = linhaDoAluno({
-      uid: 'u', nome: 'Floki', turma: 'RG1A',
+      uid: 'u', nome: 'Floki', turma: 'RG1A', meta: 'azul',
       estado: estado({ perfil: { id: 'x', nome: 'apelido local', papel: 'aluno', academiaId: 'a' } }),
       curriculo: curriculo([item()]), agora: AGORA,
     })
@@ -338,7 +354,7 @@ describe('mesma derivacao do app do aluno', () => {
   it('cadastro sem nome cai para o do perfil, e nao para vazio', () => {
     // Linha em branco na central e uma linha que o professor nao sabe ler.
     const l = linhaDoAluno({
-      uid: 'u', nome: '  ', turma: 'RG1A',
+      uid: 'u', nome: '  ', turma: 'RG1A', meta: 'azul',
       estado: estado({ perfil: { id: 'x', nome: 'Thalles', papel: 'aluno', academiaId: 'a' } }),
       curriculo: curriculo([item()]), agora: AGORA,
     })
@@ -425,8 +441,11 @@ describe('detalheDoAluno', () => {
     // A promessa da decisao 1, amarrada: as duas passam pela mesma derivacao.
     const c = curriculo([item({ id: 'a' }), item({ id: 'b', kind: 'passagem' })])
     const est = estado()
+    // Meta `azul` de proposito: e a que mede por CARTOES, e a promessa da
+    // decisao 1 e sobre esse numero. Com meta `1grau` o progresso e `null` por
+    // desenho, e o teste passaria comparando dois nulos — verde sem provar nada.
     const linha = linhaDoAluno({
-      uid: 'u', nome: 'A', turma: 'RG1A', estado: est, curriculo: c, agora: AGORA,
+      uid: 'u', nome: 'A', turma: 'RG1A', meta: 'azul', estado: est, curriculo: c, agora: AGORA,
     })
     const d = detalheDoAluno({ estado: est, curriculo: c, agora: AGORA })
     expect(d.dominio).toBe(linha.progresso)
@@ -445,6 +464,7 @@ describe('linhasDaAcademia', () => {
     nome: 'A',
     papel: 'aluno',
     turma: 'RG1A',
+    meta: 'azul',
     ativo: true,
     ...over,
   })
@@ -453,9 +473,9 @@ describe('linhasDaAcademia', () => {
     // Ele tem cadastro em `pessoas` e apareceria como aluno sem progresso — que
     // nao e um aluno parado, e um professor.
     const linhas = linhasDaAcademia({
-      cadastros: [cad({ uid: 'p', nome: 'João', papel: 'professor', turma: '' }), cad({ uid: 'a1' })],
+      cadastros: [cad({ uid: 'p', nome: 'João', papel: 'professor', turma: '', meta: '' }), cad({ uid: 'a1' })],
       estados: new Map(),
-      curriculo: c,
+      curriculoDaMeta: () => c,
       agora: AGORA,
     })
     expect(linhas.map((l) => l.uid)).toEqual(['a1'])
@@ -467,7 +487,7 @@ describe('linhasDaAcademia', () => {
     const linhas = linhasDaAcademia({
       cadastros: [cad({ uid: 'x', ativo: false })],
       estados: new Map(),
-      curriculo: c,
+      curriculoDaMeta: () => c,
       agora: AGORA,
     })
     expect(linhas).toEqual([])
@@ -477,7 +497,7 @@ describe('linhasDaAcademia', () => {
     const linhas = linhasDaAcademia({
       cadastros: [cad({ uid: 'a1' })],
       estados: new Map(),
-      curriculo: c,
+      curriculoDaMeta: () => c,
       agora: AGORA,
     })
     expect(linhas[0].progresso).toBeNull()
@@ -488,7 +508,7 @@ describe('linhasDaAcademia', () => {
     const linhas = linhasDaAcademia({
       cadastros: [cad({ uid: 'a1' })],
       estados: new Map([['a1', estado()]]),
-      curriculo: c,
+      curriculoDaMeta: () => c,
       agora: AGORA,
     })
     expect(linhas[0].progresso).toBe(0)
@@ -497,13 +517,13 @@ describe('linhasDaAcademia', () => {
 
   it('preserva o nome e a turma do CADASTRO', () => {
     const linhas = linhasDaAcademia({
-      cadastros: [cad({ uid: 'a1', nome: 'Kainã', turma: 'RG2' })],
+      cadastros: [cad({ uid: 'a1', nome: 'Kainã', turma: 'RG2', meta: '2grau' })],
       estados: new Map([['a1', estado()]]),
-      curriculo: c,
+      curriculoDaMeta: () => c,
       agora: AGORA,
     })
     expect(linhas[0].nome).toBe('Kainã')
     expect(linhas[0].turma).toBe('RG2')
-    expect(linhas[0].motivo).toBe('turma-sem-curriculo')
+    expect(linhas[0].motivo).toBe('meta-sem-curriculo')
   })
 })

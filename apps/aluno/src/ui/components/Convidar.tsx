@@ -14,6 +14,7 @@ import { useState } from 'react'
 import type { Origem } from '@faixa-azul/core/domain/procedencia'
 import type { Convite } from '@faixa-azul/core/nuvem/pessoas'
 import { nomeDaTurma, SEM_TURMA, TURMAS } from '@faixa-azul/core/domain/turmas'
+import { METAS, nomeDaMeta, SEM_META } from '@faixa-azul/core/domain/metas'
 import { pareceEmail } from '@faixa-azul/core/nuvem/autenticacao'
 
 export interface ConvidarProps {
@@ -24,6 +25,7 @@ export interface ConvidarProps {
     nome: string
     papel: Origem
     turma: string
+    meta: string
   }) => Promise<void>
   aoCancelar: (email: string) => Promise<void>
 }
@@ -33,6 +35,7 @@ export function Convidar({ convites, carregando, aoConvidar, aoCancelar }: Convi
   const [email, setEmail] = useState('')
   const [papel, setPapel] = useState<Origem>('aluno')
   const [turma, setTurma] = useState<string>(TURMAS[0].id)
+  const [meta, setMeta] = useState<string>(METAS[0].id)
   const [aviso, setAviso] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
@@ -46,24 +49,35 @@ export function Convidar({ convites, carregando, aoConvidar, aoCancelar }: Convi
    * Professor nao tem turma: ele ve todas.
    */
   const turmaEfetiva = papel === 'professor' ? SEM_TURMA : turma
+  /**
+   * A META TAMBEM NASCE NO CONVITE, e nao depois. As regras exigem que a meta do
+   * cadastro coincida com a do convite, e o convite e de uso unico — entao
+   * convidar sem meta cria alguem que nao e medido contra prova nenhuma ate
+   * alguem lembrar de definir a mao.
+   *
+   * Professor nao tem meta: ele nao esta perseguindo graduacao no app.
+   */
+  const metaEfetiva = papel === 'professor' ? SEM_META : meta
   const valido =
     nome.trim() !== '' &&
     pareceEmail(email) &&
-    (papel === 'professor' || turmaEfetiva !== SEM_TURMA)
+    (papel === 'professor' || (turmaEfetiva !== SEM_TURMA && metaEfetiva !== SEM_META))
 
   async function convidar() {
     setEnviando(true)
     setAviso(null)
     try {
-      await aoConvidar({ email, nome, papel, turma: turmaEfetiva })
+      await aoConvidar({ email, nome, papel, turma: turmaEfetiva, meta: metaEfetiva })
       const onde = turmaEfetiva === SEM_TURMA ? '' : ` na ${nomeDaTurma(turmaEfetiva)}`
+      const rumo = metaEfetiva === SEM_META ? '' : `, buscando o ${nomeDaMeta(metaEfetiva)}`
       setAviso(
-        `${nome.trim()} pode entrar agora${onde}, usando ${email.trim().toLowerCase()}.`,
+        `${nome.trim()} pode entrar agora${onde}${rumo}, usando ${email.trim().toLowerCase()}.`,
       )
       setNome('')
       setEmail('')
       setPapel('aluno')
       setTurma(TURMAS[0].id)
+      setMeta(METAS[0].id)
     } catch (e) {
       setAviso((e as Error)?.message ?? 'Não foi possível convidar agora.')
     } finally {
@@ -136,14 +150,32 @@ export function Convidar({ convites, carregando, aoConvidar, aoCancelar }: Convi
               </button>
             ))}
           </div>
+          <h4 className="rotulo-campo" style={{ marginTop: 20 }}>
+            Buscando
+          </h4>
+          {/* META E DO ALUNO, NAO DA TURMA (ADR-016, decisao 3): dois alunos da
+              mesma turma podem perseguir graduacoes diferentes. */}
+          <div className="acoes">
+            {METAS.map((m) => (
+              <button
+                key={m.id}
+                className={meta === m.id ? 'botao botao--principal' : 'botao botao--secundario'}
+                onClick={() => setMeta(m.id)}
+                aria-pressed={meta === m.id}
+              >
+                {m.nome}
+              </button>
+            ))}
+          </div>
           <p className="instrucao" style={{ marginTop: 8 }}>
-            {TURMAS.find((t) => t.id === turma)?.descricao}
-            {TURMAS.find((t) => t.id === turma)?.medeCurriculoDeAzul === false && (
-              <>
-                {' '}
-                — o progresso no currículo de azul não é medido nesta turma.
-              </>
-            )}
+            {METAS.find((m) => m.id === meta)?.descricao}
+          </p>
+
+          {/* A nota "esta turma nao mede o curriculo de azul" saiu daqui: a
+              turma deixou de decidir isso, e a meta acima e que decide. Manter a
+              frase faria a tela afirmar uma regra que nao existe mais. */}
+          <p className="instrucao" style={{ marginTop: 8 }}>
+            {TURMAS.find((t) => t.id === turma)?.descricao} — turma é horário.
           </p>
         </>
       )}
@@ -196,7 +228,11 @@ export function Convidar({ convites, carregando, aoConvidar, aoCancelar }: Convi
                   <strong>{c.nome || c.email}</strong>
                   <br />
                   {c.email} · entra como {c.papel}
-                  {c.papel === 'aluno' && <> · {nomeDaTurma(c.turma)}</>}
+                  {c.papel === 'aluno' && (
+                    <>
+                      {' '}· {nomeDaTurma(c.turma)} · {nomeDaMeta(c.meta)}
+                    </>
+                  )}
                 </span>
                 <button className="link-desfazer" onClick={() => void aoCancelar(c.email)}>
                   Cancelar

@@ -42,11 +42,15 @@ export interface EstadoDasLinhas {
 export function useLinhas({
   app,
   dados,
-  curriculo,
+  curriculoDaMeta,
 }: {
   app: FirebaseApp
   dados: Dados
-  curriculo: Curriculo
+  /**
+   * O curriculo de cada meta. FUNCAO e nao um curriculo so: alunos da mesma
+   * turma podem perseguir graduacoes diferentes (ADR-016, decisao 3).
+   */
+  curriculoDaMeta: (meta: string) => Curriculo | null
 }) {
   const [estado, setEstado] = useState<EstadoDasLinhas>({
     fase: 'carregando-pessoas',
@@ -71,7 +75,7 @@ export function useLinhas({
         ...a,
         fase: 'carregando-estados',
         linhas: alunos.map((p) =>
-          linhaSemDados({ uid: p.uid, nome: p.nome, turma: p.turma }),
+          linhaSemDados({ uid: p.uid, nome: p.nome, turma: p.turma, meta: p.meta }),
         ),
       }))
 
@@ -81,7 +85,7 @@ export function useLinhas({
       const agora = new Date()
       // A montagem e do core: a aba do professor no celular usa a MESMA funcao,
       // para as duas telas nao discordarem sobre a mesma academia.
-      const linhas = linhasDaAcademia({ cadastros: alunos, estados: porUid, curriculo, agora })
+      const linhas = linhasDaAcademia({ cadastros: alunos, estados: porUid, curriculoDaMeta, agora })
 
       setEstado({ fase: 'pronto', linhas, estados: porUid, falhas, lidoEm: agora, mensagem: null })
     } catch (e) {
@@ -91,7 +95,7 @@ export function useLinhas({
         mensagem: (e as Error)?.message ?? 'Não foi possível carregar os alunos.',
       }))
     }
-  }, [app, dados, curriculo])
+  }, [app, dados, curriculoDaMeta])
 
   useEffect(() => {
     void carregar()

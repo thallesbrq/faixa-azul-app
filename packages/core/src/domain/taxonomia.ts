@@ -50,6 +50,17 @@ export const ROTULO_PAPEL: Record<Papel, string> = {
 export function papelDoKind(kind: TechniqueKind): Papel {
   if (kind === 'passagem') return 'passando'
   if (kind === 'saida' || kind === 'defesa') return 'defendendo'
+  /**
+   * `dominio` E EXPLICITO AQUI, e nao por elegancia: esta funcao e uma cadeia de
+   * `if` com padrao no fim, entao ela NAO quebrou quando o tipo novo entrou —
+   * `dominio` cairia em 'atacando' em silencio. Manter a posicao por cima e o
+   * lado de quem passou, nao de quem ataca de baixo.
+   *
+   * Os dois `Record<TechniqueKind, ...>` deste arquivo e de cards.ts quebraram a
+   * compilacao, como projetado. Esta linha existe porque uma cadeia de `if` nao
+   * tem essa defesa, e a diferenca so aparece lendo o codigo.
+   */
+  if (kind === 'dominio') return 'passando'
   return 'atacando'
 }
 
@@ -172,6 +183,8 @@ export type GrupoTecnico =
   | 'quedas'
   | 'fundamentos'
   | 'defesa-pessoal'
+  /** Manter a posicao por cima. Entrou com o curriculo do 1o grau (ADR-016). */
+  | 'dominios'
 
 export const ROTULO_GRUPO: Record<GrupoTecnico, string> = {
   raspagens: 'Raspagens',
@@ -181,6 +194,7 @@ export const ROTULO_GRUPO: Record<GrupoTecnico, string> = {
   quedas: 'Quedas',
   fundamentos: 'Fundamentos',
   'defesa-pessoal': 'Defesa pessoal',
+  dominios: 'Domínio de posição',
 }
 
 /** Ordem das colunas: do maior grupo para o menor, com Defesa Pessoal ao fim. */
@@ -192,6 +206,9 @@ export const ORDEM_GRUPO: GrupoTecnico[] = [
   'quedas',
   'fundamentos',
   'defesa-pessoal',
+  // Depois dos demais: existe so no curriculo do 1o grau, e nas telas do azul
+  // `gruposComItens` o descarta sozinho por nao haver item ativo do tipo.
+  'dominios',
 ]
 
 const GRUPO_POR_KIND: Record<TechniqueKind, GrupoTecnico> = {
@@ -204,6 +221,7 @@ const GRUPO_POR_KIND: Record<TechniqueKind, GrupoTecnico> = {
   queda: 'quedas',
   movimentacao: 'fundamentos',
   defesa_pessoal: 'defesa-pessoal',
+  dominio: 'dominios',
 }
 
 /**

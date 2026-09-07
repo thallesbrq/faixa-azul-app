@@ -38,6 +38,7 @@ const ROTULO_KIND: Record<TechniqueKind, string> = {
   movimentacao: 'Movimentacao',
   queda: 'Queda',
   defesa_pessoal: 'Defesa pessoal',
+  dominio: 'Dominio de posicao',
 }
 
 /**

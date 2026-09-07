@@ -22,10 +22,13 @@
  * ligar Quedas e Defesa Pessoal.
  */
 
-import type { Card, RequisitoProva, TechniqueContent, TechniqueItem } from '../domain/types'
+// A FORMA do curriculo mora no dominio (ver domain/curriculo); aqui esta o
+// CALCULO. Reexportado para nao quebrar quem ja importava `Curriculo` daqui.
+import type { Curriculo } from '../domain/curriculo'
+export type { Curriculo }
 import type { GrupoTecnico } from '../domain/taxonomia'
 import { grupoDoKind, ORDEM_GRUPO } from '../domain/taxonomia'
-import { medeCurriculoDeAzul } from '../domain/turmas'
+import { medidaDoProgresso, metaTemCurriculo } from '../domain/metas'
 import { gerarBaralho } from '../domain/cards'
 import { aplicarValidacoes } from '../domain/validacao'
 import type { EstadoPersistido } from '../persistence/repositorio'
@@ -41,14 +44,6 @@ import type { FaixaDeCor, ProgressoDeGrupo } from './progresso'
 import { resumoDoAluno } from './torre'
 import type { Situacao } from './torre'
 import { situacaoDoAluno } from './torre'
-
-/** O curriculo contra o qual um aluno e medido. Hoje o de azul; roxa vem depois. */
-export interface Curriculo {
-  itens: TechniqueItem[]
-  conteudos: TechniqueContent[]
-  requisitos: RequisitoProva[]
-  cartoesTeoria: Card[]
-}
 
 /**
  * Grupos que tem pelo menos um item ATIVO — as colunas que valem hoje.
@@ -67,20 +62,28 @@ export function gruposComItens(curriculo: Curriculo): GrupoTecnico[] {
 /**
  * Por que uma celula mostra `—` em vez de um numero.
  *
- * DUAS AUSENCIAS DIFERENTES, e confundi-las e o defeito que este tipo existe
+ * TRES AUSENCIAS DIFERENTES, e confundi-las e o defeito que este tipo existe
  * para impedir:
  * - `sem-dados`: a pessoa entrou mas nunca sincronizou. NAO SABEMOS.
- * - `turma-sem-curriculo`: RG2, intermediario/avancado. O curriculo de azul nao
- *   e meta dela, entao medir produziria vermelho para quem nao esta mal.
+ * - `meta-sem-curriculo`: 2o/3o/4o grau, ou meta nao definida. Medir contra um
+ *   curriculo que nao e o dele produziria vermelho para quem nao esta mal.
+ * - `medido-por-atestado`: o 1o grau. HA curriculo e HA dado — a medida e outra.
  *
- * Zero e uma terceira coisa, e essa tem numero: sincronizou e esta em zero.
+ * Zero e uma quarta coisa, e essa tem numero: sincronizou e esta em zero.
+ *
+ * A DECISAO MUDOU DE DONO: antes o motivo vinha da TURMA
+ * (`medeCurriculoDeAzul`), e a RG2 era a razao. Agora vem da META do aluno —
+ * porque um faixa branca novo e alguem com tres graus cabem na mesma turma e
+ * precisam de provas diferentes (ADR-016, decisao 3).
  */
-export type MotivoSemProgresso = 'sem-dados' | 'turma-sem-curriculo'
+export type MotivoSemProgresso = 'sem-dados' | 'meta-sem-curriculo' | 'medido-por-atestado'
 
 export interface LinhaDaCentral {
   uid: string
   nome: string
   turma: string
+  /** Meta do aluno — quem decide o curriculo e a medida. */
+  meta: string
   /** `null` quando ha motivo para nao medir — ver `motivo`. */
   progresso: number | null
   motivo: MotivoSemProgresso | null
@@ -129,6 +132,7 @@ export function linhaSemDados(entrada: {
   uid: string
   nome: string
   turma: string
+  meta: string
 }): LinhaDaCentral {
   return {
     ...entrada,
@@ -150,6 +154,7 @@ export function linhaDoAluno({
   uid,
   nome,
   turma,
+  meta,
   estado,
   curriculo,
   agora,
@@ -157,8 +162,11 @@ export function linhaDoAluno({
   uid: string
   nome: string
   turma: string
+  /** Decide contra QUE prova ele e medido, e por qual medida. */
+  meta: string
   estado: EstadoPersistido
-  curriculo: Curriculo
+  /** O curriculo DA META dele. `null` quando a meta nao tem um. */
+  curriculo: Curriculo | null
   agora: Date
 }): LinhaDaCentral {
   // O resumo ja resolve atividade, duvidas e aulas — e ja tem teste. As datas de
@@ -169,6 +177,7 @@ export function linhaDoAluno({
 
   const base = {
     uid,
+    meta,
     // O nome do CADASTRO manda, e nao o do perfil local. Quem renomeia a si
     // mesmo no aparelho nao renomeia a linha da central do professor.
     nome: nome.trim() === '' ? resumo.nome : nome,
@@ -180,12 +189,30 @@ export function linhaDoAluno({
     situacao: situacaoDoAluno(resumo),
   }
 
-  // Turma que nao mede o curriculo de azul: atividade sim, progresso nao.
-  if (!medeCurriculoDeAzul(turma)) {
+  // Sem curriculo para a meta: atividade sim, progresso nao.
+  if (!metaTemCurriculo(meta) || curriculo === null) {
     return {
       ...base,
       progresso: null,
-      motivo: 'turma-sem-curriculo',
+      motivo: 'meta-sem-curriculo',
+      faixa: null,
+      porGrupo: {},
+      validado: null,
+      aguardandoValidacao: null,
+    }
+  }
+
+  /**
+   * Meta medida por ATESTADO do professor (1o grau): o numero vem da fatia 2 do
+   * ADR-016. Ha curriculo e ha dado — a medida e que e outra. Dizer
+   * "sem curriculo" aqui seria mentir sobre um curriculo que existe, e medir por
+   * cartoes daria zero eterno, porque 11 dos 29 itens nao tem cartao nenhum.
+   */
+  if (medidaDoProgresso(meta) === 'atestado') {
+    return {
+      ...base,
+      progresso: null,
+      motivo: 'medido-por-atestado',
       faixa: null,
       porGrupo: {},
       validado: null,
@@ -291,6 +318,7 @@ export interface CadastroNaLista {
   nome: string
   papel: string
   turma: string
+  meta: string
   ativo: boolean
 }
 
@@ -314,22 +342,30 @@ export interface CadastroNaLista {
 export function linhasDaAcademia({
   cadastros,
   estados,
-  curriculo,
+  curriculoDaMeta,
   agora,
 }: {
   cadastros: readonly CadastroNaLista[]
   estados: ReadonlyMap<string, EstadoPersistido>
-  curriculo: Curriculo
+  /**
+   * O curriculo de cada meta. `null` para meta sem curriculo.
+   *
+   * FUNCAO, E NAO UM CURRICULO SO: alunos da mesma turma podem ter metas
+   * diferentes, entao a lista resolve um curriculo POR LINHA. Um curriculo unico
+   * obrigaria a escolher uma prova para todo mundo — exatamente o que a decisao
+   * 3 do ADR-016 recusou.
+   */
+  curriculoDaMeta: (meta: string) => Curriculo | null
   agora: Date
 }): LinhaDaCentral[] {
   return cadastros
     .filter((p) => p.papel === 'aluno' && p.ativo)
     .map((p) => {
       const e = estados.get(p.uid)
-      const base = { uid: p.uid, nome: p.nome, turma: p.turma }
+      const base = { uid: p.uid, nome: p.nome, turma: p.turma, meta: p.meta }
       // Ausente do mapa = nunca sincronizou. NAO e zero, e nao sabemos.
       if (!e) return linhaSemDados(base)
-      return linhaDoAluno({ ...base, estado: e, curriculo, agora })
+      return linhaDoAluno({ ...base, estado: e, curriculo: curriculoDaMeta(p.meta), agora })
     })
 }
 
@@ -367,7 +403,10 @@ export interface MediaDaTurma {
 export function mediaDaTurma(linhas: readonly LinhaDaCentral[]): MediaDaTurma {
   const fora: Record<MotivoSemProgresso, number> = {
     'sem-dados': 0,
-    'turma-sem-curriculo': 0,
+    'meta-sem-curriculo': 0,
+    // Medido por atestado: fora da media de cartoes por DESENHO, e nao por
+    // falta. Contar junto com "sem curriculo" faria a tela dizer que falta algo.
+    'medido-por-atestado': 0,
   }
   let soma = 0
   let considerados = 0

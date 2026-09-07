@@ -288,17 +288,26 @@ describe('progressoPorGrupoTecnico', () => {
     expect(porChave.get('saidas-defesas')?.total).toBe(2)
   })
 
-  it('todo kind cai em algum grupo, e os sete cobrem o curriculo', () => {
+  it('todo kind cai num grupo que existe em ORDEM_GRUPO', () => {
     // Item na coluna errada nao produz erro nenhum — so um numero errado na
     // tela do professor. Entao a cobertura e verificada, nao presumida.
+    //
+    // ESTE TESTE JA AFIRMOU `toHaveLength(7)`, e quebrou quando `dominio` entrou
+    // com o curriculo do 1o grau. Quebrou pelo motivo certo — o numero mudou de
+    // verdade — mas o numero magico era a parte fraca: ele nao dizia QUAL era a
+    // invariante. As tres assercoes abaixo dizem, e sobrevivem ao proximo tipo.
     const kinds: TechniqueItem['kind'][] = [
-      'raspagem', 'passagem', 'finalizacao', 'costas',
-      'saida', 'defesa', 'movimentacao', 'queda', 'defesa_pessoal',
+      'raspagem', 'passagem', 'finalizacao', 'costas', 'saida',
+      'defesa', 'movimentacao', 'queda', 'defesa_pessoal', 'dominio',
     ]
     for (const kind of kinds) {
       expect(ORDEM_GRUPO).toContain(grupoDoKind(kind))
     }
-    expect(ORDEM_GRUPO).toHaveLength(7)
+    // Sem duplicata: uma coluna repetida somaria os mesmos itens duas vezes.
+    expect(new Set(ORDEM_GRUPO).size).toBe(ORDEM_GRUPO.length)
+    // E nenhum grupo orfao: coluna que nenhum kind alcanca nasceria sempre vazia.
+    const alcancados = new Set(kinds.map(grupoDoKind))
+    expect([...ORDEM_GRUPO].filter((g) => !alcancados.has(g))).toEqual([])
   })
 
   it('a chave e o grupo, e nao o rotulo com acento', () => {
