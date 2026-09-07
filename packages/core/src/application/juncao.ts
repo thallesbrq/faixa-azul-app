@@ -256,3 +256,73 @@ export function mesclarEstados({
     mudou: houveMudanca(r),
   }
 }
+
+// ---------------------------------------------------------------------------
+// A grade do professor, chegando da nuvem
+// ---------------------------------------------------------------------------
+
+export interface JuncaoDaGrade {
+  estado: EstadoPersistido
+  mudou: boolean
+  /** Numeros das aulas em que algum campo do professor substituiu o local. */
+  substituidas: number[]
+}
+
+/**
+ * Junta a grade que o professor gravou na nuvem com o estado do aluno.
+ *
+ * PORTA ESTREITA DE PROPOSITO, e nao `mesclarEstados` com um estado falso. O
+ * professor NAO escreve `estados/{uid}` (as regras negam): ele escreve
+ * `grades/{alunoUid}/aulas/{numero}`, e o que chega e uma lista de aulas — nao
+ * um estado. Montar um `EstadoPersistido` inteiro so para passar por
+ * `mesclarEstados` exigiria inventar perfil, plano de exame e configuracao que
+ * ninguem mandou, e um dia alguem confiaria neles.
+ *
+ * A REGRA E A MESMA, e isso e o ponto: reusa `unirPorChave`, `mesclarCampos` e
+ * `DONO_DA_AULA`. Nao ha uma segunda implementacao de quem manda em cada campo
+ * — se houvesse, `itemIds` poderia vencer aqui e perder la, e o aluno veria a
+ * grade aparecer e desaparecer entre sincronizacoes.
+ *
+ * O QUE ISSO PROTEGE, concretamente: `realizadaEm` e do ALUNO. Sem dono por
+ * campo, cada vez que o professor mexesse na grade o aluno veria suas aulas
+ * marcadas como feitas voltarem a "nao realizada" — em silencio, sempre.
+ */
+export function mesclarGrade({
+  local,
+  recebida,
+}: {
+  local: EstadoPersistido
+  recebida: readonly AlteracaoAula[]
+}): JuncaoDaGrade {
+  const substituidas: number[] = []
+  let novas = 0
+
+  const aulas = unirPorChave(
+    local.aulas,
+    [...recebida],
+    (a) => String(a.numero),
+    (l, rec) => {
+      const j = mesclarCampos<AlteracaoAula, keyof typeof DONO_DA_AULA>(
+        l,
+        rec,
+        DONO_DA_AULA,
+        l.marcas,
+        rec.marcas,
+      )
+      if (j.substituidos.length > 0) substituidas.push(l.numero)
+      return { ...j.valor, marcas: j.marcas }
+    },
+  )
+
+  // Aula que so existe na grade recebida e aula NOVA, e nao substituicao: a
+  // diferenca importa para a tela poder dizer "o professor montou a aula 4" em
+  // vez de "algo seu foi trocado".
+  const numerosLocais = new Set(local.aulas.map((a) => a.numero))
+  for (const a of recebida) if (!numerosLocais.has(a.numero)) novas += 1
+
+  return {
+    estado: { ...local, aulas },
+    mudou: substituidas.length > 0 || novas > 0,
+    substituidas,
+  }
+}

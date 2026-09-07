@@ -25,8 +25,10 @@ import { CONFIG_ALUNO } from '@faixa-azul/core/nuvem/config'
 import { conectar } from '@faixa-azul/core/nuvem/cliente'
 import type { Nuvem } from '@faixa-azul/core/nuvem/cliente'
 import { abrirSincronizador, INTERVALO_MS, deveSincronizar } from '@faixa-azul/core/nuvem/sincronizacao'
+import { abrirGrades } from '@faixa-azul/core/nuvem/grades'
+import type { Grades } from '@faixa-azul/core/nuvem/grades'
 import type { Gatilho, Sincronizador } from '@faixa-azul/core/nuvem/sincronizacao'
-import { mesclarEstados } from '@faixa-azul/core/application/juncao'
+import { mesclarEstados, mesclarGrade } from '@faixa-azul/core/application/juncao'
 import { resumoDoAluno } from '@faixa-azul/core/application/torre'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import type { DepositoSimples } from '@faixa-azul/core/nuvem/autenticacao'
@@ -62,6 +64,7 @@ export function useSincronizacao({
 }) {
   const [estado, setEstado] = useState<EstadoDaSincronizacao>({ fase: 'desligada' })
   const sinc = useRef<Sincronizador | null>(null)
+  const grades = useRef<Grades | null>(null)
   const nuvem = useRef<Nuvem | null>(null)
   const sujo = useRef(false)
   const emAndamento = useRef(false)
@@ -75,6 +78,13 @@ export function useSincronizacao({
     if (!nuvem.current) nuvem.current = await conectar(CONFIG_ALUNO, APP_ALUNO)
     if (!sinc.current) sinc.current = await abrirSincronizador(nuvem.current.app)
     return sinc.current
+  }, [])
+
+  /** Reaproveita a MESMA instancia do app: outra teria sessao separada. */
+  const obterGrades = useCallback(async (): Promise<Grades> => {
+    if (!nuvem.current) nuvem.current = await conectar(CONFIG_ALUNO, APP_ALUNO)
+    if (!grades.current) grades.current = await abrirGrades(nuvem.current.app)
+    return grades.current
   }, [])
 
   const sincronizar = useCallback(
@@ -110,6 +120,38 @@ export function useSincronizacao({
             local = j.estado
           }
           base = remoto.versao
+        }
+
+        /**
+         * A GRADE DO PROFESSOR, que vem de outra colecao.
+         *
+         * Ela NAO chega pelo estado: as regras negam ao professor escrever
+         * `estados/{uid}`, e e essa negacao que dispensa merge entre dois
+         * escritores no mesmo documento. Ele grava `grades/{uid}/aulas/{n}`, e a
+         * juncao acontece aqui, com dono por campo — a grade e dele, "aula
+         * feita" continua do aluno.
+         *
+         * ANTES DO EMPURRAO, de proposito: assim o estado que sobe ja carrega a
+         * grade, e `itensNaGrade` no resumo passa a refletir o que o professor
+         * montou. Depois, precisaria de uma segunda sincronizacao para aparecer.
+         *
+         * FALHA AQUI NAO DERRUBA A SINCRONIZACAO. Se a leitura da grade falhar,
+         * o estudo do aluno ainda tem de subir: perder a revisao de hoje por
+         * causa da grade seria trocar um problema pequeno por um grande.
+         */
+        try {
+          const g = await obterGrades()
+          const recebida = await g.lerGrade(uid)
+          if (recebida.length > 0) {
+            const j = mesclarGrade({ local, recebida })
+            if (j.mudou) {
+              aoReceber(j.estado)
+              local = j.estado
+            }
+          }
+        } catch {
+          // silencioso de proposito: ver acima. O erro reaparece na proxima
+          // sincronizacao, e a grade nao e urgente como o estudo.
         }
 
         let tentativa = 0
@@ -159,7 +201,7 @@ export function useSincronizacao({
         emAndamento.current = false
       }
     },
-    [uid, ativo, deposito, estadoLocal, aoReceber, obter],
+    [uid, ativo, deposito, estadoLocal, aoReceber, obter, obterGrades],
   )
 
   // Numa ref para os ouvintes registrados uma vez nao congelarem a versao do

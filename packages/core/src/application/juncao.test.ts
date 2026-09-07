@@ -4,10 +4,11 @@ import {
   abrirEnvelope,
   empacotar,
   mesclarEstados,
+  mesclarGrade,
   nomeDoArquivo,
 } from './juncao'
 import { ACADEMIA_PADRAO, VERSAO_ATUAL, estadoInicial } from '../persistence/repositorio'
-import type { EstadoPersistido } from '../persistence/repositorio'
+import type { AlteracaoAula, EstadoPersistido } from '../persistence/repositorio'
 import type { Marca, Origem } from '../domain/procedencia'
 
 const AGORA = new Date('2026-09-05T12:00:00.000Z')
@@ -227,5 +228,158 @@ describe('mesclarEstados', () => {
     const prof: EstadoPersistido = { ...base(), eventos: [ev('e2'), ev('e3')] }
     const r = mesclarEstados({ local: aluno, recebido: prof })
     expect(r.relatorio.novos['revisões']).toBe(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// mesclarGrade: a grade do professor chegando da nuvem
+// ---------------------------------------------------------------------------
+
+describe('mesclarGrade', () => {
+  const ONTEM = '2026-09-06T10:00:00.000Z'
+  const HOJE = '2026-09-07T10:00:00.000Z'
+  /**
+   * `versao` e obrigatoria na `Marca`, e nao e enfeite: e o desempate de
+   * `maisRecente` quando os relogios empatam. A primeira versao destes
+   * ajudantes a omitia — os testes passavam (Vitest transpila sem checar tipos)
+   * e o `tsc` reprovou.
+   */
+  const doProfessor = (quando = HOJE, versao = 1): Marca => ({
+    alteradoEm: quando,
+    alteradoPor: 'professor',
+    versao,
+  })
+  const doAluno = (quando = HOJE, versao = 1): Marca => ({
+    alteradoEm: quando,
+    alteradoPor: 'aluno',
+    versao,
+  })
+
+  function comAulas(aulas: AlteracaoAula[]): EstadoPersistido {
+    return { ...estadoInicial(new Date(HOJE), () => 'x'), aulas }
+  }
+
+  it('O CASO QUE ISTO EXISTE PARA IMPEDIR: a grade nao apaga "aula feita"', () => {
+    // Sem dono por campo, cada vez que o professor mexesse na grade o aluno
+    // veria as aulas marcadas como feitas voltarem a "nao realizada".
+    const local = comAulas([
+      {
+        numero: 1,
+        realizadaEm: ONTEM,
+        itemIds: ['antigo'],
+        marcas: { realizadaEm: doAluno(ONTEM), itemIds: doProfessor(ONTEM) },
+      },
+    ])
+    const j = mesclarGrade({
+      local,
+      recebida: [{ numero: 1, itemIds: ['novo-a', 'novo-b'], marcas: { itemIds: doProfessor(HOJE) } }],
+    })
+
+    expect(j.estado.aulas[0].itemIds).toEqual(['novo-a', 'novo-b'])
+    // O que o aluno marcou continua marcado:
+    expect(j.estado.aulas[0].realizadaEm).toBe(ONTEM)
+    expect(j.mudou).toBe(true)
+    expect(j.substituidas).toEqual([1])
+  })
+
+  it('aula que so existe na grade recebida entra como NOVA', () => {
+    const j = mesclarGrade({
+      local: comAulas([]),
+      recebida: [{ numero: 4, itemIds: ['a'], marcas: { itemIds: doProfessor() } }],
+    })
+    expect(j.estado.aulas.map((a) => a.numero)).toEqual([4])
+    expect(j.mudou).toBe(true)
+    // Nao e substituicao: nada do aluno foi trocado.
+    expect(j.substituidas).toEqual([])
+  })
+
+  it('grade vazia nao muda nada', () => {
+    const local = comAulas([{ numero: 1, realizadaEm: ONTEM, marcas: { realizadaEm: doAluno() } }])
+    const j = mesclarGrade({ local, recebida: [] })
+    expect(j.mudou).toBe(false)
+    expect(j.estado.aulas).toEqual(local.aulas)
+  })
+
+  it('o ALUNO nao vence no campo do professor, nem sendo mais recente', () => {
+    // `marcaVencedora` decide por DONO antes de olhar a hora. Se o aluno tivesse
+    // mexido em `itemIds` (nao ha tela para isso, mas um estado antigo pode ter),
+    // a grade do professor ainda manda.
+    const local = comAulas([
+      { numero: 1, itemIds: ['do-aluno'], marcas: { itemIds: doAluno(HOJE) } },
+    ])
+    const j = mesclarGrade({
+      local,
+      recebida: [{ numero: 1, itemIds: ['do-professor'], marcas: { itemIds: doProfessor(ONTEM) } }],
+    })
+    expect(j.estado.aulas[0].itemIds).toEqual(['do-professor'])
+  })
+
+  it('o PROFESSOR nao vence no campo do aluno', () => {
+    // O espelho do teste acima: `realizadaEm` e do aluno.
+    const local = comAulas([
+      { numero: 1, realizadaEm: ONTEM, marcas: { realizadaEm: doAluno(ONTEM) } },
+    ])
+    const j = mesclarGrade({
+      local,
+      recebida: [{ numero: 1, realizadaEm: undefined, marcas: { realizadaEm: doProfessor(HOJE) } }],
+    })
+    expect(j.estado.aulas[0].realizadaEm).toBe(ONTEM)
+  })
+
+  it('campo SEM marca no recebido nao mexe no local', () => {
+    // Grade gravada antes das marcas nunca sobrescreve por omissao.
+    const local = comAulas([
+      { numero: 1, itemIds: ['meu'], marcas: { itemIds: doProfessor(ONTEM) } },
+    ])
+    const j = mesclarGrade({ local, recebida: [{ numero: 1, itemIds: ['sem-marca'] }] })
+    expect(j.estado.aulas[0].itemIds).toEqual(['meu'])
+    expect(j.mudou).toBe(false)
+  })
+
+  it('lista VAZIA de itens e diferente de aula nao montada', () => {
+    // `undefined` = o professor nao chegou nesta aula. `[]` = ele tirou tudo
+    // dela de proposito. A distincao esta no tipo e tem de sobreviver ao merge.
+    const j = mesclarGrade({
+      local: comAulas([{ numero: 1, itemIds: ['a'], marcas: { itemIds: doProfessor(ONTEM) } }]),
+      recebida: [{ numero: 1, itemIds: [], marcas: { itemIds: doProfessor(HOJE) } }],
+    })
+    expect(j.estado.aulas[0].itemIds).toEqual([])
+    expect(j.estado.aulas[0].itemIds).not.toBeUndefined()
+  })
+
+  it('MESMO INSTANTE: o desempate e por `versao`, e nao pela ordem', () => {
+    // E por isto que `gravarAula` incrementa `versao` a partir da marca anterior,
+    // em transacao: duas escritas do professor no mesmo segundo cairiam no
+    // ultimo critério (`alteradoPor`, identico) e voltariam a depender da ordem
+    // dos argumentos — o defeito que o comentario de `maisRecente` registra.
+    const j = mesclarGrade({
+      local: comAulas([
+        { numero: 1, itemIds: ['v1'], marcas: { itemIds: doProfessor(HOJE, 1) } },
+      ]),
+      recebida: [{ numero: 1, itemIds: ['v2'], marcas: { itemIds: doProfessor(HOJE, 2) } }],
+    })
+    expect(j.estado.aulas[0].itemIds).toEqual(['v2'])
+  })
+
+  it('versao MENOR no recebido perde, mesmo instante', () => {
+    const j = mesclarGrade({
+      local: comAulas([
+        { numero: 1, itemIds: ['v3'], marcas: { itemIds: doProfessor(HOJE, 3) } },
+      ]),
+      recebida: [{ numero: 1, itemIds: ['v2'], marcas: { itemIds: doProfessor(HOJE, 2) } }],
+    })
+    expect(j.estado.aulas[0].itemIds).toEqual(['v3'])
+  })
+
+  it('nao mexe em nada fora de `aulas`', () => {
+    // A porta e estreita: o professor manda grade, e so.
+    const local = comAulas([])
+    const j = mesclarGrade({
+      local,
+      recebida: [{ numero: 1, itemIds: ['a'], marcas: { itemIds: doProfessor() } }],
+    })
+    expect(j.estado.perfil).toBe(local.perfil)
+    expect(j.estado.revisoes).toBe(local.revisoes)
+    expect(j.estado.eventos).toBe(local.eventos)
   })
 })

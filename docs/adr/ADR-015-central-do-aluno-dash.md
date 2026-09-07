@@ -309,7 +309,12 @@ Rejeitado **engordar o `resumos`** com os percentuais: card novo só apareceria 
 que cada aluno abrisse o app de novo, e quem não abrisse deixaria buraco na tela por
 semanas. Uma fonte de verdade, calculada por código já testado.
 
-**Entrega em duas partes**, com a linha onde o risco muda de natureza:
+**Entrega em duas partes**, com a linha onde o risco muda de natureza. **As duas
+foram entregues em 07/09/2026.** O transporte da grade ficou em
+`nuvem/grades.ts` (um documento por aula, escrita em transação para a `versao` da
+marca não repetir) e a junção em `mesclarGrade` — porta estreita, reusando
+`unirPorChave`/`mesclarCampos`/`DONO_DA_AULA` em vez de fingir que o professor
+mandou um estado inteiro.
 
 | Entrega | Itens |
 |---|---|

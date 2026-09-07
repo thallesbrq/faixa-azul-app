@@ -797,3 +797,185 @@
   opacity: 0.6;
   cursor: progress;
 }
+
+/* ------------------------------------------------- abas da pagina do aluno */
+
+.abas-aluno {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.aba-aluno {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  /* A borda de baixo transparente reserva o espaco da marca de ativo: sem ela,
+     trocar de aba deslocaria o conteudo em 2px. */
+  border-bottom: 2px solid transparent;
+  color: var(--cor-texto-suave);
+  padding: 10px 14px;
+  min-height: var(--alvo-toque-min);
+}
+
+.aba-aluno:hover {
+  color: var(--cor-texto);
+}
+
+.aba-aluno--ativa {
+  color: var(--cor-texto);
+  border-bottom-color: var(--laranja);
+}
+
+/* ------------------------------------------------------ montagem da grade */
+
+.topo-grade {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--espacamento-base) * 2);
+}
+
+.acoes-grade {
+  display: flex;
+  gap: var(--espacamento-base);
+}
+
+.problemas {
+  list-style: none;
+  margin: calc(var(--espacamento-base) * 2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--amarelo-atencao);
+}
+
+/* Aulas a esquerda, bolsao a direita: a leitura vai do destino para a origem,
+   porque a pergunta do professor e "o que falta pôr na aula 3". */
+.grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--espacamento-base) * 2);
+  align-items: start;
+}
+
+.lista-aulas,
+.itens-da-aula,
+.itens-do-bolsao {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lista-aulas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+}
+
+.aula {
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: calc(var(--espacamento-base) * 1.5);
+}
+
+/* Pendente ganha borda laranja E a palavra "nao gravada" — cor sozinha nao
+   informa quem nao a distingue (RNF-04). */
+.aula--pendente {
+  border-color: var(--laranja);
+  background: var(--laranja-suave);
+}
+
+.aula-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacamento-base);
+  font-size: 0.9rem;
+}
+
+.aula-conta {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.aula-sugerido {
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+}
+
+.aula-vazia {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  margin: 6px 0 0;
+  font-style: italic;
+}
+
+.aula-marca-pendente {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--laranja-texto);
+  margin: 8px 0 0;
+}
+
+.itens-da-aula,
+.itens-do-bolsao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.itens-da-aula li,
+.itens-do-bolsao li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacamento-base);
+  font-size: 0.8rem;
+}
+
+.item-nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.destino {
+  font: inherit;
+  font-size: 0.75rem;
+  flex: 0 0 auto;
+  color: var(--cor-texto);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.grupo-bolsao {
+  margin-top: calc(var(--espacamento-base) * 2);
+}
+
+.rotulo-guarda {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+  display: flex;
+  justify-content: space-between;
+}
+
+@media (max-width: 980px) {
+  .grade {
+    grid-template-columns: 1fr;
+  }
+}

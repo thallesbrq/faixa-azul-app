@@ -1,9 +1,10 @@
 /**
  * Central do Aluno — a tela do professor.
  *
- * ESTA ENTREGA (1 de 2) MOSTRA; A SEGUINTE PROGRAMA. Ver ADR-015: a linha entre
- * as duas cai onde o risco muda de natureza — ver e leitura, programar exige um
- * caminho de sincronizacao novo nos dois lados.
+ * VER E PROGRAMAR, as duas metades. A entrega 1 trouxe o painel de turmas e o
+ * progresso de cada aluno; a 2 trouxe a montagem da grade — a linha entre elas
+ * caiu onde o risco mudava de natureza, porque programar exigiu um caminho de
+ * sincronizacao novo nos dois lados (ver nuvem/grades e `mesclarGrade`).
  *
  * NENHUMA TELA ANTES DO LOGIN, e isso separa a central do app do aluno. O app
  * funciona sem conta porque o estudo e local; aqui todo dado e de outra pessoa,
@@ -31,6 +32,7 @@ import { Rosca } from './components/Rosca'
 import { Barras } from './components/Barras'
 import { Tabela } from './components/Tabela'
 import { Aluno } from './components/Aluno'
+import { MontarGrade } from './MontarGrade'
 import { horaCurta } from './formato'
 
 /**
@@ -161,6 +163,14 @@ function Central({
         <Aluno
           linha={linha}
           estado={estado.estados.get(linha.uid) ?? null}
+          aulas={
+            <MontarGrade
+              app={sessao.app}
+              alunoUid={linha.uid}
+              estadoDoAluno={estado.estados.get(linha.uid) ?? null}
+              itens={CURRICULO_DE_AZUL.itens}
+            />
+          }
           curriculo={CURRICULO_DE_AZUL}
           aoVoltar={() => irPara({ tela: 'turmas' })}
           aoTrocarTurma={async (turma) => {

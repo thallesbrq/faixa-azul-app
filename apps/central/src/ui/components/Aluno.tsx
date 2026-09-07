@@ -19,6 +19,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { ProgressoDeGrupo, NivelDominio } from '@faixa-azul/core/application/progresso'
 import { faixaDaPontuacao } from '@faixa-azul/core/application/progresso'
 import { detalheDoAluno } from '@faixa-azul/core/application/central'
@@ -90,9 +91,21 @@ export interface AlunoProps {
   aoVoltar: () => void
   /** So o professor consegue: as regras negam ao proprio aluno. */
   aoTrocarTurma: (turma: string) => Promise<void>
+  /**
+   * A aba Aulas. Chega como no filho pronto e nao como dados: a montagem tem
+   * estado proprio (`useGrade`), e ele so deve existir quando a aba esta aberta
+   * — carregar a grade de um aluno que ninguem abriu seria leitura desperdicada.
+   */
+  aulas: ReactNode
 }
 
-export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma }: AlunoProps) {
+export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma, aulas }: AlunoProps) {
+  /**
+   * DUAS ABAS (ADR-015, decisao 11), e a de Aulas so existe agora que tem
+   * conteudo. Na entrega 1 ela ficou de fora de proposito: uma aba que abre
+   * vazia e pior que uma aba que nao existe.
+   */
+  const [aba, setAba] = useState<'progresso' | 'aulas'>('progresso')
   const agora = useMemo(() => new Date(), [])
   const [trocando, setTrocando] = useState(false)
   const [avisoDaTurma, setAvisoDaTurma] = useState<string | null>(null)
@@ -204,9 +217,30 @@ export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma }: Alu
         </div>
       </section>
 
+      <div className="abas-aluno" role="tablist" aria-label="Progresso ou aulas">
+        <button
+          role="tab"
+          aria-selected={aba === 'progresso'}
+          className={aba === 'progresso' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
+          onClick={() => setAba('progresso')}
+        >
+          Progresso
+        </button>
+        <button
+          role="tab"
+          aria-selected={aba === 'aulas'}
+          className={aba === 'aulas' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
+          onClick={() => setAba('aulas')}
+        >
+          Aulas
+        </button>
+      </div>
+
+      {aba === 'aulas' && aulas}
+
       {/* Nunca sincronizou: nao ha progresso porque nao ha dado. Dizer isso e
           diferente de mostrar zeros, que seriam um fato inventado. */}
-      {estado === null && (
+      {aba === 'progresso' && estado === null && (
         <section className="cartao">
           <h3>Sem dados ainda</h3>
           <p className="apoio" style={{ marginBottom: 0 }}>
@@ -217,7 +251,7 @@ export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma }: Alu
         </section>
       )}
 
-      {detalhe && linha.motivo === 'turma-sem-curriculo' && (
+      {aba === 'progresso' && detalhe && linha.motivo === 'turma-sem-curriculo' && (
         <section className="cartao">
           <h3>Turma sem currículo próprio</h3>
           <p className="apoio" style={{ marginBottom: 0 }}>
@@ -228,7 +262,7 @@ export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma }: Alu
         </section>
       )}
 
-      {detalhe && linha.motivo === null && (
+      {aba === 'progresso' && detalhe && linha.motivo === null && (
         <>
           <section className="cartao">
             <h3>Prontidão</h3>
