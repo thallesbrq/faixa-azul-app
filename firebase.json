@@ -12,9 +12,12 @@
   "hosting": [
     {
       "target": "aluno",
-      "public": "apps/aluno/dist",
+      "public": "site",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+      "rewrites": [
+        { "source": "/central/**", "destination": "/central/index.html" },
+        { "source": "**", "destination": "/index.html" }
+      ]
     }
   ]
 }

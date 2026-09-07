@@ -1,0 +1,767 @@
+/*
+ * Central do Aluno — componentes.
+ *
+ * Cores e espacamentos vem SEMPRE dos tokens do core (@faixa-azul/core/tokens.css),
+ * os mesmos do app do aluno. Nao existe cor literal neste arquivo: a central e o
+ * app tem de parecer o mesmo produto, e um `#hex` solto aqui e o primeiro passo
+ * para divergirem.
+ *
+ * A FAIXA DO TOPO E PRETA COM ACENTO LARANJA (ADR-015, decisao 5), e nao um
+ * gradiente laranja como a referencia visual que originou esta tela. Texto branco
+ * sobre o laranja da marca da ~2,2:1 — reprova RNF-04. O preto e a outra cor da
+ * logo, e passa com folga.
+ *
+ * DESKTOP EM PRIMEIRO LUGAR, ao contrario do app do aluno. A central e usada no
+ * computador, com a tabela de turma inteira na tela; ha um minimo de adaptacao
+ * para celular no fim do arquivo, para o professor conseguir consultar no tatame,
+ * mas nao e o caso principal.
+ */
+
+.topo {
+  background: var(--preto);
+  color: #fff;
+  padding: calc(var(--espacamento-base) * 2) calc(var(--espacamento-base) * 3);
+}
+
+.topo-conteudo {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--espacamento-base) * 2);
+}
+
+.topo-logo {
+  height: 40px;
+  width: auto;
+}
+
+.topo-titulo h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.2px;
+}
+
+.topo-titulo p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  /* O cinza do anel da logo, que e exatamente para isto: texto secundario. */
+  color: var(--cinza-marca);
+}
+
+/* `margin-left: auto` e nao `justify-content: space-between`: com tres filhos,
+   space-between empurraria o titulo para o meio. */
+.topo-quem {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+  font-size: 0.85rem;
+}
+
+.botao-texto {
+  background: none;
+  border: 0;
+  color: var(--laranja);
+  font: inherit;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.botao-texto:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------ barra de turma */
+
+.barra {
+  background: var(--cor-superficie);
+  border-bottom: 1px solid var(--cor-borda);
+  /* Grudada no topo: com vinte linhas de aluno, trocar de turma nao pode exigir
+     rolar de volta. */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.barra-conteudo {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--espacamento-base) calc(var(--espacamento-base) * 3);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--espacamento-base) * 2);
+}
+
+.barra-rotulo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cor-texto-suave);
+}
+
+.abas-turma {
+  display: flex;
+  gap: 4px;
+}
+
+.aba-turma {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  padding: 6px 14px;
+  border-radius: 999px;
+  min-height: var(--alvo-toque-min);
+}
+
+.aba-turma:hover {
+  border-color: var(--laranja);
+}
+
+/* Ativa em preto e nao em laranja: o laranja fica reservado para o acento e para
+   o foco, e um pilula laranja competiria com os numeros da tabela. */
+.aba-turma--ativa {
+  background: var(--preto);
+  border-color: var(--preto);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------- painel */
+
+.painel {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: calc(var(--espacamento-base) * 3);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--espacamento-base) * 2);
+}
+
+.entrada {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.entrada .cartao {
+  margin: calc(var(--espacamento-base) * 6) auto;
+}
+
+.cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  padding: calc(var(--espacamento-base) * 3);
+}
+
+.cartao--estreito {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.cartao h2 {
+  margin: 0 0 var(--espacamento-base);
+  font-size: 1.05rem;
+}
+
+.apoio {
+  color: var(--cor-texto-suave);
+  font-size: 0.9rem;
+  margin: 0 0 calc(var(--espacamento-base) * 1.5);
+}
+
+.aviso {
+  background: var(--vermelho-suave);
+  color: var(--vermelho-alerta);
+  border: 1px solid var(--vermelho-alerta);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  margin: 0 0 calc(var(--espacamento-base) * 1.5);
+}
+
+/* -------------------------------------------------------------------- campos */
+
+.campo {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+  margin-bottom: calc(var(--espacamento-base) * 1.5);
+}
+
+.campo input {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--cor-texto);
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 4px;
+  min-height: var(--alvo-toque-min);
+}
+
+.botao {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--preto);
+  background: var(--preto);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  min-height: var(--alvo-toque-min);
+}
+
+.botao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.botao--claro {
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  border-color: var(--cor-borda);
+}
+
+/* ------------------------------------------------------------------ celular */
+
+@media (max-width: 720px) {
+  .topo-conteudo,
+  .barra-conteudo,
+  .painel {
+    padding-left: calc(var(--espacamento-base) * 2);
+    padding-right: calc(var(--espacamento-base) * 2);
+  }
+
+  /* A barra de turma rola na horizontal em vez de quebrar linha: quebrar
+     empurraria a tabela para baixo da dobra a cada abertura. */
+  .barra-conteudo {
+    overflow-x: auto;
+  }
+
+  .abas-turma {
+    flex: 0 0 auto;
+  }
+}
+
+/* -------------------------------------------------------------- cartoes KPI */
+
+/*
+ * `auto-fit` e nao `repeat(6, 1fr)`: o numero de cartoes VARIA — ele segue os
+ * grupos ativos do curriculo (quatro hoje, sete quando as Secoes 1-3 forem
+ * ativadas). Uma grade fixa deixaria buraco ou apertaria dependendo do dia.
+ */
+.cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: calc(var(--espacamento-base) * 1.5);
+}
+
+.kpi {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  padding: calc(var(--espacamento-base) * 2);
+}
+
+.kpi-rotulo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+  /* Duas linhas cabem sem empurrar o numero: "Aguardando sua validação" e longo
+     e encurtar o rotulo custaria a clareza que ele tem. */
+  min-height: 2.2em;
+}
+
+.kpi-valor {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 2px;
+  /* Numeros em colunas tem de alinhar: sem isto os digitos dancam entre cartoes. */
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-apoio {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  margin-top: 6px;
+}
+
+.medidor {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cor-fundo);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.medidor > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.medidor--pequeno {
+  width: 72px;
+  height: 4px;
+  margin: 4px 0 0 auto;
+}
+
+/* -------------------------------------------------------------- rosca/barras */
+
+.dois-blocos {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: calc(var(--espacamento-base) * 2);
+}
+
+.rosca-caixa,
+.barras-caixa {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  padding: calc(var(--espacamento-base) * 2);
+}
+
+.rosca-caixa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.rosca-caixa h3,
+.barras-caixa h3 {
+  margin: 0 0 calc(var(--espacamento-base) * 1.5);
+  font-size: 0.85rem;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+.rosca-caixa h3 {
+  align-self: center;
+}
+
+.rosca-valor {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rosca-apoio {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+  margin: calc(var(--espacamento-base) * 1.5) 0 0;
+}
+
+.rosca-nota {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  margin: 4px 0 0;
+}
+
+/* Barra como BOTAO: a linha inteira leva ao aluno, e um alvo de 100% de largura
+   e mais facil de acertar que o nome. */
+.barra-linha {
+  display: grid;
+  grid-template-columns: 130px 1fr 48px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 3px 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--cor-texto);
+  cursor: pointer;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.barra-linha:hover {
+  background: var(--cor-fundo);
+}
+
+.barra-nome {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barra-trilha {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--cor-fundo);
+  overflow: hidden;
+}
+
+.barra-cheia {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.barra-valor {
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------------- tabela */
+
+.tabela-rolagem {
+  /* A tabela rola DENTRO da caixa: com dez colunas, deixar a pagina rolar na
+     horizontal levaria o cabecalho e o seletor de turma junto. */
+  overflow-x: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.tabela thead th {
+  background: var(--cor-fundo);
+  color: var(--cor-texto-suave);
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--cor-borda);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.tabela tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--cor-borda);
+  vertical-align: middle;
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.linha-clicavel {
+  cursor: pointer;
+}
+
+.linha-clicavel:hover {
+  background: var(--cor-fundo);
+}
+
+.tabela .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tabela th.num {
+  text-align: right;
+}
+
+.vazio {
+  color: var(--cor-texto-suave);
+}
+
+.link-aluno {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--cor-texto);
+  cursor: pointer;
+  text-align: left;
+}
+
+.link-aluno:hover {
+  color: var(--laranja-texto);
+  text-decoration: underline;
+}
+
+.etiqueta {
+  display: inline-block;
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--cor-texto-suave);
+}
+
+/* Situacao com COR E PALAVRA, nao so cor: quem nao distingue verde de vermelho
+   (RNF-04) precisa do texto, e o texto ainda e mais rapido de ler que a legenda. */
+.situacao {
+  display: block;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.situacao--em-dia {
+  color: var(--verde-sucesso);
+}
+
+.situacao--parado {
+  color: var(--vermelho-alerta);
+}
+
+.situacao--nunca-estudou {
+  color: var(--amarelo-atencao);
+}
+
+/* Nunca sincronizou nao e desempenho: cinza, e nao vermelho. */
+.situacao--sem-dados {
+  color: var(--cor-texto-suave);
+}
+
+.situacao-apoio {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+  margin-top: 1px;
+}
+
+.contagem-linhas {
+  float: right;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+}
+
+.nota-turma {
+  background: var(--amarelo-suave);
+  border: 1px solid var(--amarelo-atencao);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.barra-direita {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-base);
+}
+
+.apoio-inline {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.botao--pequeno {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  min-height: 0;
+}
+
+@media (max-width: 980px) {
+  .dois-blocos {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------- pagina do aluno */
+
+.voltar {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--laranja-texto);
+  cursor: pointer;
+}
+
+.voltar:hover {
+  text-decoration: underline;
+}
+
+.aluno-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--espacamento-base) * 2);
+}
+
+.aluno-nome {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+  letter-spacing: -0.3px;
+}
+
+/* Fatos que valem para TODA turma, inclusive a que nao mede curriculo. */
+.fatos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--espacamento-base);
+  margin-top: calc(var(--espacamento-base) * 2);
+}
+
+.fato {
+  background: var(--cor-fundo);
+  border-radius: 10px;
+  padding: calc(var(--espacamento-base) * 1.5);
+}
+
+.fato-valor {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.fato-valor small {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.fato-rotulo {
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+  margin-top: 2px;
+}
+
+/* Dois eixos lado a lado, NUNCA um numero unico: o segundo existe para o
+   primeiro nao parecer suficiente. Ver application/progresso. */
+.dois-eixos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--espacamento-base) * 2);
+  margin-top: var(--espacamento-base);
+}
+
+.eixo-valor {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.eixo-rotulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cor-texto);
+}
+
+.eixo-rotulo small {
+  display: block;
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+  margin-top: 1px;
+}
+
+/* A fila de validacao: lista, e nao numero. */
+.fila {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--espacamento-base);
+}
+
+.fila li {
+  background: var(--amarelo-suave);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+}
+
+.fila-onde {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+  margin-top: 2px;
+}
+
+.lista-grupos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--espacamento-base) * 1.5);
+}
+
+.grupo-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacamento-base);
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+}
+
+.grupo-nome {
+  font-weight: 600;
+}
+
+.grupo-valor {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.grupo-legenda {
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+  margin-top: 4px;
+}
+
+/*
+ * COLISAO DE CASCATA, resolvida de propósito e nao por acidente de ordem.
+ *
+ * `.dois-blocos` e `.dois-blocos--iguais` tem a MESMA especificidade (uma classe
+ * cada), entao quem vem depois no arquivo ganha. Como esta regra esta abaixo do
+ * `@media (max-width: 980px) { .dois-blocos { 1fr } }`, ela venceria a media
+ * query e a pagina do aluno ficaria em duas colunas mesmo no celular.
+ *
+ * A media query abaixo repete o breakpoint de 980px para a variante, em vez de
+ * eu subir a especificidade com um seletor mais longo. Repetir o numero e o
+ * preco de nao depender da ordem das linhas.
+ */
+.dois-blocos--iguais {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 980px) {
+  .dois-blocos--iguais {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rodape-nota {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+

@@ -22,9 +22,17 @@ rules_version = '2';
 // SOBRE O LOG DO EMULADOR: ele reporta `evaluation error` em algumas negacoes,
 // alem de `false`. Duas causas reais foram encontradas e corrigidas (ordem da
 // guarda de autenticacao, e `.data` sem guarda de nulo). Restaram entradas que
-// eu NAO consegui atribuir — nenhuma delas muda resultado: as 23 assercoes
+// eu NAO consegui atribuir — nenhuma delas muda resultado: as 43 assercoes
 // cobrem cada caminho de permitir e negar, e todas passam. Fica registrado como
 // observacao aberta, e nao como coisa entendida.
+//
+// UMA HIPOTESE TESTADA E REFUTADA, para ninguem gastar a mesma hora de novo:
+// achei que o erro na regra de `update` de `pessoas` viesse de `resource` ser
+// nulo no caminho de create (um `set` faz o Firestore avaliar create E update).
+// Acrescentei `resource != null` e rodei: o `evaluation error` continuou
+// identico, na mesma linha e coluna. Nao e isso. O log tambem reporta erro E
+// `false` para a MESMA linha na mesma requisicao, o que sugere mais de uma
+// passagem de avaliacao — mas isso e suposicao, e fica como suposicao.
 //
 // CUSTO DE LEITURA: checar "quem sou eu" exige um get() em `pessoas`, e cada
 // get() dentro de uma regra e uma leitura cobrada. Com 20 alunos e uma academia
@@ -155,8 +163,8 @@ service cloud.firestore {
       // 1. o professor cria direto (uid ja conhecido, ex. recadastro)
       // 2. a PROPRIA pessoa cria, e SO se houver convite para o e-mail dela
       //
-      // No caminho 2, papel e academia vem DO CONVITE e nao do que o cliente
-      // mandou. Sem isso, quem tem convite de aluno se cadastraria como
+      // No caminho 2, papel, academia e TURMA vem DO CONVITE e nao do que o
+      // cliente mandou. Sem isso, quem tem convite de aluno se cadastraria como
       // professor e veria a turma toda.
       allow create: if (
           souProfessor()
@@ -171,22 +179,51 @@ service cloud.firestore {
           && temConviteValido()
         );
 
-      // Fica em funcao para os dois get() ficarem juntos e contados.
+      /**
+       * Fica em funcao para os dois get() ficarem juntos e contados.
+       *
+       * A TURMA E COMPARADA COM `get('turma', '')` DOS DOIS LADOS, e o default
+       * nao e frouxidao: todo convite criado antes deste campo existir nao tem
+       * a chave. Comparar `c.data.turma` direto faria a regra ERRAR nesses
+       * convites — e erro em regra e negacao, entao um convite legitimo pendente
+       * pararia de funcionar no deploy, silenciosamente, e a pessoa veria "sem
+       * convite" com o convite na tela do professor.
+       *
+       * Com o default, convite antigo (sem turma) exige cadastro sem turma, que
+       * e exatamente o que ele autoriza. O professor atribui a turma depois.
+       */
       function temConviteValido() {
         let c = get(/databases/$(database)/documents/convites/$(request.auth.token.email));
         return c != null
           && request.resource.data.papel == c.data.papel
           && request.resource.data.academiaId == c.data.academiaId
+          && request.resource.data.get('turma', '') == c.data.get('turma', '')
           && request.resource.data.ativo == true;
       }
 
-      // O aluno atualiza o proprio NOME e nada mais. Sem essa restricao ele
-      // mudaria o proprio papel para 'professor' e passaria a ver a turma.
+      /**
+       * O aluno atualiza o proprio NOME e nada mais.
+       *
+       * LISTA DE PERMISSAO, E NAO DE PROIBICAO — e a mudanca importa mais que
+       * parece. A versao anterior ENUMERAVA o que ele nao podia mudar:
+       *
+       *   request.resource.data.papel      == resource.data.papel
+       *   request.resource.data.academiaId == resource.data.academiaId
+       *   request.resource.data.ativo      == resource.data.ativo
+       *
+       * Funcionava porque a lista era completa. No instante em que `turma`
+       * passou a existir ela deixou de ser, e o aluno se transferiria de turma
+       * sozinho — sem erro, sem tela vermelha, e sem nenhum teste reclamar,
+       * porque nenhum teste falava de um campo que ainda nao existia.
+       *
+       * `hasOnly(['nome'])` inverte o padrao: campo novo nasce PROTEGIDO, e
+       * abrir um exige escrever aqui de propósito. E o mesmo defeito de forma
+       * que a guarda de autenticacao tinha (ver `souAtivo`): a decisao precisa
+       * estar escrita, nao ser consequencia de a lista estar em dia.
+       */
       allow update: if (
           souEu(uid)
-          && request.resource.data.papel == resource.data.papel
-          && request.resource.data.academiaId == resource.data.academiaId
-          && request.resource.data.ativo == resource.data.ativo
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome'])
         ) || mesmaAcademiaQue(uid);
 
       // Apagar e do professor (a saida do aluno passa pela central).

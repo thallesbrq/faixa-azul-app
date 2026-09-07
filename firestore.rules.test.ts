@@ -60,11 +60,13 @@ beforeEach(async () => {
       nome: 'Outro Professor', papel: 'professor', academiaId: OUTRA_ACADEMIA, ativo: true,
     })
     await setDoc(doc(db, 'pessoas', ALUNO_A), {
-      nome: 'Thalles', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      nome: 'Thalles', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1A',
     })
     await setDoc(doc(db, 'pessoas', ALUNO_B), {
-      nome: 'Outro Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      nome: 'Outro Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1B',
     })
+    // SEM `turma` de proposito: e o estado de todo cadastro que existe hoje, e
+    // as regras tem de continuar funcionando para ele.
     await setDoc(doc(db, 'pessoas', ALUNO_DESATIVADO), {
       nome: 'Ex-aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: false,
     })
@@ -223,6 +225,42 @@ describe('escalada de privilegio', () => {
     )
   })
 
+  it('aluno NAO se transfere de turma', async () => {
+    // A turma decide de quem e a media da turma e que grade o professor monta.
+    // Autoatribuicao tornaria os dois numeros opinioes do aluno.
+    await assertFails(
+      updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { turma: 'RG2' }),
+    )
+  })
+
+  it('aluno NAO cria campo novo no proprio cadastro', async () => {
+    // O ponto da lista de PERMISSAO: campo que ninguem previu nasce protegido.
+    // Com a enumeracao antiga isto passava, e era assim que `turma` escaparia.
+    await assertFails(
+      updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { qualquerCoisa: 'x' }),
+    )
+  })
+
+  it('aluno NAO apaga a propria turma', async () => {
+    // Apagar tambem e mudar: sem turma, ele sai da media e da grade.
+    await assertFails(
+      updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { turma: '' }),
+    )
+  })
+
+  it('professor ATRIBUI turma ao aluno', async () => {
+    // O outro lado da mesma trava: alguem tem de poder, e e ele.
+    await assertSucceeds(
+      updateDoc(doc(como(PROF), 'pessoas', ALUNO_A), { turma: 'RG2' }),
+    )
+  })
+
+  it('professor de OUTRA academia nao atribui turma', async () => {
+    await assertFails(
+      updateDoc(doc(como(PROF_DE_FORA), 'pessoas', ALUNO_A), { turma: 'RG2' }),
+    )
+  })
+
   it('ninguem se cadastra sozinho — nao existe porta aberta', async () => {
     await assertFails(
       setDoc(doc(como('intruso'), 'pessoas', 'intruso'), {
@@ -378,5 +416,61 @@ describe('convites', () => {
         papel: 'aluno', academiaId: ACADEMIA,
       }),
     )
+  })
+
+  // -------------------------------------------------------------------------
+  // A turma nasce do convite, e nao da vontade de quem esta entrando
+  // -------------------------------------------------------------------------
+
+  it('convite SEM turma nao autoriza cadastro COM turma', async () => {
+    // O convite deste bloco nao tem `turma` — e o formato de todo convite
+    // criado antes do campo existir. Ele autoriza entrar sem turma, e nada mais.
+    await assertFails(
+      setDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO), 'pessoas', NOVO_UID), {
+        nome: 'Novo Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1A',
+      }),
+    )
+  })
+
+  describe('convite com turma', () => {
+    const EMAIL_RG1A = 'convidado.rg1a@exemplo.com'
+    const UID_RG1A = 'uid-rg1a'
+
+    beforeEach(async () => {
+      await amb.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'convites', EMAIL_RG1A), {
+          papel: 'aluno', academiaId: ACADEMIA, turma: 'RG1A',
+          convidadoEm: '2026-09-07T00:00:00Z',
+        })
+      })
+    })
+
+    it('a pessoa entra na turma do convite', async () => {
+      await assertSucceeds(
+        setDoc(doc(comEmail(UID_RG1A, EMAIL_RG1A), 'pessoas', UID_RG1A), {
+          nome: 'Convidado', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1A',
+        }),
+      )
+    })
+
+    it('NAO entra em outra turma que nao a do convite', async () => {
+      // Sem esta trava, quem foi convidado para iniciantes se poria na RG2 —
+      // e a media da turma passaria a depender de ninguem mentir no cadastro.
+      await assertFails(
+        setDoc(doc(comEmail(UID_RG1A, EMAIL_RG1A), 'pessoas', UID_RG1A), {
+          nome: 'Convidado', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG2',
+        }),
+      )
+    })
+
+    it('NAO entra sem turma quando o convite tem uma', async () => {
+      // Omitir tambem e divergir: entraria fora de qualquer turma, invisivel em
+      // todas as visoes da central.
+      await assertFails(
+        setDoc(doc(comEmail(UID_RG1A, EMAIL_RG1A), 'pessoas', UID_RG1A), {
+          nome: 'Convidado', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+        }),
+      )
+    })
   })
 })

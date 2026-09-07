@@ -25,3 +25,4 @@ supervisão), **009** (IA como assistente controlado — aqui: IA fora do produt
 | [012](ADR-012-defesa-pessoal-sem-instrucao.md) | Defesa Pessoal sem instrução textual |
 | [013](ADR-013-ferramentas-existentes.md) | Triagem das ferramentas já construídas |
 | [014](ADR-014-vite5-node21.md) | Vite 5 fixado por incompatibilidade do Node 21 |
+| [015](ADR-015-central-do-aluno-dash.md) | Central do Aluno: dash de turmas |

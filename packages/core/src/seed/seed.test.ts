@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest'
 import { gerarBaralho } from '../domain/cards'
 import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from './index'
+import { grupoDoKind, ORDEM_GRUPO } from '../domain/taxonomia'
 
 const idsDosItens = new Set(ITENS.map((i) => i.id))
 const idsDosModulos = new Set(MODULOS.map((m) => m.id))
@@ -227,5 +228,48 @@ describe('baralho gerado a partir do seed real', () => {
   it('todo cartao de tecnica aponta para um item existente', () => {
     const orfaos = baralho.filter((c) => c.itemId && !idsDosItens.has(c.itemId))
     expect(orfaos.map((c) => c.id)).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Os sete grupos tecnicos da central (ADR-015, decisao 2)
+// ---------------------------------------------------------------------------
+
+describe('grupos tecnicos', () => {
+  const porGrupo = new Map<string, number>()
+  for (const i of ITENS) {
+    const g = grupoDoKind(i.kind)
+    porGrupo.set(g, (porGrupo.get(g) ?? 0) + 1)
+  }
+
+  it('as sete colunas cobrem os 81 itens, sem sobra nem falta', () => {
+    // As colunas da central sao a fatia do curriculo que cada uma mostra. Se a
+    // soma nao fechar, ha item que nao aparece em coluna nenhuma — invisivel na
+    // tela do professor, sem erro nenhum aparecer.
+    let soma = 0
+    for (const g of ORDEM_GRUPO) soma += porGrupo.get(g) ?? 0
+    expect(soma).toBe(ITENS.length)
+    expect(soma).toBe(81)
+  })
+
+  it('a distribuicao e a que o ADR-015 declara', () => {
+    // Os numeros estao escritos no ADR e no comentario da taxonomia. Sem este
+    // teste eles envelhecem em silencio, e a decisao de nao usar `modulo`
+    // (porque `mod-guardas` tem 48 de 81) perderia a evidencia que a sustenta.
+    expect(Object.fromEntries(porGrupo)).toEqual({
+      raspagens: 18,
+      passagens: 14,
+      finalizacoes: 16,
+      'saidas-defesas': 8,
+      quedas: 5,
+      fundamentos: 9,
+      'defesa-pessoal': 11,
+    })
+  })
+
+  it('nenhum grupo carrega mais da metade do curriculo', () => {
+    // A razao de existir desta taxonomia: com `modulo`, uma coluna teria 48 de
+    // 81 e andaria junto com o progresso geral.
+    for (const [, n] of porGrupo) expect(n).toBeLessThan(ITENS.length / 2)
   })
 })

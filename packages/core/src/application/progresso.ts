@@ -22,6 +22,7 @@
  */
 
 import type { Card, ReviewState, TechniqueItem } from '../domain/types'
+import { grupoDoKind, ROTULO_GRUPO } from '../domain/taxonomia'
 
 export type NivelDominio = 'nao_iniciado' | 'visto' | 'aprendendo' | 'dominado'
 
@@ -66,6 +67,35 @@ const PESO: Record<NivelDominio, number> = {
   visto: 0.34,
   aprendendo: 0.67,
   dominado: 1,
+}
+
+/**
+ * Faixa de cor de uma pontuacao — ADR-015, decisao 4.
+ *
+ * OS LIMIARES SAO OS PROPRIOS PESOS, e nao numeros redondos escolhidos por
+ * gosto. Como a pontuacao e a media dos pesos acima, ela tem pontos de
+ * significado exatos: 0,34 e "tudo visto uma vez", 0,67 e "tudo aprendendo",
+ * 1 e "tudo dominado".
+ *
+ * A referencia visual que originou a central cortava em 40% e 80%. Isso poria
+ * a fronteira NO MEIO de um nivel: 38% ficaria vermelho embora "tudo visto" seja
+ * 34%, e 79% ficaria amarelo embora ja esteja acima de "tudo aprendendo". A cor
+ * na central discordaria da etiqueta que o app mostra ao mesmo aluno no mesmo
+ * dia — dois vocabularios para a mesma coisa, que e o erro que `taxonomia.ts`
+ * registra sobre inventar classificacao onde ja existe uma.
+ *
+ * DERIVADO E NAO COPIADO: se `PESO` mudar, os limiares acompanham. Ha teste
+ * amarrando os dois, para a derivacao nao virar coincidencia.
+ */
+export type FaixaDeCor = 'baixa' | 'media' | 'alta'
+
+export const LIMIAR_MEDIA = PESO.visto
+export const LIMIAR_ALTA = PESO.aprendendo
+
+export function faixaDaPontuacao(pontuacao: number): FaixaDeCor {
+  if (pontuacao >= LIMIAR_ALTA) return 'alta'
+  if (pontuacao >= LIMIAR_MEDIA) return 'media'
+  return 'baixa'
 }
 
 export interface ProgressoDeItem {
@@ -187,6 +217,21 @@ export function progressoPorModulo(progresso: ProgressoDeItem[], nomeDoModulo: (
     progresso,
     (p) => p.item.moduloId,
     (p) => nomeDoModulo(p.item.moduloId),
+  )
+}
+
+/**
+ * Progresso por grupo tecnico — as sete colunas da central (ADR-015, decisao 2).
+ *
+ * A chave e o `GrupoTecnico`, nao o rotulo: quem ordena as colunas e
+ * `ORDEM_GRUPO`, e depender do texto para agrupar faria "Saídas e defesas"
+ * virar chave, com acento, no id de um `<th>`.
+ */
+export function progressoPorGrupoTecnico(progresso: ProgressoDeItem[]) {
+  return agrupar(
+    progresso,
+    (p) => grupoDoKind(p.item.kind),
+    (p) => ROTULO_GRUPO[grupoDoKind(p.item.kind)],
   )
 }
 

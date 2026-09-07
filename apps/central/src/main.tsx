@@ -1,10 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './ui/App'
-// A identidade da marca mora no core: o app do aluno e a central do professor
-// leem os MESMOS tokens. Duplicar o arquivo faria as duas telas divergirem no
-// dia em que uma cor mudasse num lado so — ver ADR-015, decisao 5.
+// A identidade da marca vem do core, a mesma que o app do aluno usa.
 import '@faixa-azul/core/tokens.css'
+import './ui/central.css'
 
 const raiz = document.getElementById('root')
 if (!raiz) throw new Error('Elemento #root nao encontrado no index.html')

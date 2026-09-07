@@ -1,6 +1,18 @@
 /*
  * Identidade Rilion Gracie.
  *
+ * MORA NO CORE, e nao no app do aluno, porque DOIS apps a usam: o app do aluno
+ * e a central do professor. Enquanto este arquivo vivia em apps/aluno/src/ui, a
+ * central so teria duas saidas — importar atravessando a fronteira de pacote,
+ * ou duplicar. A segunda e a pior: as duas telas divergiriam no dia em que uma
+ * cor mudasse num lado so, e o professor deixaria de reconhecer o app do aluno
+ * na ferramenta dele. Ver ADR-015, decisao 5.
+ *
+ * E CSS num pacote sem React, o que e coerente: aqui nao ha componente, ha
+ * vocabulario — as cores da marca, a escala de espacamento e as regras de
+ * acessibilidade que valem em qualquer tela do produto. Componentes continuam
+ * em cada app (app.css no do aluno), porque as telas nao se parecem.
+ *
  * As cores foram amostradas da propria logo da academia (preto #000, laranja
  * #F39200, cinza do anel #7B8287, branco), nao escolhidas por gosto.
  *

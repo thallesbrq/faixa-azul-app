@@ -10,7 +10,10 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @faixa-azul/aluno",
+    "dev:central": "npm run dev --workspace @faixa-azul/central",
     "build": "npm run build --workspace @faixa-azul/aluno",
+    "build:central": "npm run build --workspace @faixa-azul/central",
+    "build:site": "npm run build && npm run build:central && node scripts/montar-site.mjs",
     "preview": "npm run preview --workspace @faixa-azul/aluno",
     "test": "vitest run",
     "test:watch": "vitest",

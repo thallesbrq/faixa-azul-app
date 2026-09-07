@@ -12,6 +12,8 @@ dist
 apps/*/dist
 packages/*/dist
 dist-ssr
+# Pasta montada por scripts/montar-site.mjs: os dois builds numa origem so.
+site
 *.local
 
 # Editor directories and files

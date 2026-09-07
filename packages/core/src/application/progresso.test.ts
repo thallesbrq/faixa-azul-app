@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   ACERTOS_PARA_DOMINIO,
   dominioDoCartao,
+  faixaDaPontuacao,
   gruposMaisFracos,
+  LIMIAR_ALTA,
+  LIMIAR_MEDIA,
+  progressoPorGrupoTecnico,
   progressoPorItem,
   progressoPorModulo,
   progressoPorPosicao,
   prontidao,
 } from './progresso'
+import { grupoDoKind, ORDEM_GRUPO } from '../domain/taxonomia'
 import { estadoInicial } from '../domain/scheduler'
 import type { Card, ReviewState, TechniqueItem } from '../domain/types'
 
@@ -222,5 +227,85 @@ describe('gruposMaisFracos', () => {
       { chave: 'medio', rotulo: 'medio', total: 1, porNivel: {} as never, pontuacao: 0.5, validados: 0 },
     ]
     expect(gruposMaisFracos(grupos, 2).map((g) => g.chave)).toEqual(['ruim', 'medio'])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Faixas de cor: derivadas dos pesos, nao escolhidas (ADR-015, decisao 4)
+// ---------------------------------------------------------------------------
+
+describe('faixaDaPontuacao', () => {
+  it('os limiares SAO os pesos dos niveis', () => {
+    // Este teste existe para a derivacao nao virar coincidencia: se alguem
+    // trocar os limiares por numeros redondos, ele quebra. A cor da central tem
+    // de concordar com a etiqueta que o app mostra ao mesmo aluno.
+    const soVisto = progressoPorItem(
+      [item({ id: 'i1' })],
+      [cartao('c1', 'i1')],
+      [estado({ cardId: 'c1', repeticoes: 1, acertosConsecutivos: 0 })],
+      AGORA,
+    )
+    // "tudo visto" e exatamente o piso da faixa media.
+    expect(soVisto[0].pontuacao).toBe(LIMIAR_MEDIA)
+    expect(faixaDaPontuacao(soVisto[0].pontuacao)).toBe('media')
+  })
+
+  it('tudo aprendendo ja e faixa alta', () => {
+    expect(faixaDaPontuacao(LIMIAR_ALTA)).toBe('alta')
+  })
+
+  it('abaixo de tudo-visto e faixa baixa', () => {
+    expect(faixaDaPontuacao(0)).toBe('baixa')
+    expect(faixaDaPontuacao(LIMIAR_MEDIA - 0.01)).toBe('baixa')
+  })
+
+  it('NAO usa os limiares 40/80 da referencia visual', () => {
+    // 38% seria vermelho com o corte em 40, mas "tudo visto" e 34: a cor cairia
+    // no meio de um nivel. 79% seria amarelo com o corte em 80, embora ja esteja
+    // acima de "tudo aprendendo".
+    expect(faixaDaPontuacao(0.38)).toBe('media')
+    expect(faixaDaPontuacao(0.79)).toBe('alta')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Grupos tecnicos: as sete colunas
+// ---------------------------------------------------------------------------
+
+describe('progressoPorGrupoTecnico', () => {
+  it('agrupa costas em Finalizacoes e defesa em Saidas', () => {
+    // Os dois agrupamentos do ADR-015: sozinhos seriam 2 itens numa coluna.
+    const itens = [
+      item({ id: 'i1', kind: 'finalizacao' }),
+      item({ id: 'i2', kind: 'costas' }),
+      item({ id: 'i3', kind: 'saida' }),
+      item({ id: 'i4', kind: 'defesa' }),
+    ]
+    const grupos = progressoPorGrupoTecnico(progressoPorItem(itens, [], [], AGORA))
+    const porChave = new Map(grupos.map((g) => [g.chave, g]))
+
+    expect(porChave.get('finalizacoes')?.total).toBe(2)
+    expect(porChave.get('saidas-defesas')?.total).toBe(2)
+  })
+
+  it('todo kind cai em algum grupo, e os sete cobrem o curriculo', () => {
+    // Item na coluna errada nao produz erro nenhum — so um numero errado na
+    // tela do professor. Entao a cobertura e verificada, nao presumida.
+    const kinds: TechniqueItem['kind'][] = [
+      'raspagem', 'passagem', 'finalizacao', 'costas',
+      'saida', 'defesa', 'movimentacao', 'queda', 'defesa_pessoal',
+    ]
+    for (const kind of kinds) {
+      expect(ORDEM_GRUPO).toContain(grupoDoKind(kind))
+    }
+    expect(ORDEM_GRUPO).toHaveLength(7)
+  })
+
+  it('a chave e o grupo, e nao o rotulo com acento', () => {
+    const grupos = progressoPorGrupoTecnico(
+      progressoPorItem([item({ id: 'i1', kind: 'saida' })], [], [], AGORA),
+    )
+    expect(grupos[0].chave).toBe('saidas-defesas')
+    expect(grupos[0].rotulo).toBe('Saídas e defesas')
   })
 })

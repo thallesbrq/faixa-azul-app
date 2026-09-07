@@ -139,3 +139,81 @@ export function subPosicao(item: Pick<TechniqueItem, 'posicao' | 'categoria'>): 
   if (guarda === 'saidas') return item.posicao
   return null
 }
+
+// ---------------------------------------------------------------------------
+// Grupo tecnico: as colunas da central
+// ---------------------------------------------------------------------------
+
+/**
+ * Sete grupos, derivados do `kind` dos itens — ver ADR-015, decisao 2.
+ *
+ * POR QUE NAO O MODULO DA PROVA, que seria a taxonomia "oficial": `mod-guardas`
+ * carrega 48 dos 81 itens. Uma coluna com 59% do curriculo se move junto com o
+ * progresso geral, e a variacao que interessa ao professor (raspa bem da
+ * fechada, nao faz nada da Dela Riva) fica escondida dentro dela.
+ *
+ * POR QUE NAO AS 16 POSICOES: nao cabem como coluna. Elas viram LINHAS na
+ * pagina de um aluno so, onde `progressoPorPosicao` ja atende. A mesma
+ * taxonomia serve nos dois niveis, girada 90 graus.
+ *
+ * DOIS AGRUPAMENTOS, e cada um tem razao propria:
+ * - `costas` entra em Finalizacoes: ir as costas e ataque que termina em
+ *   finalizacao, e sozinho seriam 2 itens numa coluna inteira.
+ * - `defesa` entra em Saidas: as duas respondem "estou por baixo, como saio",
+ *   e `defesa` tambem tem so 2 itens.
+ *
+ * Contagem que fecha em 81: 18 + 14 + 16 + 8 + 5 + 9 + 11. Ha teste garantindo.
+ */
+export type GrupoTecnico =
+  | 'raspagens'
+  | 'passagens'
+  | 'finalizacoes'
+  | 'saidas-defesas'
+  | 'quedas'
+  | 'fundamentos'
+  | 'defesa-pessoal'
+
+export const ROTULO_GRUPO: Record<GrupoTecnico, string> = {
+  raspagens: 'Raspagens',
+  passagens: 'Passagens',
+  finalizacoes: 'Finalizações',
+  'saidas-defesas': 'Saídas e defesas',
+  quedas: 'Quedas',
+  fundamentos: 'Fundamentos',
+  'defesa-pessoal': 'Defesa pessoal',
+}
+
+/** Ordem das colunas: do maior grupo para o menor, com Defesa Pessoal ao fim. */
+export const ORDEM_GRUPO: GrupoTecnico[] = [
+  'raspagens',
+  'passagens',
+  'finalizacoes',
+  'saidas-defesas',
+  'quedas',
+  'fundamentos',
+  'defesa-pessoal',
+]
+
+const GRUPO_POR_KIND: Record<TechniqueKind, GrupoTecnico> = {
+  raspagem: 'raspagens',
+  passagem: 'passagens',
+  finalizacao: 'finalizacoes',
+  costas: 'finalizacoes',
+  saida: 'saidas-defesas',
+  defesa: 'saidas-defesas',
+  queda: 'quedas',
+  movimentacao: 'fundamentos',
+  defesa_pessoal: 'defesa-pessoal',
+}
+
+/**
+ * Grupo tecnico de um item.
+ *
+ * `Record` completo e nao `switch` com padrao: assim acrescentar um `kind` novo
+ * em `TechniqueKind` QUEBRA a compilacao aqui, em vez de cair silenciosamente
+ * num grupo de sobra. Um item que aparece na coluna errada nao produz erro
+ * nenhum — so um numero errado na tela do professor.
+ */
+export function grupoDoKind(kind: TechniqueKind): GrupoTecnico {
+  return GRUPO_POR_KIND[kind]
+}

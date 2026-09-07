@@ -16,6 +16,7 @@
  */
 
 import type { EstadoPersistido } from '../persistence/repositorio'
+import { TOTAL_DE_AULAS } from './montagem'
 
 // A FORMA do resumo mora no dominio (ver domain/resumo); aqui esta o CALCULO.
 // Importado para uso local e reexportado para nao quebrar quem ja importava
@@ -39,7 +40,21 @@ function ultimaRevisao(estado: EstadoPersistido): number | null {
 
 export function resumoDoAluno(
   estado: EstadoPersistido,
-  { importadoEm, exportadoEm, agora }: { importadoEm: string; exportadoEm: string; agora: Date },
+  {
+    importadoEm,
+    exportadoEm,
+    agora,
+    /**
+     * Tamanho do pacote de aulas. Padrao no `TOTAL_DE_AULAS` do pacote atual,
+     * parametro para o dia em que uma turma tiver pacote de outro tamanho.
+     */
+    totalDeAulas = TOTAL_DE_AULAS,
+  }: {
+    importadoEm: string
+    exportadoEm: string
+    agora: Date
+    totalDeAulas?: number
+  },
 ): ResumoDoAluno {
   const ultima = ultimaRevisao(estado)
 
@@ -51,7 +66,24 @@ export function resumoDoAluno(
     exportadoEm,
     importadoEm,
     aulasFeitas: estado.aulas.filter((a) => a.realizadaEm).length,
-    totalDeAulas: estado.aulas.length,
+    /**
+     * O TAMANHO DO PACOTE, e nao o tamanho da lista de alteracoes.
+     *
+     * DEFEITO CORRIGIDO EM 07/09/2026. Isto era `estado.aulas.length`, e
+     * `estado.aulas` e uma lista ESPARSA de alteracoes — so as aulas que alguem
+     * mexeu, comecando vazia (ver AlteracaoAula em persistence/repositorio). O
+     * pacote em si vem do seed.
+     *
+     * O resultado era um numero que parecia certo e mentia na direcao mais
+     * confortavel: um aluno que marcou 3 aulas como feitas e nao mexeu em mais
+     * nada aparecia como "3/3" — pacote concluido — quando estava em 3 de 10.
+     * E quem nunca mexeu em nada aparecia "0/0", que nao quer dizer nada.
+     *
+     * Nao dava erro, nao quebrava tela, e so ficava certo por acidente: quando
+     * o professor tinha montado a grade das dez, as dez existiam como alteracao
+     * e o total batia.
+     */
+    totalDeAulas,
     itensNaGrade: estado.aulas.reduce((s, a) => s + (a.itemIds?.length ?? 0), 0),
     totalDeRevisoes: estado.eventos.length,
     itensValidados: new Set(

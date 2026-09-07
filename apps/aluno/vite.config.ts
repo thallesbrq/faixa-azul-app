@@ -43,6 +43,25 @@ export default defineConfig({
       // RNF-02: dashboard, cartoes, conteudo e scheduler devem funcionar offline.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        /**
+         * A CENTRAL FICA FORA DO SERVICE WORKER, e sem esta linha ela nao abre.
+         *
+         * As duas aplicacoes compartilham a origem (ADR-015, decisao 9), e o
+         * service worker do app do aluno tem escopo `/`. O workbox instala um
+         * `navigateFallback` para `index.html`: qualquer NAVEGACAO dentro do
+         * escopo e respondida com o index do app do aluno, do cache.
+         *
+         * Ou seja: abrir `/central/` num navegador que ja tem o app do aluno
+         * instalado carregaria o APP DO ALUNO, servido do cache, sem passar pela
+         * rede e sem erro nenhum aparecer. Sintoma: "cliquei em Central e abriu
+         * o app do aluno" — impossivel de diagnosticar olhando a Central, porque
+         * o problema nao esta nela.
+         *
+         * A lista de negacao devolve `/central/**` para a rede, que e onde o
+         * outro build esta. Ha teste de build conferindo que a regra sobreviveu
+         * ao arquivo gerado (scripts/montar-site.mjs).
+         */
+        navigateFallbackDenylist: [/^\/central\//],
       },
       manifest: {
         name: 'Faixa Azul — Preparacao para a prova',

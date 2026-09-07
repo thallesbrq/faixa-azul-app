@@ -7,6 +7,7 @@ import {
   situacaoDoAluno,
 } from './torre'
 import type { ResumoDoAluno } from './torre'
+import { TOTAL_DE_AULAS } from './montagem'
 import { ACADEMIA_PADRAO, estadoInicial } from '../persistence/repositorio'
 import type { EstadoPersistido } from '../persistence/repositorio'
 import { QuotaEstourada, repositorioDeAlunos } from '../persistence/alunos'
@@ -46,7 +47,19 @@ describe('resumoDoAluno', () => {
     })
     const r = resumoDoAluno(e, ctx)
     expect(r.aulasFeitas).toBe(1)
-    expect(r.totalDeAulas).toBe(2)
+    /**
+     * ERA `2` — E ESTE TESTE ERA O QUE MANTINHA O DEFEITO VIVO.
+     *
+     * Ele afirmava que o total de aulas do pacote e o tamanho da lista de
+     * ALTERACOES (duas, aqui). Como o teste passava, o numero errado parecia
+     * verificado: um aluno com 3 aulas feitas e nenhuma outra alteracao aparecia
+     * como "3/3", pacote concluido, em vez de 3 de 10.
+     *
+     * A licao e sobre o teste e nao sobre o codigo: ele descrevia o que a funcao
+     * FAZIA, e nao o que ela deveria responder. Teste assim nao protege — ele
+     * congela.
+     */
+    expect(r.totalDeAulas).toBe(TOTAL_DE_AULAS)
     expect(r.itensNaGrade).toBe(3)
     expect(r.totalDeRevisoes).toBe(2)
   })
@@ -200,5 +213,56 @@ describe('repositorio de alunos', () => {
     expect(uso.alunos).toBe(1)
     expect(uso.bytes).toBeGreaterThan(0)
     expect(uso.apertado).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// O tamanho do pacote nao vem da lista de alteracoes (defeito de 07/09/2026)
+// ---------------------------------------------------------------------------
+
+describe('totalDeAulas', () => {
+  const datas = { importadoEm: 'x', exportadoEm: 'y', agora: new Date('2026-09-07T12:00:00Z') }
+
+  function estadoBase(aulas: { numero: number; realizadaEm?: string }[]) {
+    return {
+      versao: 2,
+      perfil: { id: 'p', nome: 'Aluno', papel: 'aluno', academiaId: 'a' },
+      planoExame: { academia: '', professor: '', dataAlvo: '', provisoria: true, criadoEm: '' },
+      config: {},
+      revisoes: [],
+      eventos: [],
+      validacoes: [],
+      aulas,
+      itens: [],
+      duvidas: [],
+      sessoes: [],
+      indicacoes: [],
+    } as unknown as Parameters<typeof resumoDoAluno>[0]
+  }
+
+  it('tres aulas feitas em pacote de dez NAO e "3 de 3"', () => {
+    // O defeito: `estado.aulas` e lista ESPARSA de alteracoes. Contar o tamanho
+    // dela fazia o aluno com 3 aulas feitas aparecer como pacote concluido.
+    const r = resumoDoAluno(
+      estadoBase([
+        { numero: 1, realizadaEm: '2026-09-01' },
+        { numero: 2, realizadaEm: '2026-09-03' },
+        { numero: 3, realizadaEm: '2026-09-05' },
+      ]),
+      datas,
+    )
+    expect(r.aulasFeitas).toBe(3)
+    expect(r.totalDeAulas).toBe(10)
+  })
+
+  it('quem nunca mexeu em aula nenhuma nao aparece como "0 de 0"', () => {
+    const r = resumoDoAluno(estadoBase([]), datas)
+    expect(r.aulasFeitas).toBe(0)
+    expect(r.totalDeAulas).toBe(10)
+  })
+
+  it('aceita pacote de outro tamanho', () => {
+    const r = resumoDoAluno(estadoBase([]), { ...datas, totalDeAulas: 6 })
+    expect(r.totalDeAulas).toBe(6)
   })
 })

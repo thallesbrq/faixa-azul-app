@@ -31,7 +31,7 @@ export function useConvites(obterDados: () => Promise<Dados>, souProfessor: bool
   }, [recarregar])
 
   const convidar = useCallback(
-    async (entrada: { email: string; nome: string; papel: Origem }) => {
+    async (entrada: { email: string; nome: string; papel: Origem; turma: string }) => {
       const d = await obterDados()
       await d.convidar(entrada)
       await recarregar()

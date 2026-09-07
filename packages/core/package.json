@@ -6,6 +6,7 @@
   "description": "Dominio, aplicacao, persistencia e seed. Sem React. Compartilhado pelo app do aluno e pela central do professor.",
   "exports": {
     "./seed": "./src/seed/index.ts",
+    "./tokens.css": "./src/tokens.css",
     "./*": "./src/*.ts"
   },
   "scripts": {
