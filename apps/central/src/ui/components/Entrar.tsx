@@ -96,11 +96,18 @@ export function Entrar({ estado, aoEnviar, aoConcluir, aoSair }: EntrarProps) {
               : 'esta conta é de aluno'}
           .
         </p>
-        {/* Quem e aluno tem o que fazer: o app dele. Sem este ponteiro a pessoa
-            fica numa tela que so sabe dizer "nao". */}
+        {/* Toda saida desta tela tem de dizer o PROXIMO PASSO. Uma tela que so
+            sabe dizer "nao" transforma quem chegou aqui em suporte. */}
         {estado.cadastro?.papel === 'aluno' && (
           <p className="apoio">
             Seu estudo fica no app do aluno, em <a href="../">{'rg-centraldoaluno.web.app'}</a>.
+          </p>
+        )}
+        {estado.cadastro === null && (
+          <p className="apoio">
+            Peça ao professor para convidar <strong>este endereço de e-mail</strong> como
+            professor — depois disso, basta entrar de novo aqui. O convite vale para o
+            e-mail exato, então confira se é o mesmo.
           </p>
         )}
         <button className="botao botao--claro" onClick={aoSair}>

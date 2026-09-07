@@ -14,8 +14,11 @@
  *    tentar, uma por uma. A tela precisa dizer isso de uma vez, em vez de
  *    mostrar uma central vazia que parece defeito.
  *
- * 3. Nao cria cadastro. Cadastro nasce do convite, no app do aluno, e replicar
- *    esse caminho aqui daria duas implementacoes da mesma regra para divergir.
+ * 3. Cria o cadastro do convite no primeiro acesso, igual ao app do aluno —
+ *    chamando a MESMA funcao do core (`criarDoConvite`). Sem isto, um professor
+ *    recem-convidado nao teria por onde entrar: ele autenticaria, nao teria
+ *    cadastro, e a tela diria que ele nao pertence a academia com o convite
+ *    dele parado no servidor.
  *
  * O NOME DO APP FIREBASE E `APP_ALUNO`, DE PROPOSITO. A central roda na MESMA
  * origem que o app do aluno (ADR-015, decisao 9), e a sessao mora em
@@ -117,7 +120,33 @@ export function useSessaoDoProfessor() {
     if (!dados.current) dados.current = await abrirDados(n.app, ACADEMIA_PADRAO)
     const d = dados.current
 
-    const cadastro = await d.cadastroDe(sessao.uid)
+    let cadastro = await d.cadastroDe(sessao.uid)
+
+    /**
+     * PRIMEIRO ACESSO: o cadastro nasce do convite, AQUI TAMBEM.
+     *
+     * DEFEITO CORRIGIDO. A primeira versao nao criava cadastro, e eu escrevi no
+     * comentario que replicar isso daria "duas implementacoes da mesma regra
+     * para divergir". A justificativa era falsa: `criarDoConvite` e uma funcao
+     * do core, compartilhada — chama-la aqui nao duplica regra nenhuma.
+     *
+     * O efeito do erro era concreto e teria aparecido na pior hora: um professor
+     * recem-convidado que abrisse a Central autenticaria, nao teria cadastro, e
+     * cairia em "esta conta nao tem cadastro nesta academia" — com o convite
+     * dele intacto no servidor. Para entrar, ele precisaria descobrir sozinho
+     * que devia primeiro abrir o APP DO ALUNO, logar la, e voltar. Ninguem
+     * descobre isso, e a tela nao dava nenhuma pista.
+     */
+    if (!cadastro && sessao.email) {
+      try {
+        cadastro = await d.criarDoConvite(sessao.uid, sessao.email)
+      } catch (e) {
+        // Sem convite nao e erro de sistema: e alguem que entrou sem ter sido
+        // convidado. Segue para `sem-permissao`, que explica isso.
+        if (!(e instanceof FalhaDaNuvem && e.codigo === 'sem-convite')) throw e
+      }
+    }
+
     if (!cadastro || cadastro.papel !== 'professor' || !cadastro.ativo) {
       setEstado({ fase: 'sem-permissao', sessao, cadastro })
       return
