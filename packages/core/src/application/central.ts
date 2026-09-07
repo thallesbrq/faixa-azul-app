@@ -282,6 +282,58 @@ export function detalheDoAluno({
 }
 
 // ---------------------------------------------------------------------------
+// Montagem das linhas da academia
+// ---------------------------------------------------------------------------
+
+/** O minimo que esta funcao precisa saber de um cadastro. */
+export interface CadastroNaLista {
+  uid: string
+  nome: string
+  papel: string
+  turma: string
+  ativo: boolean
+}
+
+/**
+ * Transforma cadastros + estados nas linhas da central.
+ *
+ * PURA, E POR UM MOTIVO CONCRETO: duas telas montam essas linhas — a Central no
+ * computador e a aba do professor no celular. Se cada uma montasse por conta
+ * propria, um filtro diferente num lado (esquecer `ativo`, incluir professores,
+ * ordenar de outro jeito) faria as duas discordarem sobre a mesma academia no
+ * mesmo minuto, e nao haveria como saber qual estava certa.
+ *
+ * A BUSCA fica fora daqui de proposito: `abrirCentral` faz o I/O, isto faz a
+ * conta. E o que permite testar as regras de filtro sem rede.
+ *
+ * SO ALUNO ATIVO. O professor tem cadastro em `pessoas` e apareceria como uma
+ * linha sem progresso — que nao e um aluno parado, e um professor. Desativado
+ * sai porque as regras ja negam a leitura do estado dele: ficaria como "nunca
+ * sincronizou", que seria mentira.
+ */
+export function linhasDaAcademia({
+  cadastros,
+  estados,
+  curriculo,
+  agora,
+}: {
+  cadastros: readonly CadastroNaLista[]
+  estados: ReadonlyMap<string, EstadoPersistido>
+  curriculo: Curriculo
+  agora: Date
+}): LinhaDaCentral[] {
+  return cadastros
+    .filter((p) => p.papel === 'aluno' && p.ativo)
+    .map((p) => {
+      const e = estados.get(p.uid)
+      const base = { uid: p.uid, nome: p.nome, turma: p.turma }
+      // Ausente do mapa = nunca sincronizou. NAO e zero, e nao sabemos.
+      if (!e) return linhaSemDados(base)
+      return linhaDoAluno({ ...base, estado: e, curriculo, agora })
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Agregacao da turma
 // ---------------------------------------------------------------------------
 

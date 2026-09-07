@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dados } from '@faixa-azul/core/nuvem/pessoas'
 import { abrirCentral } from '@faixa-azul/core/nuvem/central'
 import type { DadosDaCentral } from '@faixa-azul/core/nuvem/central'
-import { linhaDoAluno, linhaSemDados } from '@faixa-azul/core/application/central'
+import { linhasDaAcademia, linhaSemDados } from '@faixa-azul/core/application/central'
 import type { Curriculo, LinhaDaCentral } from '@faixa-azul/core/application/central'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import type { FirebaseApp } from 'firebase/app'
@@ -79,18 +79,9 @@ export function useLinhas({
       const { porUid, falhas } = await central.current.estadosDe(alunos.map((p) => p.uid))
 
       const agora = new Date()
-      const linhas = alunos.map((p) => {
-        const e = porUid.get(p.uid)
-        if (!e) return linhaSemDados({ uid: p.uid, nome: p.nome, turma: p.turma })
-        return linhaDoAluno({
-          uid: p.uid,
-          nome: p.nome,
-          turma: p.turma,
-          estado: e,
-          curriculo,
-          agora,
-        })
-      })
+      // A montagem e do core: a aba do professor no celular usa a MESMA funcao,
+      // para as duas telas nao discordarem sobre a mesma academia.
+      const linhas = linhasDaAcademia({ cadastros: alunos, estados: porUid, curriculo, agora })
 
       setEstado({ fase: 'pronto', linhas, estados: porUid, falhas, lidoEm: agora, mensagem: null })
     } catch (e) {

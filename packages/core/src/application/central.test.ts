@@ -4,11 +4,12 @@ import {
   detalheDoAluno,
   gruposComItens,
   linhaDoAluno,
+  linhasDaAcademia,
   linhaSemDados,
   mediaDaTurma,
   ordenarLinhas,
 } from './central'
-import type { Curriculo, LinhaDaCentral } from './central'
+import type { CadastroNaLista, Curriculo, LinhaDaCentral } from './central'
 import { ROTULO_GRUPO } from '../domain/taxonomia'
 import { estadoInicial } from '../persistence/repositorio'
 import type { EstadoPersistido } from '../persistence/repositorio'
@@ -430,5 +431,79 @@ describe('detalheDoAluno', () => {
     const d = detalheDoAluno({ estado: est, curriculo: c, agora: AGORA })
     expect(d.dominio).toBe(linha.progresso)
     expect(d.validado).toBe(linha.validado)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// linhasDaAcademia: os filtros que as duas telas compartilham
+// ---------------------------------------------------------------------------
+
+describe('linhasDaAcademia', () => {
+  const c = curriculo([item({ id: 'a' })])
+  const cad = (over: Partial<CadastroNaLista>): CadastroNaLista => ({
+    uid: 'u',
+    nome: 'A',
+    papel: 'aluno',
+    turma: 'RG1A',
+    ativo: true,
+    ...over,
+  })
+
+  it('o PROFESSOR nao vira linha', () => {
+    // Ele tem cadastro em `pessoas` e apareceria como aluno sem progresso — que
+    // nao e um aluno parado, e um professor.
+    const linhas = linhasDaAcademia({
+      cadastros: [cad({ uid: 'p', nome: 'João', papel: 'professor', turma: '' }), cad({ uid: 'a1' })],
+      estados: new Map(),
+      curriculo: c,
+      agora: AGORA,
+    })
+    expect(linhas.map((l) => l.uid)).toEqual(['a1'])
+  })
+
+  it('aluno DESATIVADO nao vira linha', () => {
+    // As regras negam a leitura do estado dele: ficaria como "nunca
+    // sincronizou", o que seria mentira.
+    const linhas = linhasDaAcademia({
+      cadastros: [cad({ uid: 'x', ativo: false })],
+      estados: new Map(),
+      curriculo: c,
+      agora: AGORA,
+    })
+    expect(linhas).toEqual([])
+  })
+
+  it('sem estado no mapa vira linha SEM DADOS, e nao zero', () => {
+    const linhas = linhasDaAcademia({
+      cadastros: [cad({ uid: 'a1' })],
+      estados: new Map(),
+      curriculo: c,
+      agora: AGORA,
+    })
+    expect(linhas[0].progresso).toBeNull()
+    expect(linhas[0].motivo).toBe('sem-dados')
+  })
+
+  it('com estado no mapa calcula o progresso', () => {
+    const linhas = linhasDaAcademia({
+      cadastros: [cad({ uid: 'a1' })],
+      estados: new Map([['a1', estado()]]),
+      curriculo: c,
+      agora: AGORA,
+    })
+    expect(linhas[0].progresso).toBe(0)
+    expect(linhas[0].motivo).toBeNull()
+  })
+
+  it('preserva o nome e a turma do CADASTRO', () => {
+    const linhas = linhasDaAcademia({
+      cadastros: [cad({ uid: 'a1', nome: 'Kainã', turma: 'RG2' })],
+      estados: new Map([['a1', estado()]]),
+      curriculo: c,
+      agora: AGORA,
+    })
+    expect(linhas[0].nome).toBe('Kainã')
+    expect(linhas[0].turma).toBe('RG2')
+    expect(linhas[0].motivo).toBe('turma-sem-curriculo')
   })
 })

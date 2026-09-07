@@ -12,9 +12,10 @@ import { Simulado } from './screens/Simulado'
 import { Revisao } from './screens/Revisao'
 import { Treino } from './screens/Treino'
 import { Perfil } from './screens/Perfil'
-import { Torre } from './screens/Torre'
+import { Academia } from './screens/Academia'
 import { abasDoPapel } from './components/Navegacao'
-import { useTorre } from './useTorre'
+import { useAcademia } from './useAcademia'
+import { CARTOES_TEORIA, CONTEUDOS, ITENS, REQUISITOS } from '@faixa-azul/core/seed'
 import { useSessao } from './useSessao'
 import { Entrar } from './components/Entrar'
 import { Convidar } from './components/Convidar'
@@ -22,11 +23,17 @@ import { Restaurar } from './components/Restaurar'
 import { useConvites } from './useConvites'
 import { useSincronizacao } from './useSincronizacao'
 import { deposito } from './useApp'
-import { baixarArquivo } from './baixarArquivo'
-import { empacotar, nomeDoArquivo } from '@faixa-azul/core/application/juncao'
 import { armazenamentoPersistente, useApp } from './useApp'
 import { useAtualizacao } from './useAtualizacao'
 import './app.css'
+
+/** O curriculo de hoje. Ver a nota em application/central sobre o de roxa. */
+const CURRICULO_DE_AZUL = {
+  itens: ITENS,
+  conteudos: CONTEUDOS,
+  requisitos: REQUISITOS,
+  cartoesTeoria: CARTOES_TEORIA,
+}
 
 export function App() {
   const app = useApp()
@@ -40,7 +47,6 @@ export function App() {
    * o estudo diario e o que mais abre, isto volta.
    */
   const [tela, setTela] = useState<Tela>('aulas')
-  const torre = useTorre(deposito)
   const sessaoDoApp = useSessao(deposito)
   const naNuvem = sessaoDoApp.estado.fase === 'logado' ? sessaoDoApp.estado : null
   const naNuvemPapel = naNuvem?.cadastro.papel ?? null
@@ -52,6 +58,17 @@ export function App() {
    */
   const souProfessorNaNuvem = naNuvemPapel === 'professor'
   const convites = useConvites(sessao.obterDados, souProfessorNaNuvem)
+
+  /**
+   * A academia so e lida DEPOIS de `souProfessorNaNuvem` existir — o hook fica
+   * aqui e nao no topo por isso. O curriculo entra como parametro (e nao
+   * importado dentro do core) para o dia em que houver curriculo por faixa.
+   */
+  const academia = useAcademia({
+    obterDados: sessao.obterDados,
+    souProfessor: souProfessorNaNuvem,
+    curriculo: CURRICULO_DE_AZUL,
+  })
 
   /**
    * Sincronização. Só liga com cadastro ATIVO na nuvem — sem cadastro as regras
@@ -296,6 +313,27 @@ export function App() {
             />
           )}
 
+          {/*
+            A LISTA VEM DA NUVEM, e a Torre de importacao por arquivo saiu.
+            Ela lia arquivos guardados no `localStorage` deste aparelho: com a
+            nuvem, virou um segundo lugar mostrando progresso, de outra fonte,
+            capaz de discordar da Central no mesmo dia (ADR-015, decisao 12).
+          */}
+          {tela === 'torre' && souProfessorNaNuvem && (
+            <Academia estado={academia.estado} aoRecarregar={academia.recarregar} />
+          )}
+
+          {/* Sem cadastro de professor na nuvem nao ha academia para ler — e as
+              regras negariam a leitura. Dizer isso e melhor que uma lista vazia. */}
+          {tela === 'torre' && !souProfessorNaNuvem && (
+            <div className="card">
+              <h3 className="detalhe-secao">Entre na sua conta</h3>
+              <p className="instrucao" style={{ marginBottom: 0 }}>
+                A lista de alunos vem da conta do professor. Entre em Perfil para vê-la.
+              </p>
+            </div>
+          )}
+
           {tela === 'torre' && souProfessorNaNuvem && (
             <Convidar
               convites={convites.convites}
@@ -305,24 +343,6 @@ export function App() {
             />
           )}
 
-          {tela === 'torre' && (
-            <Torre
-              lista={torre.lista}
-              atencao={torre.atencao}
-              espaco={torre.espaco}
-              aoImportar={(texto, forcarId) => torre.importar(texto, new Date(), forcarId)}
-              aoRemover={torre.remover}
-              aoDevolver={(id) => {
-                const estado = torre.ler(id)
-                if (!estado) return
-                const agora = new Date()
-                baixarArquivo(
-                  nomeDoArquivo(estado, agora),
-                  JSON.stringify(empacotar(estado, agora), null, 2),
-                )
-              }}
-            />
-          )}
 
           <Navegacao atual={tela} aoTrocar={setTela} papel={papel} />
         </>

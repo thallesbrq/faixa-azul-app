@@ -10,8 +10,6 @@ import type { ResumoDoAluno } from './torre'
 import { TOTAL_DE_AULAS } from './montagem'
 import { ACADEMIA_PADRAO, estadoInicial } from '../persistence/repositorio'
 import type { EstadoPersistido } from '../persistence/repositorio'
-import { QuotaEstourada, repositorioDeAlunos } from '../persistence/alunos'
-import type { Deposito } from '../persistence/deposito'
 
 const AGORA = new Date('2026-09-10T12:00:00.000Z')
 
@@ -131,88 +129,6 @@ describe('situacao e ordem', () => {
 
   it('conta quem precisa de atencao', () => {
     expect(precisamDeAtencao([r('a', 1), r('b', null), r('c', 30)])).toBe(2)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// armazenamento da central
-// ---------------------------------------------------------------------------
-
-function depositoDeTeste(limite = Infinity): Deposito & { mapa: Map<string, string> } {
-  const mapa = new Map<string, string>()
-  return {
-    mapa,
-    ler: (k) => mapa.get(k) ?? null,
-    escrever: (k, v) => {
-      const total = [...mapa.entries()].reduce((s, [ck, cv]) => s + (ck === k ? 0 : cv.length), 0)
-      if (total + v.length > limite) throw new Error('QuotaExceededError')
-      mapa.set(k, v)
-    },
-    remover: (k) => void mapa.delete(k),
-  }
-}
-
-describe('repositorio de alunos', () => {
-  const ctx = { importadoEm: AGORA.toISOString(), exportadoEm: AGORA.toISOString(), agora: AGORA }
-
-  it('grava, lista e le de volta', () => {
-    const repo = repositorioDeAlunos(depositoDeTeste())
-    const e = aluno({ id: 'a1', nome: 'Thalles' })
-    repo.gravar(e, resumoDoAluno(e, ctx))
-
-    expect(repo.listar().map((r) => r.nome)).toEqual(['Thalles'])
-    expect(repo.ler('a1')?.perfil.id).toBe('a1')
-    expect(repo.ler('nao-existe')).toBeNull()
-  })
-
-  it('regravar o mesmo aluno ATUALIZA em vez de duplicar', () => {
-    const repo = repositorioDeAlunos(depositoDeTeste())
-    const e = aluno({ id: 'a1', nome: 'Thalles' })
-    repo.gravar(e, resumoDoAluno(e, ctx))
-    const e2 = { ...e, eventos: [evento(1)] }
-    repo.gravar(e2, resumoDoAluno(e2, ctx))
-
-    expect(repo.listar()).toHaveLength(1)
-    expect(repo.listar()[0].totalDeRevisoes).toBe(1)
-  })
-
-  it('remover tira da lista e do armazenamento', () => {
-    const repo = repositorioDeAlunos(depositoDeTeste())
-    const e = aluno({ id: 'a1' })
-    repo.gravar(e, resumoDoAluno(e, ctx))
-    repo.remover('a1')
-    expect(repo.listar()).toEqual([])
-    expect(repo.ler('a1')).toBeNull()
-  })
-
-  it('QUOTA ESTOURADA falha alto — perder aluno em silencio seria o pior caso', () => {
-    const repo = repositorioDeAlunos(depositoDeTeste(50))
-    const e = aluno({ id: 'a1', nome: 'Thalles' })
-    expect(() => repo.gravar(e, resumoDoAluno(e, ctx))).toThrow(QuotaEstourada)
-    // E nao deixa uma entrada fantasma no indice.
-    expect(repo.listar()).toEqual([])
-  })
-
-  it('indice corrompido nao derruba a central — ele e derivado', () => {
-    const dep = depositoDeTeste()
-    const repo = repositorioDeAlunos(dep)
-    const e = aluno({ id: 'a1' })
-    repo.gravar(e, resumoDoAluno(e, ctx))
-    dep.mapa.set('faixa_azul_torre_indice', '{{{ nao e json')
-
-    expect(repo.listar()).toEqual([])
-    // O estado do aluno continua intacto na chave propria.
-    expect(repo.ler('a1')?.perfil.id).toBe('a1')
-  })
-
-  it('mede o espaco e avisa quando aperta', () => {
-    const repo = repositorioDeAlunos(depositoDeTeste())
-    const e = aluno({ id: 'a1' })
-    repo.gravar(e, resumoDoAluno(e, ctx))
-    const uso = repo.espacoUsado()
-    expect(uso.alunos).toBe(1)
-    expect(uso.bytes).toBeGreaterThan(0)
-    expect(uso.apertado).toBe(false)
   })
 })
 

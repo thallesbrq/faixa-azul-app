@@ -1803,3 +1803,107 @@
   font-weight: 400;
   margin: calc(var(--espacamento-base) * 2) 0 var(--espacamento-base);
 }
+
+/* ------------------------------------------------- academia no celular
+   A aba do professor. Substituiu a Torre de importacao por arquivo: com a nuvem,
+   aquela tela era um segundo lugar mostrando progresso, de outra fonte, capaz de
+   discordar da Central no mesmo dia (ADR-015, decisao 12). */
+
+.topo-secao {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacamento-base);
+  margin-bottom: calc(var(--espacamento-base) * 2);
+}
+
+.lista-alunos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-base);
+}
+
+.lista-alunos li {
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: calc(var(--espacamento-base) * 1.5);
+}
+
+.aluno-linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacamento-base);
+}
+
+.aluno-quem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.aluno-turma {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+}
+
+.aluno-progresso {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  /* Sem cor por faixa aqui: no celular a lista e curta e o numero ja salta.
+     Colorir tres numeros lado a lado competiria com a etiqueta de situacao,
+     que e o que o professor procura nesta tela. */
+  color: var(--cor-texto);
+}
+
+/* Cor E palavra, nunca cor sozinha (RNF-04). */
+.situacao-aluno {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.situacao-aluno--ok {
+  color: var(--verde-sucesso);
+}
+
+.situacao-aluno--parado {
+  color: var(--vermelho-alerta);
+}
+
+.situacao-aluno--nunca {
+  color: var(--amarelo-atencao);
+}
+
+/* Nunca sincronizou nao e desempenho ruim: cinza, e nao vermelho. */
+.situacao-aluno--sem {
+  color: var(--cor-texto-suave);
+}
+
+.aluno-duvidas {
+  font-size: 0.75rem;
+  color: var(--laranja-texto);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.atalho-central {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  margin-top: calc(var(--espacamento-base) * 3);
+}
+
+.aluno-nota {
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+  margin-top: 3px;
+}
