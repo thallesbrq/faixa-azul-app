@@ -239,3 +239,44 @@ describe('migracao v1 -> v2', () => {
     expect([...mem.keys()].filter((k) => k.includes('__v'))).toHaveLength(0)
   })
 })
+
+describe('importarJSON aceita os dois formatos', () => {
+  it('aceita o ENVELOPE que o app exporta hoje', () => {
+    // Era o bug latente: esta funcao exigia o estado cru e recusaria o proprio
+    // arquivo do app com "nao parece um backup".
+    const estado = estadoInicial(AGORA, () => 'id-x')
+    const envelope = {
+      formato: 'faixa-azul/estado',
+      versaoDoEstado: VERSAO_ATUAL,
+      exportadoEm: AGORA.toISOString(),
+      exportadoPor: 'aluno',
+      nome: 'Thalles',
+      estado,
+    }
+    const r = importarJSON(JSON.stringify(envelope), AGORA)
+    expect(r.perfil.id).toBe('id-x')
+    expect(r.versao).toBe(VERSAO_ATUAL)
+  })
+
+  it('continua aceitando o estado CRU de backups antigos', () => {
+    const estado = estadoInicial(AGORA, () => 'id-y')
+    expect(importarJSON(JSON.stringify(estado), AGORA).perfil.id).toBe('id-y')
+  })
+
+  it('RESTAURAR traz a identidade DO ARQUIVO — e o que distingue de mesclar', () => {
+    // Restaurar backup diz "isto sou eu, de antes": assume o perfil do arquivo.
+    // Receber do professor diz "eis o que mudou": mantem o perfil local.
+    const antigo = {
+      ...estadoInicial(AGORA, () => 'id-do-outro-aparelho'),
+      perfil: { id: 'id-do-outro-aparelho', nome: 'Thalles Alvim', papel: 'aluno' as const, academiaId: ACADEMIA_PADRAO },
+    }
+    const env = { formato: 'faixa-azul/estado', versaoDoEstado: VERSAO_ATUAL, estado: antigo }
+    const r = importarJSON(JSON.stringify(env), AGORA)
+    expect(r.perfil.id).toBe('id-do-outro-aparelho')
+    expect(r.perfil.nome).toBe('Thalles Alvim')
+  })
+
+  it('recusa envelope sem estado dentro', () => {
+    expect(() => importarJSON('{"formato":"faixa-azul/estado"}', AGORA)).toThrow()
+  })
+})

@@ -328,8 +328,26 @@ export function exportarJSON(estado: EstadoPersistido): string {
  */
 export function importarJSON(texto: string, agora: Date): EstadoPersistido {
   const parsed = JSON.parse(texto) as Record<string, unknown>
-  if (typeof parsed.versao !== 'number' || !Array.isArray(parsed.eventos)) {
+
+  /*
+   * ACEITA DOIS FORMATOS, e isto era um bug latente: esta funcao exigia o estado
+   * CRU (`parsed.versao`, `parsed.eventos`), mas o que o app exporta hoje e um
+   * ENVELOPE — `{ formato, versaoDoEstado, exportadoEm, estado }`, ver
+   * application/juncao. Ou seja: ela recusaria o proprio arquivo do app com
+   * "nao parece um backup".
+   *
+   * Nao estava exposto em tela nenhuma (nenhum caminho da UI chamava isto), mas
+   * deixar duas definicoes de "o que e um backup" no mesmo projeto e como o
+   * conserto vira armadilha na proxima vez. Aceita os dois: envelope, que e o
+   * atual, e estado cru, que e o de backups antigos.
+   */
+  const bruto =
+    parsed.estado && typeof parsed.estado === 'object'
+      ? (parsed.estado as Record<string, unknown>)
+      : parsed
+
+  if (typeof bruto.versao !== 'number' || !Array.isArray(bruto.eventos)) {
     throw new Error('arquivo nao parece um backup do Faixa Azul')
   }
-  return migrar(parsed, agora)
+  return migrar(bruto, agora)
 }

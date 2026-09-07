@@ -18,6 +18,7 @@ import { useTorre } from './useTorre'
 import { useSessao } from './useSessao'
 import { Entrar } from './components/Entrar'
 import { Convidar } from './components/Convidar'
+import { Restaurar } from './components/Restaurar'
 import { useConvites } from './useConvites'
 import { deposito } from './useApp'
 import { baixarArquivo } from './baixarArquivo'
@@ -243,6 +244,12 @@ export function App() {
                   aoConcluir={sessao.concluirCom}
                   aoSair={sessao.sair}
                   aoTentarDeNovo={sessao.tentarDeNovo}
+                />
+              }
+              restaurar={
+                <Restaurar
+                  aoInspecionar={app.inspecionarBackup}
+                  aoRestaurar={app.restaurarBackup}
                 />
               }
             />

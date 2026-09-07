@@ -22,7 +22,7 @@ import { aplicarValidacoes, criarValidacao } from '@faixa-azul/core/domain/valid
 import { normalizarUrlDeVideo } from '@faixa-azul/core/domain/video'
 import type { Dificuldade, PracticeObservation, ValidationStatus } from '@faixa-azul/core/domain/types'
 import { depositoEmMemoria, depositoLocalStorage } from '@faixa-azul/core/persistence/deposito'
-import { VERSAO_ATUAL, carregar, migrar, salvar } from '@faixa-azul/core/persistence/repositorio'
+import { VERSAO_ATUAL, carregar, importarJSON, migrar, salvar } from '@faixa-azul/core/persistence/repositorio'
 import type { AlteracaoAula, AlteracaoItem, EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import { AULAS, CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from '@faixa-azul/core/seed'
 import {
@@ -356,6 +356,69 @@ export function useApp() {
     [estado, atualizar],
   )
 
+  /**
+   * RESTAURAR e diferente de RECEBER, e a diferenca esta na identidade.
+   *
+   *   receber do professor -> "eis o que mudou"  -> MANTEM o perfil local
+   *   restaurar backup     -> "isto sou eu, de antes" -> ASSUME o perfil do arquivo
+   *
+   * Restaurar existe para dois casos reais: reinstalei o app, e mudei de
+   * endereco. O segundo e o de agora — `localStorage` e por ORIGEM, entao mudar
+   * de `github.io` para `web.app` deixa o progresso para tras, e o navegador
+   * trata os dois como apps sem relacao nenhuma.
+   *
+   * Duas etapas de proposito: inspecionar mostra DE QUEM e o arquivo antes de
+   * substituir, porque restaurar o backup de outra pessoa faria este aparelho
+   * virar ela — em silencio, e sem volta.
+   */
+  const inspecionarBackup = useCallback(
+    (
+      texto: string,
+    ):
+      | { ok: true; nome: string; exportadoEm: string; mesmoPerfil: boolean; eventos: number }
+      | { ok: false; mensagem: string } => {
+      try {
+        const lido = importarJSON(texto, new Date())
+        // `exportadoEm` vive no ENVELOPE, nao no estado — e nao existe em backup
+        // de formato antigo. Lido a parte, e vazio quando nao houver.
+        let exportadoEm = ''
+        try {
+          const env = JSON.parse(texto) as { exportadoEm?: unknown }
+          if (typeof env.exportadoEm === 'string') exportadoEm = env.exportadoEm
+        } catch {
+          // O parse principal ja passou; aqui e so o extra.
+        }
+        return {
+          ok: true,
+          nome: lido.perfil.nome.trim() || 'sem nome',
+          exportadoEm,
+          mesmoPerfil: lido.perfil.id === estado.perfil.id,
+          eventos: lido.eventos.length,
+        }
+      } catch (e) {
+        return { ok: false, mensagem: (e as Error)?.message ?? 'Arquivo inválido.' }
+      }
+    },
+    [estado.perfil.id],
+  )
+
+  /** Substitui TUDO neste aparelho pelo conteudo do arquivo. */
+  const restaurarBackup = useCallback(
+    (texto: string): { ok: boolean; mensagem: string } => {
+      try {
+        const lido = importarJSON(texto, new Date())
+        atualizar(lido)
+        return {
+          ok: true,
+          mensagem: `Restaurado: ${lido.eventos.length} revisões e ${lido.aulas.length} aulas.`,
+        }
+      } catch (e) {
+        return { ok: false, mensagem: (e as Error)?.message ?? 'Arquivo inválido.' }
+      }
+    },
+    [atualizar],
+  )
+
   const aulas = useMemo(() => {
     const alteracoes = new Map(estado.aulas.map((a) => [a.numero, a]))
     return AULAS.map((aula) => {
@@ -384,6 +447,8 @@ export function useApp() {
     definirPerfil,
     exportarArquivo,
     importarArquivo,
+    inspecionarBackup,
+    restaurarBackup,
     registrarSessao,
     atribuicao,
     codigoDaMontagem,

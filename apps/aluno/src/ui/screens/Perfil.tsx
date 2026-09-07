@@ -28,6 +28,8 @@ export interface PerfilProps {
    * esta tela não precisar conhecer o Firebase — ela só decide ONDE ele aparece.
    */
   entrar: React.ReactNode
+  /** Bloco de restaurar backup, montado por quem tem acesso ao estado. */
+  restaurar: React.ReactNode
 }
 
 export function Perfil({
@@ -39,6 +41,7 @@ export function Perfil({
   aoImportar,
   totalDeItens,
   entrar,
+  restaurar,
 }: PerfilProps) {
   const [rascunho, setRascunho] = useState(nome)
   const [salvo, setSalvo] = useState(false)
@@ -170,6 +173,8 @@ export function Perfil({
           </p>
         )}
       </div>
+
+      {restaurar}
 
       <p className="rodape-nota">
         Identificação deste aparelho: <code>{id.slice(0, 8)}</code>. Ela nasce na primeira abertura e

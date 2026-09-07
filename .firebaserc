@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "rg-centraldoaluno"
-  }
+  },
+  "targets": {
+    "rg-centraldoaluno": {
+      "hosting": {
+        "aluno": [
+          "rg-centraldoaluno"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
