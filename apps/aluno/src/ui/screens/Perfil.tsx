@@ -30,6 +30,12 @@ export interface PerfilProps {
   entrar: React.ReactNode
   /** Bloco de restaurar backup, montado por quem tem acesso ao estado. */
   restaurar: React.ReactNode
+  /**
+   * Papel definido pela NUVEM, quando ha cadastro. Quando existe, ele manda e o
+   * interruptor local nao decide nada — e a tela precisa dizer isso, senao a
+   * pessoa aperta e nao acontece nada.
+   */
+  papelDaNuvem: Origem | null
 }
 
 export function Perfil({
@@ -42,6 +48,7 @@ export function Perfil({
   totalDeItens,
   entrar,
   restaurar,
+  papelDaNuvem,
 }: PerfilProps) {
   const [rascunho, setRascunho] = useState(nome)
   const [salvo, setSalvo] = useState(false)
@@ -101,11 +108,26 @@ export function Perfil({
         <h3 className="detalhe-secao" style={{ marginTop: 26 }}>
           Este aparelho é
         </h3>
+
+        {/*
+          Com cadastro na nuvem, o papel vem dela e o interruptor nao decide
+          nada. Deixar os botoes clicaveis faria a pessoa apertar e nada
+          acontecer — sintoma sem erro, que e o pior de depurar.
+        */}
+        {papelDaNuvem !== null && (
+          <p className="instrucao">
+            Definido pela sua conta:{' '}
+            <strong>{papelDaNuvem === 'professor' ? 'professor' : 'aluno'}</strong>. Enquanto você
+            estiver logado, é a conta que decide — o botão abaixo só vale sem conta.
+          </p>
+        )}
+
         <div className="acoes">
           <button
             className={papel === 'aluno' ? 'botao botao--principal' : 'botao botao--secundario'}
             onClick={() => aoDefinir(rascunho.trim(), 'aluno')}
             aria-pressed={papel === 'aluno'}
+            disabled={papelDaNuvem !== null}
           >
             de aluno
           </button>
@@ -113,6 +135,7 @@ export function Perfil({
             className={papel === 'professor' ? 'botao botao--principal' : 'botao botao--secundario'}
             onClick={() => aoDefinir(rascunho.trim(), 'professor')}
             aria-pressed={papel === 'professor'}
+            disabled={papelDaNuvem !== null}
           >
             do professor
           </button>

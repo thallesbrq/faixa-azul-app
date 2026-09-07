@@ -41,21 +41,22 @@ export function App() {
    */
   const [tela, setTela] = useState<Tela>('aulas')
   const torre = useTorre(deposito)
-  const sessao = useSessao(deposito)
+  const sessaoDoApp = useSessao(deposito)
+  const naNuvem = sessaoDoApp.estado.fase === 'logado' ? sessaoDoApp.estado : null
+  const naNuvemPapel = naNuvem?.cadastro.papel ?? null
+  const sessao = sessaoDoApp
   /**
    * Convites só existem para quem entrou COMO PROFESSOR. O papel do cadastro na
    * nuvem, e não o `papel` local do perfil: o local é um interruptor que a
    * pessoa liga sozinha, e não autoriza nada no servidor.
    */
-  const souProfessorNaNuvem =
-    sessao.estado.fase === 'logado' && sessao.estado.cadastro.papel === 'professor'
+  const souProfessorNaNuvem = naNuvemPapel === 'professor'
   const convites = useConvites(sessao.obterDados, souProfessorNaNuvem)
 
   /**
    * Sincronização. Só liga com cadastro ATIVO na nuvem — sem cadastro as regras
    * negam a escrita, e tentar produziria erro de permissão que pareceria bug.
    */
-  const naNuvem = sessao.estado.fase === 'logado' ? sessao.estado : null
   const sincronia = useSincronizacao({
     uid: naNuvem?.sessao.uid ?? null,
     ativo: naNuvem?.cadastro.ativo === true,
@@ -73,7 +74,20 @@ export function App() {
     sincronia.marcarSujo()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.estado])
-  const papel = app.estado.perfil.papel
+  /**
+   * O PAPEL DA NUVEM MANDA, quando ha um.
+   *
+   * Havia duas fontes para `papel` e a barra de abas seguia a errada: o
+   * interruptor LOCAL do Perfil, que a propria pessoa liga e que nao autoriza
+   * nada. Resultado real: cadastro `professor` no servidor, `aluno` no
+   * aparelho, e a aba Central simplesmente nao aparecia — sem erro nenhum, o
+   * que e o pior tipo de sintoma.
+   *
+   * Com cadastro na nuvem, ele decide. Sem cadastro (offline, ou sem conta), o
+   * interruptor local continua valendo — e o que faz o app funcionar antes de
+   * qualquer login.
+   */
+  const papel = naNuvemPapel ?? app.estado.perfil.papel
 
   /**
    * Trocar de papel troca as abas — e a aba aberta pode deixar de existir.
@@ -256,6 +270,7 @@ export function App() {
             <Perfil
               nome={app.estado.perfil.nome}
               papel={papel}
+              papelDaNuvem={naNuvemPapel}
               id={app.estado.perfil.id}
               aoDefinir={app.definirPerfil}
               aoExportar={app.exportarArquivo}
