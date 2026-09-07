@@ -263,3 +263,120 @@ describe('colecao desconhecida', () => {
     await assertFails(getDoc(doc(como(ALUNO_A), 'qualquer_coisa', 'x')))
   })
 })
+
+// ---------------------------------------------------------------------------
+// Convites: o furo que impedia o sistema de comecar
+// ---------------------------------------------------------------------------
+
+const EMAIL_CONVIDADO = 'novo.aluno@exemplo.com'
+const NOVO_UID = 'uid-do-novo'
+
+/** Contexto com e-mail VERIFICADO no token, como o link magico produz. */
+const comEmail = (uid: string, email: string, verificado = true) =>
+  amb.authenticatedContext(uid, { email, email_verified: verificado }).firestore()
+
+describe('convites', () => {
+  beforeEach(async () => {
+    await amb.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'convites', EMAIL_CONVIDADO), {
+        papel: 'aluno', academiaId: ACADEMIA, convidadoEm: '2026-09-07T00:00:00Z',
+      })
+    })
+  })
+
+  it('SEM convite, ninguem se cadastra — nao existe porta aberta', async () => {
+    await assertFails(
+      setDoc(doc(comEmail('intruso', 'intruso@exemplo.com'), 'pessoas', 'intruso'), {
+        nome: 'Intruso', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+  })
+
+  it('COM convite, a pessoa cria o proprio cadastro', async () => {
+    // E o que destrava o convite: o uid so existe depois do primeiro login,
+    // entao quem cria o cadastro tem de ser a propria pessoa.
+    await assertSucceeds(
+      setDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO), 'pessoas', NOVO_UID), {
+        nome: 'Novo Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+  })
+
+  it('com convite de ALUNO, NAO se cadastra como professor', async () => {
+    // Sem essa amarra, quem tem convite veria a turma inteira.
+    await assertFails(
+      setDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO), 'pessoas', NOVO_UID), {
+        nome: 'Novo Aluno', papel: 'professor', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+  })
+
+  it('nao se cadastra em OUTRA academia que nao a do convite', async () => {
+    await assertFails(
+      setDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO), 'pessoas', NOVO_UID), {
+        nome: 'Novo Aluno', papel: 'aluno', academiaId: OUTRA_ACADEMIA, ativo: true,
+      }),
+    )
+  })
+
+  it('nao usa o convite de OUTRA pessoa', async () => {
+    // O convite vale para o e-mail do token, nao para quem apontar para ele.
+    await assertFails(
+      setDoc(doc(comEmail('outro-uid', 'outro@exemplo.com'), 'pessoas', 'outro-uid'), {
+        nome: 'Outro', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+  })
+
+  it('e-mail NAO VERIFICADO nao vale convite', async () => {
+    await assertFails(
+      setDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO, false), 'pessoas', NOVO_UID), {
+        nome: 'Novo Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+  })
+
+  it('nao se cadastra ja desativado para burlar a regra de ativo', async () => {
+    await assertFails(
+      setDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO), 'pessoas', NOVO_UID), {
+        nome: 'Novo Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: false,
+      }),
+    )
+  })
+
+  it('o convidado LE o proprio convite, e nao o de outro', async () => {
+    await assertSucceeds(getDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO), 'convites', EMAIL_CONVIDADO)))
+    await assertFails(
+      getDoc(doc(comEmail('x', 'outro@exemplo.com'), 'convites', EMAIL_CONVIDADO)),
+    )
+  })
+
+  it('CONVITE E DE USO UNICO: o convidado apaga o proprio', async () => {
+    // Sem isso, um convite antigo valeria para sempre — e desativar alguem
+    // apagando o cadastro permitiria recadastro com o convite velho.
+    await assertSucceeds(
+      deleteDoc(doc(comEmail(NOVO_UID, EMAIL_CONVIDADO), 'convites', EMAIL_CONVIDADO)),
+    )
+  })
+
+  it('o professor cria e cancela convite; o aluno nao', async () => {
+    await assertSucceeds(
+      setDoc(doc(como(PROF), 'convites', 'mais.um@exemplo.com'), {
+        papel: 'aluno', academiaId: ACADEMIA,
+      }),
+    )
+    await assertFails(
+      setDoc(doc(como(ALUNO_A), 'convites', 'invadindo@exemplo.com'), {
+        papel: 'professor', academiaId: ACADEMIA,
+      }),
+    )
+  })
+
+  it('professor de OUTRA academia nao convida para a nossa', async () => {
+    await assertFails(
+      setDoc(doc(como(PROF_DE_FORA), 'convites', 'x@exemplo.com'), {
+        papel: 'aluno', academiaId: ACADEMIA,
+      }),
+    )
+  })
+})

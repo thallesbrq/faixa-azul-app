@@ -109,17 +109,76 @@ service cloud.firestore {
       return eu != null ? eu.data.academiaId : '';
     }
 
+    // ------------------------------------------------------------- convites
+    /**
+     * Convite indexado por E-MAIL, e nao por uid.
+     *
+     * O FURO QUE ISTO FECHA: `pessoas/{uid}` so podia ser criado por um
+     * professor, mas o uid nasce no PRIMEIRO LOGIN. Ou seja, o professor nao
+     * tinha o que digitar — o convite era impossivel de existir. O e-mail, ao
+     * contrario, ele sabe antes.
+     *
+     * Com isso a pessoa passa a poder criar o PROPRIO cadastro, mas SO quando
+     * ha convite para o e-mail dela. Continua nao existindo cadastro aberto: sem
+     * convite, ninguem entra.
+     *
+     * O id do documento e o e-mail em minusculas. E-mail e id valido no
+     * Firestore (nao contem `/`), e normalizar evita que
+     * `Thalles@x.com` e `thalles@x.com` sejam dois convites.
+     */
+    match /convites/{email} {
+      // O convidado le o proprio convite (para saber que existe); o professor
+      // le todos os da academia dele.
+      allow read: if souProfessor()
+        || (autenticado() && request.auth.token.email == email);
+
+      allow create, update: if souProfessor()
+        && request.resource.data.academiaId == minhaAcademia()
+        && request.resource.data.papel in ['aluno', 'professor'];
+
+      // CONVITE E DE USO UNICO: quem consome apaga o proprio. Sem isto, um
+      // convite antigo ficaria valido para sempre — e se o professor
+      // desativasse alguem apagando o cadastro, a pessoa se recadastraria com o
+      // convite velho. O professor tambem pode apagar (cancelar convite).
+      allow delete: if souProfessor()
+        || (autenticado() && request.auth.token.email == email);
+    }
+
     // ------------------------------------------------------------- pessoas
 
     match /pessoas/{uid} {
       // Cada um le o proprio cadastro; o professor le os da academia dele.
       allow read: if souEu(uid) || mesmaAcademiaQue(uid);
 
-      // Criar pessoa e do professor: nao existe cadastro aberto. Sem isto,
-      // qualquer conta autenticada poderia se inscrever na academia sozinha.
-      allow create: if souProfessor()
-        && request.resource.data.academiaId == minhaAcademia()
-        && request.resource.data.papel in ['aluno', 'professor'];
+      // Duas formas de nascer um cadastro, e nenhuma delas e aberta:
+      //
+      // 1. o professor cria direto (uid ja conhecido, ex. recadastro)
+      // 2. a PROPRIA pessoa cria, e SO se houver convite para o e-mail dela
+      //
+      // No caminho 2, papel e academia vem DO CONVITE e nao do que o cliente
+      // mandou. Sem isso, quem tem convite de aluno se cadastraria como
+      // professor e veria a turma toda.
+      allow create: if (
+          souProfessor()
+          && request.resource.data.academiaId == minhaAcademia()
+          && request.resource.data.papel in ['aluno', 'professor']
+        ) || (
+          souEu(uid)
+          // E-mail nao verificado nao vale: com link magico ele sempre vem
+          // verificado, e exigir isso fecha a porta para outros provedores que
+          // possam ser ligados depois sem essa garantia.
+          && request.auth.token.email_verified == true
+          && temConviteValido()
+        );
+
+      // Fica em funcao para os dois get() ficarem juntos e contados.
+      function temConviteValido() {
+        let c = get(/databases/$(database)/documents/convites/$(request.auth.token.email));
+        return c != null
+          && request.resource.data.papel == c.data.papel
+          && request.resource.data.academiaId == c.data.academiaId
+          && request.resource.data.ativo == true;
+      }
 
       // O aluno atualiza o proprio NOME e nada mais. Sem essa restricao ele
       // mudaria o proprio papel para 'professor' e passaria a ver a turma.
