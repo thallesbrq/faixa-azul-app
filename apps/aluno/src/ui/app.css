@@ -1794,3 +1794,12 @@
   color: var(--cor-texto-suave);
   margin-right: auto;
 }
+
+/* Rotulo de um grupo de campos — o mesmo peso visual de `.campo`, mas para
+   escolhas em botao, que nao tem <label> natural. */
+.rotulo-campo {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  font-weight: 400;
+  margin: calc(var(--espacamento-base) * 2) 0 var(--espacamento-base);
+}

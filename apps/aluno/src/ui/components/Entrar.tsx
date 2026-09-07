@@ -29,8 +29,30 @@ export function Entrar({ estado, aoEnviar, aoConcluir, aoSair, aoTentarDeNovo }:
       <div className="card">
         <h3 className="detalhe-secao">Sua conta</h3>
         <p className="instrucao">
-          Entrou como <strong>{estado.sessao.email ?? 'sua conta'}</strong>. Seu progresso vai para
+          Entrou como <strong>{estado.sessao.email ?? 'sua conta'}</strong>
+          {estado.cadastro.papel === 'professor' ? ', como professor' : ''}. Seu progresso vai para
           a conta, e o professor vê na central dele.
+        </p>
+        <button className="botao botao--secundario" onClick={aoSair}>
+          Sair da conta
+        </button>
+      </div>
+    )
+  }
+
+  // Entrou, mas nao ha convite. Nao e erro tecnico: e alguem que conseguiu
+  // autenticar sem ter sido convidado. A mensagem diz o que fazer, e a saida
+  // fica visivel para a pessoa nao ficar presa num estado sem acao.
+  if (estado.fase === 'sem-convite') {
+    return (
+      <div className="card">
+        <h3 className="detalhe-secao">Você entrou, mas ainda não tem acesso</h3>
+        <p className="instrucao">
+          O e-mail <strong>{estado.sessao.email}</strong> não tem convite nesta academia. Peça ao
+          seu professor para convidar esse endereço — depois disso, basta entrar de novo.
+        </p>
+        <p className="instrucao">
+          O app continua funcionando normalmente sem conta: seu estudo fica salvo neste aparelho.
         </p>
         <button className="botao botao--secundario" onClick={aoSair}>
           Sair da conta

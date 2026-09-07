@@ -17,6 +17,8 @@ import { abasDoPapel } from './components/Navegacao'
 import { useTorre } from './useTorre'
 import { useSessao } from './useSessao'
 import { Entrar } from './components/Entrar'
+import { Convidar } from './components/Convidar'
+import { useConvites } from './useConvites'
 import { deposito } from './useApp'
 import { baixarArquivo } from './baixarArquivo'
 import { empacotar, nomeDoArquivo } from '@faixa-azul/core/application/juncao'
@@ -38,6 +40,14 @@ export function App() {
   const [tela, setTela] = useState<Tela>('aulas')
   const torre = useTorre(deposito)
   const sessao = useSessao(deposito)
+  /**
+   * Convites só existem para quem entrou COMO PROFESSOR. O papel do cadastro na
+   * nuvem, e não o `papel` local do perfil: o local é um interruptor que a
+   * pessoa liga sozinha, e não autoriza nada no servidor.
+   */
+  const souProfessorNaNuvem =
+    sessao.estado.fase === 'logado' && sessao.estado.cadastro.papel === 'professor'
+  const convites = useConvites(sessao.obterDados, souProfessorNaNuvem)
   const papel = app.estado.perfil.papel
 
   /**
@@ -235,6 +245,15 @@ export function App() {
                   aoTentarDeNovo={sessao.tentarDeNovo}
                 />
               }
+            />
+          )}
+
+          {tela === 'torre' && souProfessorNaNuvem && (
+            <Convidar
+              convites={convites.convites}
+              carregando={convites.carregando}
+              aoConvidar={convites.convidar}
+              aoCancelar={convites.cancelar}
             />
           )}
 

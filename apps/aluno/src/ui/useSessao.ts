@@ -23,6 +23,9 @@ import { APP_ALUNO } from '@faixa-azul/core/chaves'
 import { CONFIG_ALUNO } from '@faixa-azul/core/nuvem/config'
 import { conectar, FalhaDaNuvem } from '@faixa-azul/core/nuvem/cliente'
 import type { Nuvem, Sessao } from '@faixa-azul/core/nuvem/cliente'
+import { abrirDados } from '@faixa-azul/core/nuvem/pessoas'
+import type { Cadastro, Dados } from '@faixa-azul/core/nuvem/pessoas'
+import { ACADEMIA_PADRAO } from '@faixa-azul/core/persistence/repositorio'
 import {
   EXPLICACAO_DA_FALHA,
   guardarEmailPendente,
@@ -48,7 +51,16 @@ export type EstadoDoLogin =
   | { fase: 'enviando' }
   | { fase: 'link-enviado'; email: string }
   | { fase: 'concluindo' }
-  | { fase: 'logado'; sessao: Sessao }
+  /** Entrou E tem cadastro. E o unico estado em que da para fazer algo. */
+  | { fase: 'logado'; sessao: Sessao; cadastro: Cadastro }
+  /**
+   * Entrou, mas nao ha convite para este e-mail.
+   *
+   * NAO e erro de sistema, e por isso e um estado proprio: e alguem que
+   * conseguiu entrar sem ter sido convidado. A tela diz isso, em vez de mostrar
+   * falha tecnica que faria a pessoa tentar de novo.
+   */
+  | { fase: 'sem-convite'; sessao: Sessao }
   | { fase: 'falhou'; mensagem: string }
   /**
    * Link aberto num aparelho que nao pediu o link: o e-mail nao esta guardado
@@ -59,21 +71,67 @@ export type EstadoDoLogin =
 export function useSessao(deposito: DepositoSimples) {
   const [estado, setEstado] = useState<EstadoDoLogin>({ fase: 'deslogado' })
   const nuvem = useRef<Nuvem | null>(null)
+  const dados = useRef<Dados | null>(null)
   const cancelarObservacao = useRef<(() => void) | null>(null)
+  /**
+   * `falhar` numa ref porque o observador de sessao e registrado UMA vez e
+   * sobrevive a re-renderizacoes. Capturar a funcao direto congelaria a versao
+   * daquele render.
+   */
+  const falharRef = useRef<(e: unknown) => void>(() => {})
+
+  /**
+   * Resolve o cadastro de quem entrou, criando do convite se for a primeira vez.
+   *
+   * ENTRAR NAO E O MESMO QUE TER CADASTRO. A sessao do Firebase diz quem a
+   * pessoa e; o cadastro em `pessoas` diz se ela pertence a academia e com que
+   * papel. Sem cadastro as regras negam tudo — inclusive escrever o proprio
+   * estado — entao este passo nao e detalhe: e o que torna a sessao utilizavel.
+   */
+  const resolverCadastro = useCallback(
+    async (n: Nuvem, sessao: Sessao) => {
+      if (!dados.current) dados.current = await abrirDados(n.app, ACADEMIA_PADRAO)
+      const d = dados.current
+
+      const existente = await d.cadastroDe(sessao.uid)
+      if (existente) {
+        setEstado({ fase: 'logado', sessao, cadastro: existente })
+        return
+      }
+
+      // Primeira vez: o cadastro nasce do convite.
+      if (!sessao.email) {
+        setEstado({ fase: 'sem-convite', sessao })
+        return
+      }
+      try {
+        const novo = await d.criarDoConvite(sessao.uid, sessao.email)
+        setEstado({ fase: 'logado', sessao, cadastro: novo })
+      } catch (e) {
+        if (e instanceof FalhaDaNuvem && e.codigo === 'sem-convite') {
+          setEstado({ fase: 'sem-convite', sessao })
+          return
+        }
+        throw e
+      }
+    },
+    [],
+  )
 
   /** Carrega o SDK uma vez e reaproveita. */
   const obterNuvem = useCallback(async (): Promise<Nuvem> => {
     if (!nuvem.current) {
       nuvem.current = await conectar(CONFIG_ALUNO, APP_ALUNO)
-      cancelarObservacao.current = nuvem.current.observarSessao((s) => {
+      const n = nuvem.current
+      cancelarObservacao.current = n.observarSessao((s) => {
         if (s) {
           deposito.escrever(MARCA_JA_ENTROU, '1')
-          setEstado({ fase: 'logado', sessao: s })
+          void resolverCadastro(n, s).catch(falharRef.current)
         }
       })
     }
     return nuvem.current
-  }, [deposito])
+  }, [deposito, resolverCadastro])
 
   const falhar = useCallback((e: unknown) => {
     const codigo = e instanceof FalhaDaNuvem ? e.codigo : 'desconhecido'
@@ -89,7 +147,7 @@ export function useSessao(deposito: DepositoSimples) {
         const s = await n.concluirLogin(normalizarEmail(email), url)
         limparEmailPendente(deposito, APP_ALUNO)
         deposito.escrever(MARCA_JA_ENTROU, '1')
-        setEstado({ fase: 'logado', sessao: s })
+        await resolverCadastro(n, s)
         // Limpa a URL: o link vale uma vez, e deixa-lo na barra de endereco faz
         // um recarregamento tentar de novo e falhar com "link invalido".
         window.history.replaceState({}, '', window.location.pathname)
@@ -97,8 +155,12 @@ export function useSessao(deposito: DepositoSimples) {
         falhar(e)
       }
     },
-    [obterNuvem, deposito, falhar],
+    [obterNuvem, deposito, falhar, resolverCadastro],
   )
+
+  useEffect(() => {
+    falharRef.current = falhar
+  }, [falhar])
 
   // Abertura: link de login primeiro, sessao guardada depois.
   useEffect(() => {
@@ -147,5 +209,12 @@ export function useSessao(deposito: DepositoSimples) {
 
   const tentarDeNovo = useCallback(() => setEstado({ fase: 'deslogado' }), [])
 
-  return { estado, enviarLink, concluirCom, sair, tentarDeNovo }
+  /** A camada de dados, para a central convidar. Só existe depois de entrar. */
+  const obterDados = useCallback(async (): Promise<Dados> => {
+    const n = await obterNuvem()
+    if (!dados.current) dados.current = await abrirDados(n.app, ACADEMIA_PADRAO)
+    return dados.current
+  }, [obterNuvem])
+
+  return { estado, enviarLink, concluirCom, sair, tentarDeNovo, obterDados }
 }

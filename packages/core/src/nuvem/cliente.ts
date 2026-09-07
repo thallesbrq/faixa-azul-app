@@ -19,6 +19,7 @@
  * sessoes do app do aluno e da central. Ver ../chaves.
  */
 
+import type { FirebaseApp } from 'firebase/app'
 import type { ConfigDaNuvem } from './config'
 
 /** O minimo que o resto do app precisa saber sobre quem entrou. */
@@ -28,6 +29,14 @@ export interface Sessao {
 }
 
 export interface Nuvem {
+  /**
+   * O app inicializado, para a camada de dados aproveitar a MESMA instancia.
+   *
+   * Sem isso, `abrirDados` teria que inicializar de novo — e duas instancias com
+   * o mesmo nome lancam, enquanto duas com nomes diferentes teriam sessoes
+   * separadas: o Firestore nao veria quem entrou pelo Auth.
+   */
+  app: FirebaseApp
   /** Manda o link de login para o e-mail. */
   enviarLink(email: string, destino: string): Promise<void>
   /** Conclui o login a partir do link aberto. */
@@ -85,6 +94,8 @@ export async function conectar(config: ConfigDaNuvem, nomeDoApp: string): Promis
     u ? { uid: u.uid, email: u.email } : null
 
   return {
+    app,
+
     async enviarLink(email, destino) {
       try {
         await auth.sendSignInLinkToEmail(autenticacao, email, {
