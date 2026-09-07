@@ -422,6 +422,67 @@ describe('convites', () => {
   // A turma nasce do convite, e nao da vontade de quem esta entrando
   // -------------------------------------------------------------------------
 
+  // -------------------------------------------------------------------------
+  // Convite de PROFESSOR: o caminho que o professor da academia percorre
+  // -------------------------------------------------------------------------
+
+  describe('convite de professor', () => {
+    const EMAIL_PROF = 'joao.eduardo@exemplo.com'
+    const UID_PROF = 'uid-joao'
+
+    beforeEach(async () => {
+      await amb.withSecurityRulesDisabled(async (ctx) => {
+        // Professor nao tem turma: ele ve todas. A tela de convite nem oferece
+        // o seletor nesse papel, e o convite nasce sem a chave.
+        await setDoc(doc(ctx.firestore(), 'convites', EMAIL_PROF), {
+          nome: 'João Eduardo', papel: 'professor', academiaId: ACADEMIA,
+          convidadoEm: '2026-09-07T00:00:00Z',
+        })
+      })
+    })
+
+    it('o convidado nasce PROFESSOR, e nao aluno', async () => {
+      // Este e o primeiro acesso do professor da academia. Nunca havia sido
+      // exercido: as outras assercoes de convite cobrem papel aluno.
+      await assertSucceeds(
+        setDoc(doc(comEmail(UID_PROF, EMAIL_PROF), 'pessoas', UID_PROF), {
+          nome: 'João Eduardo', papel: 'professor', academiaId: ACADEMIA, ativo: true,
+        }),
+      )
+    })
+
+    it('convite de professor NAO autoriza nascer com turma', async () => {
+      // O convite nao tem a chave, entao `get('turma','')` exige '' no cadastro.
+      await assertFails(
+        setDoc(doc(comEmail(UID_PROF, EMAIL_PROF), 'pessoas', UID_PROF), {
+          nome: 'João Eduardo', papel: 'professor', academiaId: ACADEMIA, ativo: true,
+          turma: 'RG1A',
+        }),
+      )
+    })
+
+    it('recem-nascido professor JA alcanca os alunos da academia', async () => {
+      // Nao basta o cadastro nascer: se as regras nao o reconhecessem em
+      // seguida, ele entraria numa central que nega tudo — e o sintoma seria
+      // uma tela vazia, sem erro.
+      await amb.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'pessoas', UID_PROF), {
+          nome: 'João Eduardo', papel: 'professor', academiaId: ACADEMIA, ativo: true,
+        })
+      })
+      const dele = comEmail(UID_PROF, EMAIL_PROF)
+      await assertSucceeds(getDoc(doc(dele, 'pessoas', ALUNO_A)))
+      await assertSucceeds(getDoc(doc(dele, 'estados', ALUNO_A)))
+      await assertSucceeds(getDoc(doc(dele, 'resumos', ALUNO_A)))
+      // E consegue convidar alunos, que e a outra coisa que ele fara.
+      await assertSucceeds(
+        setDoc(doc(dele, 'convites', 'novo.aluno2@exemplo.com'), {
+          papel: 'aluno', academiaId: ACADEMIA, turma: 'RG1A',
+        }),
+      )
+    })
+  })
+
   it('convite SEM turma nao autoriza cadastro COM turma', async () => {
     // O convite deste bloco nao tem `turma` — e o formato de todo convite
     // criado antes do campo existir. Ele autoriza entrar sem turma, e nada mais.

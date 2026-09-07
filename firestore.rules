@@ -22,7 +22,7 @@ rules_version = '2';
 // SOBRE O LOG DO EMULADOR: ele reporta `evaluation error` em algumas negacoes,
 // alem de `false`. Duas causas reais foram encontradas e corrigidas (ordem da
 // guarda de autenticacao, e `.data` sem guarda de nulo). Restaram entradas que
-// eu NAO consegui atribuir — nenhuma delas muda resultado: as 43 assercoes
+// eu NAO consegui atribuir — nenhuma delas muda resultado: as 46 assercoes
 // cobrem cada caminho de permitir e negar, e todas passam. Fica registrado como
 // observacao aberta, e nao como coisa entendida.
 //
