@@ -18,7 +18,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore'
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 
 const ACADEMIA = 'rilion-garopaba'
@@ -78,6 +78,10 @@ beforeEach(async () => {
     await setDoc(doc(db, 'resumos', ALUNO_B), { aulasFeitas: 0 })
     await setDoc(doc(db, 'grades', ALUNO_A, 'aulas', '1'), { itemIds: ['x'] })
     await setDoc(doc(db, 'validacoes', 'v1'), { alunoUid: ALUNO_A, itemId: 'i1' })
+    await setDoc(doc(db, 'competencias', ALUNO_A, 'registros', 'c1'), {
+      itemId: 'i1', competente: true, texto: 'fez limpo', origem: 'aula_regular',
+      professorUid: PROF, registradaEm: '2026-09-07T00:00:00Z',
+    })
     await setDoc(doc(db, 'indicacoes', ALUNO_A, 'itens', 'i1'), { video: 'https://v' })
   })
 })
@@ -169,6 +173,134 @@ describe('validacao e append-only', () => {
 
   it('nem o professor apaga uma validacao', async () => {
     await assertFails(deleteDoc(doc(como(PROF), 'validacoes', 'v1')))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Competencias e graduacoes: o atestado do 1o grau
+// ---------------------------------------------------------------------------
+
+describe('competencias atestadas', () => {
+  const nova = (over: Record<string, unknown> = {}) => ({
+    itemId: 'i2',
+    competente: true,
+    texto: 'fez limpo dos dois lados',
+    origem: 'aula_regular',
+    professorUid: PROF,
+    registradaEm: '2026-09-07T10:00:00Z',
+    ...over,
+  })
+
+  it('o professor ATESTA competencia do aluno dele', async () => {
+    await assertSucceeds(
+      addDoc(collection(como(PROF), 'competencias', ALUNO_A, 'registros'), nova()),
+    )
+  })
+
+  it('o aluno NAO atesta a si mesmo', async () => {
+    // Atestar a si proprio seria o aluno se graduando sozinho.
+    await assertFails(
+      addDoc(collection(como(ALUNO_A), 'competencias', ALUNO_A, 'registros'), nova({ professorUid: ALUNO_A })),
+    )
+  })
+
+  it('o aluno LE as proprias competencias', async () => {
+    // Ele tem direito de saber o que o professor atestou sobre ele.
+    await assertSucceeds(getDoc(doc(como(ALUNO_A), 'competencias', ALUNO_A, 'registros', 'c1')))
+  })
+
+  it('aluno A nao le as competencias de B', async () => {
+    await assertFails(getDoc(doc(como(ALUNO_A), 'competencias', ALUNO_B, 'registros', 'c1')))
+  })
+
+  it('o professor LISTA as competencias de um aluno', async () => {
+    // E a razao de o uid estar no CAMINHO e nao dentro do documento: com ele no
+    // corpo, a regra so seria decidivel documento por documento e o Firestore
+    // recusaria a consulta — e a folha do atestado nao carregaria.
+    await assertSucceeds(getDocs(collection(como(PROF), 'competencias', ALUNO_A, 'registros')))
+  })
+
+  it('atestacao SEM TEXTO e recusada pelo servidor', async () => {
+    // O cliente ja exige, mas o cliente e codigo no navegador de qualquer um.
+    await assertFails(
+      addDoc(collection(como(PROF), 'competencias', ALUNO_A, 'registros'), nova({ texto: '' })),
+    )
+  })
+
+  it('professor NAO assina atestacao com o uid de OUTRO professor', async () => {
+    await assertFails(
+      addDoc(collection(como(PROF), 'competencias', ALUNO_A, 'registros'), nova({ professorUid: PROF_DE_FORA })),
+    )
+  })
+
+  it('APPEND-ONLY: nem o professor edita ou apaga uma atestacao', async () => {
+    // Evidencia de graduacao reescrivel nao serve como evidencia. Retirar e um
+    // registro novo com `competente: false`.
+    await assertFails(
+      updateDoc(doc(como(PROF), 'competencias', ALUNO_A, 'registros', 'c1'), { competente: false }),
+    )
+    await assertFails(deleteDoc(doc(como(PROF), 'competencias', ALUNO_A, 'registros', 'c1')))
+  })
+
+  it('RETIRAR e um registro novo, e isso E permitido', async () => {
+    await assertSucceeds(
+      addDoc(collection(como(PROF), 'competencias', ALUNO_A, 'registros'), nova({ itemId: 'i1', competente: false, texto: 'errou o detalhe do quadril' })),
+    )
+  })
+
+  it('professor de OUTRA academia nao atesta nem le', async () => {
+    await assertFails(
+      addDoc(collection(como(PROF_DE_FORA), 'competencias', ALUNO_A, 'registros'), nova({ professorUid: PROF_DE_FORA })),
+    )
+    await assertFails(getDoc(doc(como(PROF_DE_FORA), 'competencias', ALUNO_A, 'registros', 'c1')))
+  })
+
+  it('anonimo nao alcanca competencia nenhuma', async () => {
+    await assertFails(getDoc(doc(anonimo(), 'competencias', ALUNO_A, 'registros', 'c1')))
+  })
+})
+
+describe('graduacoes concedidas', () => {
+  const concessao = (over: Record<string, unknown> = {}) => ({
+    meta: '1grau',
+    texto: 'fechou os 29 itens e as 35 aulas',
+    professorUid: PROF,
+    aulasConfirmadas: 36,
+    concedidaEm: '2026-09-07T10:00:00Z',
+    ...over,
+  })
+
+  it('o professor CONCEDE a graduacao', async () => {
+    await assertSucceeds(
+      addDoc(collection(como(PROF), 'graduacoes', ALUNO_A, 'registros'), concessao()),
+    )
+  })
+
+  it('o aluno NAO se gradua', async () => {
+    await assertFails(
+      addDoc(collection(como(ALUNO_A), 'graduacoes', ALUNO_A, 'registros'), concessao({ professorUid: ALUNO_A })),
+    )
+  })
+
+  it('concessao sem META ou sem TEXTO e recusada', async () => {
+    await assertFails(
+      addDoc(collection(como(PROF), 'graduacoes', ALUNO_A, 'registros'), concessao({ meta: '' })),
+    )
+    await assertFails(
+      addDoc(collection(como(PROF), 'graduacoes', ALUNO_A, 'registros'), concessao({ texto: '' })),
+    )
+  })
+
+  it('o aluno LE as proprias graduacoes', async () => {
+    await assertSucceeds(getDocs(collection(como(ALUNO_A), 'graduacoes', ALUNO_A, 'registros')))
+  })
+
+  it('APPEND-ONLY: graduacao concedida nao se apaga', async () => {
+    await amb.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'graduacoes', ALUNO_A, 'registros', 'g1'), concessao())
+    })
+    await assertFails(deleteDoc(doc(como(PROF), 'graduacoes', ALUNO_A, 'registros', 'g1')))
+    await assertFails(updateDoc(doc(como(PROF), 'graduacoes', ALUNO_A, 'registros', 'g1'), { meta: 'azul' }))
   })
 })
 

@@ -127,9 +127,24 @@ do Thalles virar 35 aulas quando a meta dele mudasse. As 35 moram em
 
 ### 6. Competência é registro NOVO, e não `validacoes`
 
-`competencias/{alunoUid}/itens/{itemId}`: quem atestou, quando, em que aula, e o
+`competencias/{alunoUid}/registros/{id}`: quem atestou, quando, onde viu, e o
 texto do professor. Append-only, como `validacoes` — evidência de graduação que
 pode ser reescrita não serve como evidência (ADR-010).
+
+**CORREÇÃO desta decisão, feita ao implementar.** Ela dizia
+`competencias/{aluno}/itens/{itemId}` — um documento por item, ou seja um
+**estado**. Com aquela forma, retirar um atestado dado por engano exigiria
+sobrescrever, e o registro anterior desapareceria: o oposto de append-only. É um
+**log**, e o estado atual é derivado do registro mais recente de cada item.
+Retirar é uma linha nova com `competente: false`, porque o professor pode ter
+atestado numa aula e mudado de opinião na seguinte — e as duas coisas
+aconteceram.
+
+**E o uid vai no CAMINHO, não dentro do documento**, por exigência das regras e
+não por gosto: `validacoes/{id}` guarda `alunoUid` no corpo, então a regra só é
+decidível documento por documento e o Firestore **recusa a consulta de coleção**.
+A folha precisa LISTAR as competências de um aluno. Com o uid no caminho, a mesma
+regra autoriza a lista — é o desenho de `grades/{alunoUid}/aulas/{numero}`.
 
 **POR QUE NÃO REUSAR `validacoes`, e este é o achado que motivou o ADR:**
 `validado_pelo_professor` **não é sobre o aluno, é sobre o TEXTO**. O cabeçalho
@@ -144,12 +159,16 @@ de `validacao.ts` é explícito:
 avaliação de execução. Reusar aquilo faria `aplicarValidacoes` mudar o item por
 causa do desempenho de uma pessoa.
 
-**DEFEITO DECORRENTE, a corrigir:** a Central rotula o eixo como *"você validou ·
+**DEFEITO DECORRENTE, CORRIGIDO em 07/09/2026:** a Central rotulava o eixo como *"você validou ·
 confirmado na academia"* ao lado de *"ele recupera"*. Lido junto, isso afirma que
 o professor confirmou que **ele** faz — quando o dado diz que confirmou que **o
 passo a passo** está certo. O rótulo mente sobre o que mede. (A fila *"Esperando
-você olhar"* está correta: o texto dela fala de *"dominar a versão errada"*, que
+você olhar"* estava correta: o texto dela fala de *"dominar a versão errada"*, que
 é conteúdo.)
+
+O rótulo passou a ser **"passo a passo conferido · você confirmou o CONTEÚDO da
+técnica"**. Quem afirma que o aluno executa é a aba Atestado, que é outro
+registro.
 
 Com o registro novo, a Central passa a mostrar três coisas honestas: **ele
 recupera** · **o texto está conferido** · **você atestou**.

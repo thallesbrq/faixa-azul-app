@@ -102,6 +102,11 @@ export interface AlunoProps {
    * — carregar a grade de um aluno que ninguem abriu seria leitura desperdicada.
    */
   aulas: ReactNode
+  /**
+   * A folha do atestado. `null` quando a meta nao e medida por atestado — uma
+   * aba que abre vazia e pior que uma aba que nao existe.
+   */
+  atestado: ReactNode | null
 }
 
 export function Aluno({
@@ -112,13 +117,14 @@ export function Aluno({
   aoTrocarTurma,
   aoTrocarMeta,
   aulas,
+  atestado,
 }: AlunoProps) {
   /**
    * DUAS ABAS (ADR-015, decisao 11), e a de Aulas so existe agora que tem
    * conteudo. Na entrega 1 ela ficou de fora de proposito: uma aba que abre
    * vazia e pior que uma aba que nao existe.
    */
-  const [aba, setAba] = useState<'progresso' | 'aulas'>('progresso')
+  const [aba, setAba] = useState<'progresso' | 'aulas' | 'atestado'>('progresso')
   const agora = useMemo(() => new Date(), [])
   const [trocando, setTrocando] = useState(false)
   const [avisoDaTurma, setAvisoDaTurma] = useState<string | null>(null)
@@ -306,9 +312,22 @@ export function Aluno({
         >
           Aulas
         </button>
+        {/* A aba do atestado so existe quando ha o que atestar: meta medida por
+            atestado. Para quem busca o azul, ela nao aparece. */}
+        {atestado !== null && (
+          <button
+            role="tab"
+            aria-selected={aba === 'atestado'}
+            className={aba === 'atestado' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
+            onClick={() => setAba('atestado')}
+          >
+            Atestado
+          </button>
+        )}
       </div>
 
       {aba === 'aulas' && aulas}
+      {aba === 'atestado' && atestado}
 
       {/* Nunca sincronizou: nao ha progresso porque nao ha dado. Dizer isso e
           diferente de mostrar zeros, que seriam um fato inventado. */}
@@ -358,9 +377,23 @@ export function Aluno({
                 >
                   {porcento(detalhe.validado)}
                 </div>
+                {/*
+                  ROTULO CORRIGIDO (ADR-016, decisao 6). Ele dizia "você validou
+                  · confirmado na academia", ao lado de "ele recupera" — e lido
+                  junto isso afirmava que o professor confirmou que ELE FAZ.
+
+                  O dado diz outra coisa: `validado_pelo_professor` e o professor
+                  confirmando que o PASSO A PASSO da tecnica esta certo. O
+                  cabecalho de `validacao.ts` e explicito: existe porque 70 dos
+                  81 itens tem conteudo redigido como sugestao, nao como o
+                  curriculo da academia.
+
+                  Quem afirma que o ALUNO executa e a aba Atestado, que e outro
+                  registro. O rotulo mentia sobre o que media.
+                */}
                 <div className="eixo-rotulo">
-                  você validou
-                  <small>confirmado na academia</small>
+                  passo a passo conferido
+                  <small>você confirmou o CONTEÚDO da técnica</small>
                 </div>
               </div>
             </div>

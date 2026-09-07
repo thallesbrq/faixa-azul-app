@@ -13,6 +13,8 @@
 
 import { useMemo, useState } from 'react'
 import { curriculoDaMeta, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
+import { MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
+import { medidaDoProgresso, metaSeguinte } from '@faixa-azul/core/domain/metas'
 import { nomeDaTurma, TURMAS } from '@faixa-azul/core/domain/turmas'
 import { ROTULO_GRUPO } from '@faixa-azul/core/domain/taxonomia'
 import {
@@ -33,6 +35,7 @@ import { Barras } from './components/Barras'
 import { Tabela } from './components/Tabela'
 import { Aluno } from './components/Aluno'
 import { MontarGrade } from './MontarGrade'
+import { FolhaDoAtestado } from './FolhaDoAtestado'
 import { horaCurta } from './formato'
 
 /**
@@ -169,6 +172,28 @@ function Central({
             />
           }
           curriculo={curriculoDaMeta(linha.meta) ?? CURRICULO_DAS_COLUNAS}
+          atestado={
+            // So quando a meta e medida por atestado E ha curriculo para atestar.
+            medidaDoProgresso(linha.meta) === 'atestado' && curriculoDaMeta(linha.meta) !== null ? (
+              <FolhaDoAtestado
+                app={sessao.app}
+                alunoUid={linha.uid}
+                professorUid={sessao.sessao.uid}
+                curriculo={curriculoDaMeta(linha.meta) as Curriculo}
+                modulos={MODULOS_1GRAU}
+                meta={linha.meta}
+                // `null` porque o app ainda nao conta presenca (fatia 3).
+                aulasCumpridas={null}
+                aoConceder={async (metaConcedida) => {
+                  const proxima = metaSeguinte(metaConcedida)
+                  // `null` no fim da fila: o que vem depois do azul e outra
+                  // faixa, e nao ha meta para avancar.
+                  if (proxima !== null) await sessao.dados.atualizarMeta(linha.uid, proxima)
+                  await recarregar()
+                }}
+              />
+            ) : null
+          }
           aoVoltar={() => irPara({ tela: 'turmas' })}
           aoTrocarMeta={async (meta) => {
             await sessao.dados.atualizarMeta(linha.uid, meta)

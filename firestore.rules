@@ -14,7 +14,7 @@ rules_version = '2';
 //
 // PRINCIPIO: a posse e desenhada para que o conflito nao exista.
 //   - o ALUNO escreve so o proprio estado
-//   - o PROFESSOR escreve so grade, validacao e indicacao
+//   - o PROFESSOR escreve so grade, validacao, competencia, graduacao e indicacao
 //   - nenhum dos dois consegue escrever no campo do outro
 // Assim a disputa aluno-professor deixa de ser problema de merge e passa a ser
 // impossivel por construcao.
@@ -22,7 +22,7 @@ rules_version = '2';
 // SOBRE O LOG DO EMULADOR: ele reporta `evaluation error` em algumas negacoes,
 // alem de `false`. Duas causas reais foram encontradas e corrigidas (ordem da
 // guarda de autenticacao, e `.data` sem guarda de nulo). Restaram entradas que
-// eu NAO consegui atribuir — nenhuma delas muda resultado: as 51 assercoes
+// eu NAO consegui atribuir — nenhuma delas muda resultado: as 67 assercoes
 // cobrem cada caminho de permitir e negar, e todas passam. Fica registrado como
 // observacao aberta, e nao como coisa entendida.
 //
@@ -284,6 +284,65 @@ service cloud.firestore {
     match /validacoes/{id} {
       allow read: if souEu(resource.data.alunoUid) || mesmaAcademiaQue(resource.data.alunoUid);
       allow create: if mesmaAcademiaQue(request.resource.data.alunoUid);
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------------------- competencias
+    /**
+     * O professor atestando que ESTE ALUNO executa. Append-only.
+     *
+     * NAO E `validacoes`, e a diferenca esta no que cada uma afirma:
+     * `validacoes` diz que o TEXTO da tecnica esta certo; aqui diz que a PESSOA
+     * executa. A descricao pode estar perfeita e o aluno nao fazer.
+     *
+     * O uid NO CAMINHO e nao dentro do documento, e isso e exigencia das regras
+     * e nao estetica: `validacoes/{id}` tem `alunoUid` no corpo, entao a regra
+     * so e decidivel documento por documento e o Firestore recusa uma consulta
+     * de colecao. A folha do atestado precisa LISTAR as competencias de um
+     * aluno — com o uid no caminho, a mesma regra autoriza a lista.
+     *
+     * `update, delete: if false` — nem o professor edita. Evidencia de
+     * graduacao reescrivel nao serve como evidencia (ADR-010). Retirar um
+     * atestado e um registro NOVO com `competente: false`.
+     */
+    match /competencias/{alunoUid}/registros/{id} {
+      allow read: if souEu(alunoUid) || mesmaAcademiaQue(alunoUid);
+
+      // O professor da academia atesta. O aluno NAO: atestar a si mesmo seria
+      // o aluno se graduando sozinho — mesma regra de `validacoes`.
+      allow create: if mesmaAcademiaQue(alunoUid)
+        // Texto obrigatorio TAMBEM na regra, e nao so no cliente: o cliente e
+        // codigo que vai para o navegador de qualquer pessoa. Atestacao sem
+        // justificativa nao e rastreavel, e a fronteira e aqui.
+        && request.resource.data.texto is string
+        && request.resource.data.texto.size() > 0
+        // Quem atesta e quem esta autenticado. Sem isto, um professor poderia
+        // gravar uma atestacao assinada por OUTRO professor.
+        && request.resource.data.professorUid == request.auth.uid
+        && request.resource.data.competente is bool;
+
+      allow update, delete: if false;
+    }
+
+    // --------------------------------------------------------- graduacoes
+    /**
+     * O ato de conceder a graduacao. Append-only, pelos mesmos motivos.
+     *
+     * O APP NUNCA GRADUA: ele diz que os requisitos fecharam e o professor
+     * decide. Por isso existe um registro do ATO, com quem concedeu e quando —
+     * e com quantas aulas ele CONFIRMOU, que pode nao ser um numero que o
+     * sistema contou.
+     */
+    match /graduacoes/{alunoUid}/registros/{id} {
+      allow read: if souEu(alunoUid) || mesmaAcademiaQue(alunoUid);
+
+      allow create: if mesmaAcademiaQue(alunoUid)
+        && request.resource.data.texto is string
+        && request.resource.data.texto.size() > 0
+        && request.resource.data.professorUid == request.auth.uid
+        && request.resource.data.meta is string
+        && request.resource.data.meta.size() > 0;
+
       allow update, delete: if false;
     }
 

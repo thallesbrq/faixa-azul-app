@@ -979,3 +979,82 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* --------------------------------------------------------- folha do atestado */
+
+.lista-atestado {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.linha-atestado {
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* Atestado ganha borda verde E o texto do registro embaixo — cor sozinha nao
+   informa quem nao a distingue (RNF-04), e aqui o QUE o professor viu importa
+   mais que o fato de ter visto. */
+.linha-atestado--ok {
+  border-color: var(--verde-sucesso);
+  background: var(--verde-suave);
+}
+
+.atestado-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacamento-base);
+}
+
+.atestado-nome {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.atestado-vezes {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--amarelo-atencao);
+}
+
+.atestado-quando {
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+  margin-top: 4px;
+}
+
+.atestado-form {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.atestado-form .campo {
+  margin-bottom: 8px;
+}
+
+.atestado-acoes {
+  display: flex;
+  gap: var(--espacamento-base);
+  align-items: center;
+}
+
+.atestado-acoes .destino {
+  flex: 0 0 auto;
+}
+
+/* O bloco de conceder e o unico da tela com a cor da marca: e o ato, e nao mais
+   um cartao de leitura. */
+.cartao--conceder {
+  border-color: var(--laranja);
+  background: var(--laranja-suave);
+}
