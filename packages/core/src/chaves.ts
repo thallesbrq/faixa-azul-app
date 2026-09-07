@@ -25,9 +25,20 @@ export const CHAVE_INDICE_TORRE = 'faixa_azul_torre_indice'
 export const PREFIXO_ALUNO = 'faixa_azul_aluno_'
 
 /**
- * Onde o SDK do Firebase guarda a sessao. Precisa ser DIFERENTE entre os dois
- * apps: se dividirem a mesma chave e a mesma origem, entrar como professor num
- * deslogaria o aluno no outro — ou pior, faria um herdar a sessao do outro.
+ * NOME do app no SDK do Firebase — e nao uma chave de armazenamento nossa.
+ *
+ * Correcao de uma suposicao minha: eu tinha criado `CHAVE_SESSAO_ALUNO` e
+ * `CHAVE_SESSAO_CENTRAL` como se desse para escolher onde o SDK guarda a
+ * sessao. Nao da. O Firebase guarda em `firebase:authUser:{apiKey}:{nomeDoApp}`,
+ * e o unico pedaco que a gente controla e o NOME DO APP.
+ *
+ * Entao o isolamento entre as duas aplicacoes sai de graca ao inicializar com
+ * nomes diferentes — e nao de uma chave que eu inventaria e que o SDK
+ * ignoraria. Se os dois usassem o mesmo nome na mesma origem, entrar como
+ * professor num deslogaria o aluno no outro.
+ *
+ * Serve tambem de prefixo para o e-mail pendente do link magico, que ESSE sim
+ * e nosso (ver nuvem/autenticacao).
  */
-export const CHAVE_SESSAO_ALUNO = 'faixa_azul_sessao_aluno'
-export const CHAVE_SESSAO_CENTRAL = 'faixa_azul_sessao_central'
+export const APP_ALUNO = 'aluno'
+export const APP_CENTRAL = 'central'

@@ -15,6 +15,8 @@ import { Perfil } from './screens/Perfil'
 import { Torre } from './screens/Torre'
 import { abasDoPapel } from './components/Navegacao'
 import { useTorre } from './useTorre'
+import { useSessao } from './useSessao'
+import { Entrar } from './components/Entrar'
 import { deposito } from './useApp'
 import { baixarArquivo } from './baixarArquivo'
 import { empacotar, nomeDoArquivo } from '@faixa-azul/core/application/juncao'
@@ -35,6 +37,7 @@ export function App() {
    */
   const [tela, setTela] = useState<Tela>('aulas')
   const torre = useTorre(deposito)
+  const sessao = useSessao(deposito)
   const papel = app.estado.perfil.papel
 
   /**
@@ -223,6 +226,15 @@ export function App() {
               aoExportar={app.exportarArquivo}
               aoImportar={app.importarArquivo}
               totalDeItens={app.itens.length}
+              entrar={
+                <Entrar
+                  estado={sessao.estado}
+                  aoEnviar={sessao.enviarLink}
+                  aoConcluir={sessao.concluirCom}
+                  aoSair={sessao.sair}
+                  aoTentarDeNovo={sessao.tentarDeNovo}
+                />
+              }
             />
           )}
 

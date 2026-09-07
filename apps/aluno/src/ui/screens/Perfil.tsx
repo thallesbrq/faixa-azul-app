@@ -23,6 +23,11 @@ export interface PerfilProps {
   aoImportar: (texto: string) => { ok: true; mensagem: string } | { ok: false; mensagem: string }
   /** Quantas técnicas o aparelho conhece, só para a exportação não parecer vazia. */
   totalDeItens: number
+  /**
+   * Bloco de login, montado por quem tem acesso à sessão. Chega pronto para
+   * esta tela não precisar conhecer o Firebase — ela só decide ONDE ele aparece.
+   */
+  entrar: React.ReactNode
 }
 
 export function Perfil({
@@ -33,6 +38,7 @@ export function Perfil({
   aoExportar,
   aoImportar,
   totalDeItens,
+  entrar,
 }: PerfilProps) {
   const [rascunho, setRascunho] = useState(nome)
   const [salvo, setSalvo] = useState(false)
@@ -114,6 +120,8 @@ export function Perfil({
             : 'Marque “do professor” só no aparelho de quem vai acompanhar a turma — isso troca as abas do app.'}
         </p>
       </div>
+
+      {entrar}
 
       <div className="card">
         <h3 className="detalhe-secao">Enviar para o professor</h3>
