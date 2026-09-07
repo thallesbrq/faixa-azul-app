@@ -765,3 +765,35 @@
   margin: 0;
 }
 
+
+/* Trocar a turma: acao do professor, na tela daquele aluno. */
+.troca-turma {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+}
+
+.troca-turma select {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--cor-texto);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-height: var(--alvo-toque-min);
+  cursor: pointer;
+}
+
+.troca-turma select:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

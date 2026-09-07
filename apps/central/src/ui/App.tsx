@@ -163,6 +163,13 @@ function Central({
           estado={estado.estados.get(linha.uid) ?? null}
           curriculo={CURRICULO_DE_AZUL}
           aoVoltar={() => irPara({ tela: 'turmas' })}
+          aoTrocarTurma={async (turma) => {
+            await sessao.dados.atualizarTurma(linha.uid, turma)
+            // Recarrega porque trocar de turma muda se o progresso E MEDIDO:
+            // sem reler, a tela continuaria mostrando os numeros da turma
+            // anterior, com o seletor dizendo outra coisa.
+            await recarregar()
+          }}
         />
       </>
     )

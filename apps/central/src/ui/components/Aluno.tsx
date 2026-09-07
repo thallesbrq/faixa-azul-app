@@ -18,12 +18,18 @@
  * maior do projeto.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ProgressoDeGrupo, NivelDominio } from '@faixa-azul/core/application/progresso'
 import { faixaDaPontuacao } from '@faixa-azul/core/application/progresso'
 import { detalheDoAluno } from '@faixa-azul/core/application/central'
 import type { Curriculo, LinhaDaCentral } from '@faixa-azul/core/application/central'
-import { nomeDaTurma } from '@faixa-azul/core/domain/turmas'
+import {
+  medeCurriculoDeAzul,
+  nomeDaTurma,
+  ROTULO_SEM_TURMA,
+  SEM_TURMA,
+  TURMAS,
+} from '@faixa-azul/core/domain/turmas'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import { atividade, corDaFaixa, porcento } from '../formato'
 
@@ -82,10 +88,14 @@ export interface AlunoProps {
   estado: EstadoPersistido | null
   curriculo: Curriculo
   aoVoltar: () => void
+  /** So o professor consegue: as regras negam ao proprio aluno. */
+  aoTrocarTurma: (turma: string) => Promise<void>
 }
 
-export function Aluno({ linha, estado, curriculo, aoVoltar }: AlunoProps) {
+export function Aluno({ linha, estado, curriculo, aoVoltar, aoTrocarTurma }: AlunoProps) {
   const agora = useMemo(() => new Date(), [])
+  const [trocando, setTrocando] = useState(false)
+  const [avisoDaTurma, setAvisoDaTurma] = useState<string | null>(null)
   const detalhe = useMemo(
     () => (estado ? detalheDoAluno({ estado, curriculo, agora }) : null),
     [estado, curriculo, agora],
@@ -101,12 +111,70 @@ export function Aluno({ linha, estado, curriculo, aoVoltar }: AlunoProps) {
         <div className="aluno-topo">
           <div>
             <h2 className="aluno-nome">{linha.nome}</h2>
-            <p className="apoio" style={{ margin: 0 }}>
-              <span className="etiqueta">{nomeDaTurma(linha.turma)}</span>{' '}
-              {atividade(linha.diasSemEstudar)}
-            </p>
+            <p className="apoio" style={{ margin: 0 }}>{atividade(linha.diasSemEstudar)}</p>
           </div>
+
+          {/*
+            TROCAR A TURMA MORA AQUI, e nao na tabela.
+
+            Na tabela, um seletor por linha convidaria a trocar a turma de
+            alguem por engano ao passar o mouse — e turma decide se o progresso
+            e medido e que grade sera montada. Aqui a acao esta na tela DAQUELA
+            pessoa, com o nome dela no topo.
+
+            Antes disto nao havia caminho nenhum: `atualizarTurma` existia no
+            core e nenhuma interface chamava, entao a turma era decidida no
+            convite e ficava imutavel. Um aluno na turma errada exigia edicao no
+            banco a mao.
+          */}
+          <label className="troca-turma">
+            <span>Turma</span>
+            <select
+              value={linha.turma}
+              disabled={trocando}
+              onChange={async (e) => {
+                const nova = e.target.value
+                setTrocando(true)
+                setAvisoDaTurma(null)
+                try {
+                  await aoTrocarTurma(nova)
+                  // Diz a CONSEQUENCIA e nao so "salvo": trocar entre uma turma
+                  // que mede o curriculo e uma que nao mede faz o progresso
+                  // aparecer ou virar `—`, e isso assusta se nao for anunciado.
+                  setAvisoDaTurma(
+                    medeCurriculoDeAzul(nova)
+                      ? `Agora na ${nomeDaTurma(nova)} — o progresso passa a ser medido.`
+                      : `Agora na ${nomeDaTurma(nova)} — sem currículo próprio, o progresso aparece como —.`,
+                  )
+                } catch (err) {
+                  setAvisoDaTurma((err as Error)?.message ?? 'Não foi possível trocar a turma.')
+                } finally {
+                  setTrocando(false)
+                }
+              }}
+            >
+              {/* Sem turma e um estado real: todo cadastro anterior a este campo
+                  esta nele, e "nao atribuido" precisa ser escolhivel de volta. */}
+              <option value={SEM_TURMA}>{ROTULO_SEM_TURMA}</option>
+              {TURMAS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nome} — {t.descricao}
+                </option>
+              ))}
+              {/* Turma desconhecida (vinda do banco) nao pode desaparecer do
+                  seletor: sem esta opcao, abrir a tela ja mudaria o valor. */}
+              {linha.turma !== SEM_TURMA && !TURMAS.some((t) => t.id === linha.turma) && (
+                <option value={linha.turma}>{linha.turma}</option>
+              )}
+            </select>
+          </label>
         </div>
+
+        {avisoDaTurma && (
+          <p className="apoio" style={{ marginTop: 10, marginBottom: 0 }}>
+            {avisoDaTurma}
+          </p>
+        )}
 
         {/*
           Atividade e aulas valem para toda turma, inclusive a que nao mede
