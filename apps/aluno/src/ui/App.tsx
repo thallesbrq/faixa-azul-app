@@ -20,6 +20,7 @@ import { Entrar } from './components/Entrar'
 import { Convidar } from './components/Convidar'
 import { Restaurar } from './components/Restaurar'
 import { useConvites } from './useConvites'
+import { useSincronizacao } from './useSincronizacao'
 import { deposito } from './useApp'
 import { baixarArquivo } from './baixarArquivo'
 import { empacotar, nomeDoArquivo } from '@faixa-azul/core/application/juncao'
@@ -49,6 +50,29 @@ export function App() {
   const souProfessorNaNuvem =
     sessao.estado.fase === 'logado' && sessao.estado.cadastro.papel === 'professor'
   const convites = useConvites(sessao.obterDados, souProfessorNaNuvem)
+
+  /**
+   * Sincronização. Só liga com cadastro ATIVO na nuvem — sem cadastro as regras
+   * negam a escrita, e tentar produziria erro de permissão que pareceria bug.
+   */
+  const naNuvem = sessao.estado.fase === 'logado' ? sessao.estado : null
+  const sincronia = useSincronizacao({
+    uid: naNuvem?.sessao.uid ?? null,
+    ativo: naNuvem?.cadastro.ativo === true,
+    deposito,
+    estadoLocal: app.estadoAtual,
+    aoReceber: app.aplicarEstado,
+  })
+
+  /**
+   * Marca pendência a cada mudança local, para o envio periódico saber que há
+   * o que mandar. Observa a referência do estado: ela troca a cada alteração
+   * porque `atualizar` sempre cria um objeto novo.
+   */
+  useEffect(() => {
+    sincronia.marcarSujo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.estado])
   const papel = app.estado.perfil.papel
 
   /**
@@ -240,6 +264,8 @@ export function App() {
               entrar={
                 <Entrar
                   estado={sessao.estado}
+                  sincronizacao={sincronia.estado}
+                  aoSincronizar={sincronia.sincronizarAgora}
                   aoEnviar={sessao.enviarLink}
                   aoConcluir={sessao.concluirCom}
                   aoSair={sessao.sair}

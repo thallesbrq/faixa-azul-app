@@ -12,16 +12,40 @@
 
 import { useState } from 'react'
 import type { EstadoDoLogin } from '../useSessao'
+import type { EstadoDaSincronizacao } from '../useSincronizacao'
+
+/**
+ * Estado da sincronizacao em uma frase.
+ *
+ * O ALUNO PRECISA SABER SE O PROGRESSO CHEGOU. Sem isto, "entrei" e a ultima
+ * informacao que ele tem — e ele nao consegue distinguir "o professor ja ve meu
+ * estudo" de "esta tudo preso aqui e ninguem sabe". Silencio, aqui, e o mesmo
+ * que mentir por omissao.
+ */
+function frase(s: EstadoDaSincronizacao): { texto: string; problema: boolean } {
+  if (s.fase === 'sincronizando') return { texto: 'Enviando seu progresso…', problema: false }
+  if (s.fase === 'erro') return { texto: s.mensagem, problema: true }
+  if (s.fase === 'ociosa') {
+    if (!s.ultimaEm) return { texto: 'Ainda não sincronizado.', problema: false }
+    const min = Math.floor((Date.now() - new Date(s.ultimaEm).getTime()) / 60000)
+    if (min < 1) return { texto: 'Progresso enviado agora.', problema: false }
+    if (min === 1) return { texto: 'Progresso enviado há 1 minuto.', problema: false }
+    return { texto: `Progresso enviado há ${min} minutos.`, problema: false }
+  }
+  return { texto: '', problema: false }
+}
 
 export interface EntrarProps {
   estado: EstadoDoLogin
+  sincronizacao: EstadoDaSincronizacao
+  aoSincronizar: () => void
   aoEnviar: (email: string) => void
   aoConcluir: (email: string, url: string) => void
   aoSair: () => void
   aoTentarDeNovo: () => void
 }
 
-export function Entrar({ estado, aoEnviar, aoConcluir, aoSair, aoTentarDeNovo }: EntrarProps) {
+export function Entrar({ estado, sincronizacao, aoSincronizar, aoEnviar, aoConcluir, aoSair, aoTentarDeNovo }: EntrarProps) {
   const [email, setEmail] = useState('')
 
   if (estado.fase === 'logado') {
@@ -33,9 +57,27 @@ export function Entrar({ estado, aoEnviar, aoConcluir, aoSair, aoTentarDeNovo }:
           {estado.cadastro.papel === 'professor' ? ', como professor' : ''}. Seu progresso vai para
           a conta, e o professor vê na central dele.
         </p>
-        <button className="botao botao--secundario" onClick={aoSair}>
-          Sair da conta
-        </button>
+        {(() => {
+          const f = frase(sincronizacao)
+          if (!f.texto) return null
+          return f.problema ? (
+            <p className="aviso">
+              <span aria-hidden="true">⚠️</span>
+              <span>{f.texto}</span>
+            </p>
+          ) : (
+            <p className="instrucao">{f.texto}</p>
+          )
+        })()}
+
+        <div className="acoes">
+          <button className="botao botao--secundario" onClick={aoSincronizar}>
+            Enviar agora
+          </button>
+          <button className="botao botao--secundario" onClick={aoSair}>
+            Sair da conta
+          </button>
+        </div>
       </div>
     )
   }

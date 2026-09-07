@@ -449,6 +449,15 @@ export function useApp() {
     importarArquivo,
     inspecionarBackup,
     restaurarBackup,
+    /**
+     * O estado atual por FUNCAO, e nao por valor: a sincronizacao roda dentro de
+     * temporizador e de ouvinte de evento, registrados uma vez. Passar o valor
+     * congelaria o estado do render em que foram criados, e ela enviaria dado
+     * velho por cima do novo.
+     */
+    estadoAtual: () => estado,
+    /** Aplica um estado vindo da nuvem, pelo mesmo caminho de qualquer alteracao. */
+    aplicarEstado: atualizar,
     registrarSessao,
     atribuicao,
     codigoDaMontagem,
