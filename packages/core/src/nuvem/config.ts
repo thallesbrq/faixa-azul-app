@@ -13,11 +13,30 @@
  * proteger nada: o valor apareceria no bundle de qualquer forma. Fica no codigo,
  * versionado, com este comentario — para ninguem tratar como vazamento depois.
  *
- * O QUE VALE FAZER, e nao e esconder: restringir a chave por referenciador HTTP
- * no Google Cloud Console (APIs e servicos -> Credenciais), aceitando so os
- * dominios do Hosting. Isso nao protege o dado — as regras fazem isso — mas
- * impede que alguem use a nossa cota de autenticacao a partir de outro site.
- * Fica pendente ate os dominios existirem.
+ * A CHAVE ESTA RESTRINGIDA desde 07/09/2026, e isso FOI VERIFICADO — nao e
+ * intencao. O GitHub abriu um alerta de "Google API Key publicamente vazada"
+ * assim que este arquivo subiu, e o alerta acertou em detectar e errou em
+ * recomendar: seguir o passo "revoke this key" derrubaria o app sem fechar
+ * nenhuma porta de dado.
+ *
+ * O risco real, medido antes: a chave respondia `HTTP 200` a uma chamada feita
+ * do terminal, sem navegador. Isso nao da acesso ao dado dos alunos (as regras
+ * negam), mas permitia gastar a cota de autenticacao do projeto de qualquer
+ * lugar. Depois de restringir por referenciador HTTP e por API:
+ *
+ *   sem referenciador (curl, script, bot)  -> 403 "referer <empty> are blocked"
+ *   site nao autorizado                    -> 403
+ *   rg-centraldoaluno.web.app              -> 200
+ *   localhost em qualquer porta            -> 200
+ *
+ * APIs permitidas: Firestore, Identity Toolkit, Token Service e Firebase
+ * Installations. A quarta entrou por prudencia — parte do SDK a chama por
+ * baixo, e restricao apertada demais falha de um jeito difícil de rastrear.
+ *
+ * QUANDO ACRESCENTAR UM DOMINIO NOVO (Hosting proprio, dominio da academia),
+ * ele precisa entrar na lista de referenciadores DA CHAVE e nos dominios
+ * autorizados DO AUTHENTICATION. Sao duas listas diferentes, e esquecer a
+ * segunda faz o login falhar sem erro claro.
  */
 
 export interface ConfigDaNuvem {
