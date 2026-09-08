@@ -17,8 +17,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FirebaseApp } from 'firebase/app'
 import { montarAcompanhamento } from '@faixa-azul/core/application/acompanhamento'
 import type { ParaAtestar } from '@faixa-azul/core/application/acompanhamento'
-import { partesDoSlot } from '@faixa-azul/core/application/agenda'
-import { aulaDeCadaItem } from '@faixa-azul/core/application/acompanhamento'
 import { procedenciaDaAtestacao } from '@faixa-azul/core/domain/competencia'
 import type { RegistroDeCompetencia } from '@faixa-azul/core/domain/competencia'
 import { abrirCompetencias } from '@faixa-azul/core/nuvem/competencias'
@@ -28,6 +26,7 @@ import type { Programas } from '@faixa-azul/core/nuvem/programas'
 import type { AulaDoPrograma } from '@faixa-azul/core/application/programa'
 import { CURRICULO_1GRAU } from '@faixa-azul/core/seed/curriculos'
 import { MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
+import { equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
 import { Acompanhamento } from './components/Acompanhamento'
 
 /** Listas vazias FIXAS: `?? []` a cada render alimenta laco de dependencia. */
@@ -129,6 +128,17 @@ export function AcompanhamentoDaTurma({
         aulas,
         registrosPorAluno: registros,
         hoje,
+        /**
+         * A TABELA DE EQUIVALENCIA ENTRA AQUI, e este e o unico lugar que a
+         * conhece.
+         *
+         * Sem ela a matriz conta ids `g1-*` enquanto o Planner grava ids de azul,
+         * e a aula que ensinou rolamentos e fuga de quadril aparece como "0 de 29
+         * itens ja foram dados". `montarAcompanhamento` tem como padrao "nenhuma
+         * equivalencia" de proposito: o `application` nao deve conhecer o seed de
+         * um curriculo.
+         */
+        equivalentes: equivalentesDe,
       }),
     [turma, daMatriz, aulas, registros, hoje],
   )
@@ -142,18 +152,40 @@ export function AcompanhamentoDaTurma({
    * ARRUMOU o registro, e nao a da aula — e seis meses depois isso e a diferenca
    * entre um log que se le e um que confunde.
    */
+  /**
+   * De onde a procedencia sai: DA MATRIZ, e nao de um calculo proprio.
+   *
+   * Antes isto refazia a conta com `aulaDeCadaItem(aulas).get(itemId)` — uma
+   * segunda implementacao da mesma regra. Com a equivalencia entre curriculos ela
+   * passou a estar ERRADA sem dar erro: `g1-edu--rolamentos` nao esta em nenhuma
+   * aula pelo proprio id, entao a busca devolvia `undefined` e a atestacao seria
+   * gravada sem numero de aula — exatamente para o requisito que a aula 1 ensinou.
+   *
+   * Ler de `dados` faz a tela e o log concordarem por construcao: a aula que a
+   * matriz mostra e a aula que o registro cita, inclusive a regra de que quem
+   * completa o requisito e a ULTIMA parte.
+   */
+  const ondeFoiDado = useMemo(
+    () =>
+      new Map(
+        dados.grupos
+          .flatMap((g) => g.itens)
+          .map((i) => [i.item.id, { aula: i.aula, data: i.data }] as const),
+      ),
+    [dados],
+  )
+
   const textoDe = useCallback(
     (itemId: string): string => {
-      const aulaDoItem = aulaDeCadaItem(aulas).get(itemId) ?? null
-      const slot = aulas.find((a) => a.numero === aulaDoItem)?.slot ?? ''
+      const onde = ondeFoiDado.get(itemId)
       return procedenciaDaAtestacao({
         turma,
-        aula: aulaDoItem,
-        data: partesDoSlot(slot)?.data ?? null,
+        aula: onde?.aula ?? null,
+        data: onde?.data ?? null,
         agora: hoje,
       })
     },
-    [aulas, turma, hoje],
+    [ondeFoiDado, turma, hoje],
   )
 
   const atestar = useCallback(

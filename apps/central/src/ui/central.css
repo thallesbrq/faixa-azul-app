@@ -1669,6 +1669,17 @@
   font-size: 0.68rem;
 }
 
+/* O PARCIAL DE UM REQUISITO COMPOSTO ("2 de 3 partes"). Fica em bloco abaixo do
+   numero da aula, e nao ao lado: a coluna da aula e estreita de proposito, e um
+   texto extra na mesma linha empurraria a tabela para a rolagem horizontal com
+   quatro alunos. Sem negrito — ele informa, nao alerta. */
+.ac-partes {
+  display: block;
+  font-size: 0.64rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
 /* A CELULA E UM BOTAO, sempre — mesmo desabilitada. Um `<span>` para o estado
    nao clicavel e um `<button>` para o clicavel dariam alturas diferentes na
    mesma coluna, e a grade sairia torta. */

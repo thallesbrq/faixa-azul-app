@@ -3,6 +3,7 @@ import {
   aulaDeCadaItem,
   montarAcompanhamento,
   paresPendentes,
+  programacaoDoRequisito,
 } from './acompanhamento'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '../seed/primeiro-grau'
 import type { RegistroDeCompetencia } from '../domain/competencia'
@@ -272,5 +273,316 @@ describe('atestar a area inteira', () => {
     for (const g of a.grupos) {
       expect(paresPendentes(g.itens)).toHaveLength(g.pendentes)
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// A MESMA TECNICA COM ID DIFERENTE EM CADA CURRICULO
+// ---------------------------------------------------------------------------
+/**
+ * O DEFEITO QUE ESTE BLOCO FIXA, medido em producao em 08/09/2026.
+ *
+ * O bolsao do Planner oferece os itens de AZUL; a matriz conta os do 1o GRAU; e
+ * os dois conjuntos de ids sao disjuntos. A aula 1 da RGI ensinou rolamento para
+ * frente e rolamento para tras — que JUNTOS sao o requisito "Rolamentos (frente e
+ * costas)" — e a matriz mostrava o requisito como "fora do programa" e "0 de 29
+ * itens ja foram dados em aula".
+ *
+ * Nenhum dos 23 testes acima pegou isso, e o motivo e instrutivo: todos usam
+ * `AULAS`, construido com ids de `ITENS_1GRAU`. A suite inteira vivia no universo
+ * em que os dois lados coincidem — universo que a producao nao tem.
+ */
+describe('requisito satisfeito por itens de OUTRO curriculo', () => {
+  const HOJE_TXT = '2026-09-08'
+  const mapa = (pares: [string, number][]) => new Map(pares)
+
+  /** As duas partes do requisito "Rolamentos", como estao no azul. */
+  const ROLAMENTOS = ['az--rolamento-frente', 'az--rolamento-tras']
+  const equivalentes = (id: string) => (id === 'g1-edu--rolamentos' ? ROLAMENTOS : [])
+
+  const resolver = (
+    aulaDoItem: Map<string, number>,
+    dataDaAula: Map<number, string>,
+    requisitoId = 'g1-edu--rolamentos',
+  ) => programacaoDoRequisito({ requisitoId, aulaDoItem, dataDaAula, limite: HOJE_TXT, equivalentes })
+
+  it('O CASO DE PRODUCAO: as duas partes na aula 1 ja dada = ENSINADO', () => {
+    const r = resolver(
+      mapa([
+        [ROLAMENTOS[0], 1],
+        [ROLAMENTOS[1], 1],
+      ]),
+      new Map([[1, '2026-09-08']]),
+    )
+    expect(r.ensinado).toBe(true)
+    expect(r.aula).toBe(1)
+    expect(r.partes).toEqual({ programadas: 2, dadas: 2, total: 2 })
+  })
+
+  it('o caminho DIRETO ganha quando e ele que ja foi dado', () => {
+    /**
+     * O id proprio na aula 3 (ja dada) contra os equivalentes na aula 9 (futura).
+     * Ganha o direto porque ele esta ENSINADO, e nao porque e o direto — ver o
+     * teste do o soto gari, em que a comparacao inverte.
+     */
+    const r = resolver(
+      mapa([
+        ['g1-edu--rolamentos', 3],
+        [ROLAMENTOS[0], 9],
+        [ROLAMENTOS[1], 9],
+      ]),
+      new Map([
+        [3, '2026-09-01'],
+        [9, '2026-10-20'],
+      ]),
+    )
+    expect(r.aula).toBe(3)
+    expect(r.partes).toBe(null)
+    expect(r.ensinado).toBe(true)
+  })
+
+  it('TODOS OS EQUIVALENTES: uma parte dada e a outra no futuro NAO e ensinado', () => {
+    // A decisao do professor: "ukemi conta como todos frente, costas e lateral".
+    const r = resolver(
+      mapa([
+        [ROLAMENTOS[0], 1],
+        [ROLAMENTOS[1], 4],
+      ]),
+      new Map([
+        [1, '2026-09-08'],
+        [4, '2026-09-17'],
+      ]),
+    )
+    expect(r.ensinado).toBe(false)
+    expect(r.partes).toEqual({ programadas: 2, dadas: 1, total: 2 })
+  })
+
+  it('A ULTIMA PARTE E A QUE COMPLETA, e nao a primeira', () => {
+    /**
+     * Se `aula` fosse a primeira, a procedencia gravada diria "Aula 1" para um
+     * requisito que so ficou pronto na aula 4 — e seis meses depois o log estaria
+     * apontando para a aula errada.
+     */
+    const r = resolver(
+      mapa([
+        [ROLAMENTOS[0], 1],
+        [ROLAMENTOS[1], 4],
+      ]),
+      new Map([
+        [1, '2026-09-01'],
+        [4, '2026-09-08'],
+      ]),
+    )
+    expect(r.aula).toBe(4)
+    expect(r.data).toBe('2026-09-08')
+    expect(r.ensinado).toBe(true)
+  })
+
+  it('FALTANDO UMA PARTE NO PROGRAMA, `aula` e null mas o parcial aparece', () => {
+    /**
+     * A diferenca entre "falta uma parte" e "nao esta no programa" — que sem
+     * `partes` seriam a MESMA celula em branco. Dizer "aula 1" aqui prometeria
+     * uma conclusao que nao vem: a outra parte nao esta programada em lugar
+     * nenhum.
+     */
+    const r = resolver(mapa([[ROLAMENTOS[0], 1]]), new Map([[1, '2026-09-08']]))
+    expect(r.aula).toBe(null)
+    expect(r.ensinado).toBe(false)
+    expect(r.partes).toEqual({ programadas: 1, dadas: 1, total: 2 })
+  })
+
+  it('parte programada SEM DATA nao conta como dada', () => {
+    const r = resolver(
+      mapa([
+        [ROLAMENTOS[0], 1],
+        [ROLAMENTOS[1], 20],
+      ]),
+      new Map([[1, '2026-09-08']]),
+    )
+    expect(r.ensinado).toBe(false)
+    expect(r.aula).toBe(20)
+    expect(r.data).toBe(null)
+    expect(r.partes).toEqual({ programadas: 2, dadas: 1, total: 2 })
+  })
+
+  it('requisito SEM equivalente e fora do programa tem `partes` null', () => {
+    // Os 13 requisitos que o azul nao enumera (dominio de posicao, ataques a
+    // partir dela). "Sem partes" e diferente de "zero partes dadas".
+    const r = resolver(new Map(), new Map(), 'g1-dom--montada')
+    expect(r.aula).toBe(null)
+    expect(r.partes).toBe(null)
+  })
+
+  it('montarAcompanhamento repassa a tabela — e sem ela nada muda', () => {
+    /**
+     * O padrao e "sem equivalente nenhum", e este teste fixa isso: os 23 testes
+     * acima passam justamente porque o default nao inventa equivalencia. Se
+     * alguem trocar o default pela tabela do 1o grau, o `application` passa a
+     * conhecer o seed de um curriculo — e este teste quebra.
+     */
+    const aulas = [{ numero: 1, itemIds: ROLAMENTOS, slot: '2026-09-08T0800' }]
+    const rolamentos = ITENS_1GRAU.find((i) => i.id === 'g1-edu--rolamentos')!
+
+    const sem = montarAcompanhamento({ ...base, aulas, registrosPorAluno: new Map() })
+    expect(sem.ensinados).toBe(0)
+
+    const com = montarAcompanhamento({
+      ...base,
+      aulas,
+      registrosPorAluno: new Map(),
+      equivalentes,
+    })
+    expect(com.ensinados).toBe(1)
+    const linha = com.grupos.flatMap((g) => g.itens).find((i) => i.item.id === rolamentos.id)!
+    expect(linha.ensinado).toBe(true)
+    expect(linha.celulas.every((c) => c.estado === 'pendente')).toBe(true)
+  })
+})
+
+/**
+ * O CASO QUE DERRUBOU A PRIMEIRA VERSAO DA REGRA, tirado do programa real da RGI
+ * em 08/09/2026.
+ *
+ * `quedas--o-soto-gari` (id de azul) esta na aula 1, dada naquela manha.
+ * `g1-quedas--osoto-gari` (o requisito) esta na aula 15, sem data. A regra "o id
+ * proprio ganha" devolvia a aula 15 e "nao ensinado" — para uma tecnica que o
+ * professor tinha acabado de dar.
+ *
+ * O erro era de ORDEM: precedencia escolhe o caminho antes de saber qual deles
+ * aconteceu. Nenhum teste inventado tinha essa forma; o dado de producao tinha.
+ */
+describe('entre os dois caminhos, ganha o que JA FOI DADO', () => {
+  const equivalentes = (id: string) =>
+    id === 'g1-quedas--osoto-gari' ? ['az--o-soto-gari'] : []
+
+  const osoto = (aulaDoItem: Map<string, number>, dataDaAula: Map<number, string>) =>
+    programacaoDoRequisito({
+      requisitoId: 'g1-quedas--osoto-gari',
+      aulaDoItem,
+      dataDaAula,
+      limite: '2026-09-08',
+      equivalentes,
+    })
+
+  it('equivalente dado na aula 1 vence o id proprio sem data na aula 15', () => {
+    const r = osoto(
+      new Map([
+        ['az--o-soto-gari', 1],
+        ['g1-quedas--osoto-gari', 15],
+      ]),
+      new Map([[1, '2026-09-08']]),
+    )
+    expect(r.ensinado).toBe(true)
+    expect(r.aula).toBe(1)
+  })
+
+  it('entre dois caminhos JA DADOS, ganha a data mais antiga', () => {
+    // "A primeira aparicao ganha": o que decide "esta aprendendo" e a primeira
+    // vez que o aluno viu, e nao a repeticao.
+    const r = osoto(
+      new Map([
+        ['az--o-soto-gari', 9],
+        ['g1-quedas--osoto-gari', 2],
+      ]),
+      new Map([
+        [2, '2026-09-05'],
+        [9, '2026-09-01'],
+      ]),
+    )
+    expect(r.ensinado).toBe(true)
+    expect(r.data).toBe('2026-09-01')
+    expect(r.aula).toBe(9)
+  })
+
+  it('nenhum dado ainda: ganha a aula MENOR, que e quando vai ser dado', () => {
+    const r = osoto(
+      new Map([
+        ['az--o-soto-gari', 12],
+        ['g1-quedas--osoto-gari', 4],
+      ]),
+      new Map(),
+    )
+    expect(r.ensinado).toBe(false)
+    expect(r.aula).toBe(4)
+  })
+})
+
+/**
+ * `programadas` E `dadas` SAO PERGUNTAS DIFERENTES, e confundi-las produziu um
+ * defeito que a pagina de amostra mostrou na primeira olhada: a coluna dizia
+ * "falta parte" para "Raspagem de tesoura", cuja unica parte nao esta programada
+ * em lugar nenhum. Nao falta parte — falta o requisito inteiro.
+ *
+ * `programadas` responde "esta no programa?"; `dadas` responde "ja aconteceu?".
+ * A tela usa a primeira para escolher a FRASE e a segunda para o NUMERO.
+ */
+describe('partes: programadas responde uma coisa, dadas responde outra', () => {
+  const TRES = ['az--a', 'az--b', 'az--c']
+  const equivalentes = (id: string) => (id === 'req' ? TRES : [])
+  const req = (aulaDoItem: Map<string, number>, dataDaAula: Map<number, string>) =>
+    programacaoDoRequisito({
+      requisitoId: 'req',
+      aulaDoItem,
+      dataDaAula,
+      limite: '2026-09-08',
+      equivalentes,
+    })
+
+  it('nenhuma parte programada: `programadas` zero — a tela diz "fora do programa"', () => {
+    const r = req(new Map(), new Map())
+    expect(r.partes).toEqual({ programadas: 0, dadas: 0, total: 3 })
+    expect(r.aula).toBe(null)
+  })
+
+  it('programadas SEM data conta em `programadas` e NAO em `dadas`', () => {
+    /**
+     * A distincao que a tela precisa: tres partes no programa, nenhuma com data.
+     * "Fora do programa" seria falso (estao lá) e "3 de 3 partes" tambem
+     * (nenhuma foi dada).
+     */
+    const r = req(
+      new Map([
+        ['az--a', 4],
+        ['az--b', 5],
+        ['az--c', 6],
+      ]),
+      new Map(),
+    )
+    expect(r.partes).toEqual({ programadas: 3, dadas: 0, total: 3 })
+    expect(r.aula).toBe(6)
+    expect(r.ensinado).toBe(false)
+  })
+
+  it('parcialmente programado E parcialmente dado: as duas contagens divergem', () => {
+    const r = req(
+      new Map([
+        ['az--a', 1],
+        ['az--b', 9],
+      ]),
+      new Map([
+        [1, '2026-09-01'],
+        [9, '2026-10-10'],
+      ]),
+    )
+    // `az--c` fora do programa: o requisito nao pode se completar.
+    expect(r.aula).toBe(null)
+    expect(r.partes).toEqual({ programadas: 2, dadas: 1, total: 3 })
+  })
+
+  it('requisito de UMA parte tambem tem `partes`, e a TELA e que decide nao mostrar', () => {
+    /**
+     * O core devolve o dado; a decisao de nao imprimir "0 de 1 partes" e de
+     * apresentacao e vive no componente. Pôr a regra aqui obrigaria toda outra
+     * tela a herdar uma escolha de layout desta.
+     */
+    const uma = (id: string) => (id === 'req' ? ['az--a'] : [])
+    const r = programacaoDoRequisito({
+      requisitoId: 'req',
+      aulaDoItem: new Map(),
+      dataDaAula: new Map(),
+      limite: '2026-09-08',
+      equivalentes: uma,
+    })
+    expect(r.partes).toEqual({ programadas: 0, dadas: 0, total: 1 })
   })
 })

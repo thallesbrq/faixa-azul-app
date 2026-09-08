@@ -235,14 +235,47 @@ function LinhaDoItem({
         {item.aula === null ? (
           /* ITEM FORA DO PROGRAMA e uma lacuna que o professor precisa ver: se
              ele nunca programar, o aluno nunca vai ver, e o 1o grau fica preso
-             sem que nada na tela diga por que. */
-          <span className="ac-sem-aula" title="Este item não está em nenhuma aula do programa">
-            fora do programa
-          </span>
+             sem que nada na tela diga por que.
+
+             PARCIALMENTE PROGRAMADO E OUTRA LACUNA, e a frase muda: o requisito
+             ESTA no programa, pela metade. "Ukemi conta como todos frente,
+             costas e lateral" — decisao do professor — e sem esta distincao um
+             requisito com duas das tres partes programadas ficaria identico a um
+             que nunca foi tocado. As duas exigem acao dele, mas acoes
+             diferentes: uma e completar, a outra e comecar.
+
+             A CONDICAO E `programadas > 0` E NAO `partes !== null`. Com
+             `partes !== null` a tela dizia "falta parte" para "Raspagem de
+             tesoura", cuja unica parte nao esta programada em lugar nenhum — nao
+             falta parte, falta o requisito. A pagina de amostra mostrou isso na
+             primeira olhada. */
+          item.partes && item.partes.programadas > 0 ? (
+            <span
+              className="ac-sem-aula"
+              title={`Este requisito é composto por ${item.partes.total} itens do currículo de azul, e ${item.partes.programadas} deles estão no programa. Ele só conta como dado quando todos estiverem.`}
+            >
+              falta parte
+            </span>
+          ) : (
+            <span className="ac-sem-aula" title="Este item não está em nenhuma aula do programa">
+              fora do programa
+            </span>
+          )
         ) : (
           <span title={item.data ? `Aula ${item.aula} em ${item.data}` : `Aula ${item.aula}, sem data`}>
             {item.aula}
             {item.data === null && <span className="ac-sem-data"> sem data</span>}
+          </span>
+        )}
+        {/* O PARCIAL SO APARECE ENQUANTO FALTA ALGO E SO A PARTIR DE DUAS PARTES.
+            Mostrar "3 de 3" em toda linha completa poria ruido em 16 das 29
+            linhas para dizer o que a coluna da aula ja diz; e com UMA parte
+            "parte" nao e um conceito util — o requisito esta ou nao esta no
+            programa. Sem o `total > 1`, a tela imprimia "0 de 1 partes" em sete
+            linhas, que foi o que a amostra revelou. */}
+        {item.partes && item.partes.total > 1 && item.partes.dadas < item.partes.total && (
+          <span className="ac-partes" title="Partes deste requisito já dadas em aula">
+            {item.partes.dadas} de {item.partes.total} partes
           </span>
         )}
       </td>

@@ -44,6 +44,7 @@
 
 import { montarAcompanhamento } from '../packages/core/src/application/acompanhamento'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '../packages/core/src/seed/primeiro-grau'
+import { equivalentesDe } from '../packages/core/src/seed/equivalencia-1grau'
 import { ACADEMIA, gravar, ler, listar } from './firestore-rest'
 
 const ALUNO = {
@@ -118,6 +119,12 @@ async function preverAMatriz(hoje: Date) {
       aulas,
       registrosPorAluno: new Map(),
       hoje,
+      /**
+       * A MESMA TABELA QUE A CENTRAL PASSA (`AcompanhamentoDaTurma`). Sem ela
+       * este script previa a matriz de antes do conserto: ids `g1-*` contra um
+       * programa gravado com ids de azul, e a resposta era "0 de 29 dados".
+       */
+      equivalentes: equivalentesDe,
     }),
   }
 }
