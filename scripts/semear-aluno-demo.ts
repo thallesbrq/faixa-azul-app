@@ -55,7 +55,16 @@ const ALUNO = {
   turma: 'RGI',
   /** A prova que ele persegue. Thalles tem 3 graus. */
   meta: '3grau',
-  /** O curriculo que ele treina: azul inteiro, guarda fechada e meia inclusas. */
+  /**
+   * O curriculo que ele treina: AZUL, e nao `1grau`.
+   *
+   * ISTO FOI CONFERIDO E CORRIGIDO EM PRODUCAO. Com `estuda: '1grau'` o
+   * curriculo passa a ser medido por ATESTADO — e sem atestacao nenhuma a coluna
+   * mostra 0%, nao os 57% de dominio de cartao que ele de fato tem. O conteudo
+   * das 35 aulas esta DENTRO do curriculo de azul (fundamentos, quedas, defesa
+   * pessoal, guarda fechada, meia guarda), entao `azul` mostra tudo o que ele
+   * treina; `1grau` mostraria so o julgamento do professor, que ainda nao houve.
+   */
   estuda: 'azul',
   /** Ligado para testar a feature — ele contratou particulares. */
   temParticulares: true,
@@ -65,32 +74,51 @@ const ALUNO = {
 /**
  * O PERFIL DO ALUNO, e nao uma distribuicao aleatoria.
  *
- * "Para mim considere todo o conteudo das 35 aulas, mais todo da guarda fechada
- * e meia guarda" — entao o dado tem de mostrar isso: forte no que ele treinou,
- * fraco no que ainda nao viu. Uma distribuicao uniforme produziria uma tela
- * bonita e sem informacao nenhuma, e o professor nao teria o que ler nela.
+ * "Considere para o Floki todo o curriculo das 35 aulas completo, inclusive com
+ * defesa pessoal" — entao TODO O CONTEUDO DAS 35 AULAS entra como `dominado`. O
+ * que fica fraco e o que as 35 aulas nao cobrem: as guardas abertas do exame de
+ * azul e o complexo moderno, que sao conteudo de faixa azul de verdade.
  *
- * NIVEL POR BLOCO DO CURRICULO:
- * - `dominado`: guarda fechada e meia guarda (o que ele treina há 3 graus)
- * - `aprendendo`: fundamentos e quedas (conteudo das 35 aulas)
- * - `visto`: guardas abertas que aparecem na aula mas nao sao dele
- * - `nao_iniciado`: complexo moderno e saidas avancadas — faixa azul de verdade
+ * Uma distribuicao uniforme produziria uma tela bonita e sem informacao nenhuma:
+ * o professor nao teria o que ler nela. O contraste E o dado.
+ *
+ * O QUE AS 35 AULAS COBREM (`dominado`):
+ * - fundamentos: base, movimentacao, rolamento, fuga de quadril
+ * - quedas: as cinco, com ukemi
+ * - defesa pessoal: as onze — dadas na aula 00 experimental
+ * - guarda fechada e meia guarda: inteiras, os tres graus de treino
+ * - saidas: das posicoes que o 1o grau cobra (montada, 100kg, costas)
+ *
+ * O QUE ELAS NAO COBREM:
+ * - guardas abertas (gancho, aranha, dela riva, laco): `visto`, aparecem na aula
+ * - complexo moderno: `nao_iniciado`, e conteudo de azul
  */
 const NIVEL_POR_BLOCO: Record<string, 'dominado' | 'aprendendo' | 'visto' | 'nao_iniciado'> = {
+  fundamentos: 'dominado',
+  quedas: 'dominado',
   fechada: 'dominado',
   meia: 'dominado',
-  fundamentos: 'aprendendo',
-  quedas: 'aprendendo',
+  saidas: 'dominado',
+  /**
+   * DEFESA PESSOAL ENTRA COMO `dominado` E ISSO MEXE EM UM CARTAO SO.
+   *
+   * Os 11 itens nao tem cartao proprio (ADR-012: o app nao ensina defesa contra
+   * golpe por texto). O modulo tem UM cartao de reconhecimento — "liste os 11
+   * itens que a prova exige" — e ele nao carrega `itemId`, entao cai no ramo
+   * "cartao sem item" mais abaixo. Marcar aqui documenta a intencao; o efeito
+   * numerico vem daquele ramo.
+   *
+   * Consequencia honesta: nao existe forma de o app registrar que ele EXECUTA
+   * defesa de soco. Isso e atestacao do professor, nao cartao — e e exatamente
+   * por isso que o 1o grau e medido por atestado.
+   */
+  'defesa-pessoal': 'dominado',
   gancho: 'visto',
   aranha: 'visto',
   'dela-riva': 'visto',
   laco: 'visto',
-  aberta: 'aprendendo',
-  saidas: 'visto',
+  aberta: 'visto',
   complexo: 'nao_iniciado',
-  // Defesa pessoal nao tem cartao por item (ADR-012), entao nao entra aqui de
-  // qualquer forma. Fica escrito para nao parecer esquecimento.
-  'defesa-pessoal': 'nao_iniciado',
 }
 
 const DIA_MS = 86_400_000
@@ -143,11 +171,19 @@ function montarEstado(agora: Date) {
   const revisoes: ReviewState[] = []
   let n = 0
   for (const c of baralho) {
-    // Cartao sem item (requisito, teoria, reconhecimento) recebe nivel medio: ele
-    // existe no baralho e o aluno o estuda, mas nao pertence a bloco nenhum.
+    /**
+     * Cartao SEM item (requisito da prova, teoria, reconhecimento de defesa
+     * pessoal) entra como `dominado`: os tres sao conteudo das 35 aulas —
+     * quantas raspagens a prova exige, os termos, e a lista de defesa pessoal.
+     *
+     * Era `aprendendo`, e mudou junto com o pedido de "35 aulas completo": o
+     * cartao de reconhecimento de defesa pessoal e o UNICO caminho que o app tem
+     * para representar aquele modulo, e deixa-lo pela metade contradiria o
+     * pedido sem que nada na tela dissesse por que.
+     */
     const posicao = c.itemId ? posicaoPorItem.get(c.itemId) : undefined
     const bloco = posicao ? blocoDaPosicao(posicao) : null
-    const nivel = bloco ? NIVEL_POR_BLOCO[bloco] : 'aprendendo'
+    const nivel = bloco ? NIVEL_POR_BLOCO[bloco] : 'dominado'
     if (nivel === 'nao_iniciado') continue
     revisoes.push(revisao(c.id, nivel, agora, n++))
   }

@@ -140,8 +140,56 @@ describe('o CURRICULO decide a medida', () => {
     expect(azul.progresso).toBe(0)
     expect(azul.motivo).toBeNull()
 
+    // Sem atestacao lida, o de atestado ainda nao tem numero...
     expect(grau.progresso).toBeNull()
-    expect(grau.motivo).toBe('medido-por-atestado')
+    expect(grau.motivo).toBe('atestado-nao-lido')
+    expect(grau.medidaUsada).toBe('atestado')
+  })
+
+  it('ATESTADO TEM NUMERO — e antes mostrava travessao para sempre', () => {
+    /**
+     * O DEFEITO QUE ISTO CONSERTA, e como ele apareceu.
+     *
+     * O Floki foi semeado com `estuda: 'azul'` e a Central mostrou 57%. Ao
+     * trocar para `estuda: '1grau'`, os 57% viraram `—` e o dado PARECEU ter
+     * sido perdido. Nao foi: o ramo de atestado devolvia `progresso: null` com
+     * motivo `medido-por-atestado`, e a coluna nao mostrava nada — nem o
+     * numerador, nem o denominador, nem que havia um.
+     *
+     * Havia dado (as atestacoes) e havia denominador (os itens do curriculo). A
+     * coluna vazia nao distinguia "nao e medido aqui" de "zero de 29 atestados".
+     */
+    const com = (competentes: number | null) =>
+      linhaDoAluno({
+        uid: 'u1', nome: 'Floki', turma: 'RGI', meta: '1grau', estuda: '1grau',
+        estado: estado(),
+        curriculo: curriculo([item({ id: 'a' }), item({ id: 'b' }), item({ id: 'c' }), item({ id: 'd' })], 'atestado'),
+        competentes,
+        agora: AGORA,
+      })
+
+    expect(com(1).progresso).toBe(0.25)
+    expect(com(1).motivo).toBeNull()
+    expect(com(1).medidaUsada).toBe('atestado')
+    expect(com(4).progresso).toBe(1)
+
+    // ZERO ATESTADAS E UM NUMERO, e nao uma ausencia: e o primeiro dia de todo
+    // aluno novo, e o professor precisa ver 0% e nao um travessao.
+    expect(com(0).progresso).toBe(0)
+    expect(com(0).motivo).toBeNull()
+
+    // `null` e outra coisa: NAO CONSEGUIMOS LER. Se isto virasse 0, uma falha de
+    // rede pareceria professor que nao atestou nada.
+    expect(com(null).progresso).toBeNull()
+    expect(com(null).motivo).toBe('atestado-nao-lido')
+  })
+
+  it('a medida usada viaja na linha — 40%% de cartao nao e 40%% de atestado', () => {
+    // Sem este campo a tela junta o que o aluno recupera de cabeca com o que o
+    // professor confirmou no tatame, sob o mesmo cabecalho "Progresso".
+    const cartoes = linha({ estuda: 'azul', curriculo: porCartoes })
+    expect(cartoes.medidaUsada).toBe('cartoes')
+    expect(linha({ curriculo: null }).medidaUsada).toBeNull()
   })
 
   it('A META NAO DECIDE MAIS A MEDIDA — e este e o meu proprio caso', () => {

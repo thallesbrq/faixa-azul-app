@@ -541,6 +541,17 @@
   color: var(--cor-texto-suave);
 }
 
+/* A medida fica sob o numero, pequena: ela qualifica o valor sem competir com
+   ele. Numa coluna estreita, ao lado ficaria em duas linhas quebradas. */
+.medida-nota {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--laranja-texto);
+}
+
 .nome-inerte {
   font-weight: 600;
   color: var(--cor-texto-suave);

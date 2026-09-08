@@ -15,6 +15,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Convite, Dados } from '@faixa-azul/core/nuvem/pessoas'
 import { abrirCentral } from '@faixa-azul/core/nuvem/central'
+import { abrirCompetencias } from '@faixa-azul/core/nuvem/competencias'
+import type { Competencias } from '@faixa-azul/core/nuvem/competencias'
+import { itensCompetentes } from '@faixa-azul/core/domain/competencia'
 import type { DadosDaCentral } from '@faixa-azul/core/nuvem/central'
 import {
   linhaConvidada,
@@ -74,6 +77,7 @@ export function useLinhas({
     convites: [],
   })
   const central = useRef<DadosDaCentral | null>(null)
+  const comps = useRef<Competencias | null>(null)
 
   const carregar = useCallback(async () => {
     setEstado((a) => ({ ...a, fase: 'carregando-pessoas', mensagem: null }))
@@ -124,6 +128,40 @@ export function useLinhas({
       if (!central.current) central.current = await abrirCentral(app)
       const { porUid, falhas } = await central.current.estadosDe(alunos.map((p) => p.uid))
 
+      /**
+       * ATESTACOES SO DE QUEM E MEDIDO POR ELAS.
+       *
+       * Quem estuda o curriculo de azul e medido por cartao e nunca consulta
+       * este mapa; ler `competencias` de vinte alunos para usar em dois seria
+       * vinte consultas de colecao a mais por abertura de tela.
+       *
+       * A DECISAO DE QUEM PRECISA VEM DO CURRICULO, e nao de uma lista de metas
+       * cravada aqui: `curriculoPorId(estuda)?.medida === 'atestado'`. Cravar
+       * `estuda === '1grau'` funcionaria hoje e erraria no dia em que o 2o grau
+       * chegasse — silenciosamente, com a coluna voltando a `—`.
+       */
+      const porAtestado = alunos.filter((p) => curriculoPorId(p.estuda)?.medida === 'atestado')
+      const competentes = new Map<string, number>()
+      if (porAtestado.length > 0) {
+        if (!comps.current) comps.current = await abrirCompetencias(app)
+        await Promise.all(
+          porAtestado.map(async (p) => {
+            try {
+              const registros = await comps.current!.registrosDe(p.uid)
+              competentes.set(p.uid, itensCompetentes(registros).size)
+            } catch {
+              /**
+               * FALHA FICA FORA DO MAPA, e nao entra como zero.
+               *
+               * `linhaDoAluno` traduz "ausente do mapa" em `atestado-nao-lido` e
+               * mostra `—`. Um zero aqui diria ao professor que ele nao atestou
+               * nada — e ele pode ter atestado os 29.
+               */
+            }
+          }),
+        )
+      }
+
       const agora = new Date()
       // A montagem e do core: a aba do professor no celular usa a MESMA funcao,
       // para as duas telas nao discordarem sobre a mesma academia.
@@ -131,6 +169,7 @@ export function useLinhas({
         cadastros: alunos,
         convites: convitesDeAluno,
         estados: porUid,
+        competentes,
         curriculoPorId,
         agora,
       })

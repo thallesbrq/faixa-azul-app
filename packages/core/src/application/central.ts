@@ -97,9 +97,20 @@ export function gruposComItens(curriculo: Curriculo): GrupoTecnico[] {
  * - `sem-curriculo`: nao existe lista de itens para o que ele estuda (2o/3o/4o
  *   grau, ou nada definido). Medir contra um curriculo que nao e o dele
  *   produziria vermelho para quem nao esta mal.
- * - `medido-por-atestado`: o 1o grau. HA curriculo e HA dado — a medida e outra.
+ * - `atestado-nao-lido`: o curriculo e medido por atestado e NAO conseguimos ler
+ *   as atestacoes. Diferente de "zero atestadas", que tem numero.
  *
  * Zero e uma quinta coisa, e essa tem numero: sincronizou e esta em zero.
+ *
+ * `medido-por-atestado` FOI REMOVIDO, e a remocao conserta um defeito que estava
+ * no ar. Ele fazia todo aluno de 1o grau mostrar `—` na coluna Progresso PARA
+ * SEMPRE — mesmo havendo numero real (atestados / total). O professor nao
+ * conseguia distinguir "nao e medido aqui" de "zero de 29 atestados", que e
+ * precisamente a coluna-que-nao-informa que este arquivo existe para evitar.
+ *
+ * Como apareceu: o Floki foi semeado com `estuda: 'azul'` e mostrava 57%; ao
+ * trocar para `estuda: '1grau'` na Central, os 57% viraram travessao e o dado
+ * pareceu ter sido perdido. Nao foi — mas a tela dizia que sim.
  *
  * A DECISAO MUDOU DE DONO DUAS VEZES. Vinha da TURMA (`medeCurriculoDeAzul`), e
  * a RG2 era a razao; passou para a META do aluno, porque um faixa branca novo e
@@ -112,7 +123,7 @@ export type MotivoSemProgresso =
   | 'convidado'
   | 'sem-dados'
   | 'sem-curriculo'
-  | 'medido-por-atestado'
+  | 'atestado-nao-lido'
 
 export interface LinhaDaCentral {
   /**
@@ -136,8 +147,24 @@ export interface LinhaDaCentral {
    * lista que nao existe, ou apareceria perseguindo o azul.
    */
   estuda: string
-  /** `null` quando ha motivo para nao medir — ver `motivo`. */
+  /**
+   * 0 a 1, ou `null` quando ha motivo para nao medir — ver `motivo`.
+   *
+   * VEM DE DUAS FONTES, decididas pelo curriculo e nao pela linha: dominio de
+   * cartoes (`medida: 'cartoes'`) ou fracao atestada pelo professor
+   * (`medida: 'atestado'`). `medidaUsada` diz qual, porque o numero sozinho nao
+   * diz — e 60% de cartao e 60% de atestado nao significam a mesma coisa.
+   */
   progresso: number | null
+  /**
+   * Como `progresso` foi obtido. `null` junto com ele.
+   *
+   * A TELA PRECISA DIZER ISSO, e nao e detalhe: 40% de dominio de cartao e o
+   * aluno recuperando tecnica de cabeca; 40% de atestado e o professor tendo
+   * confirmado 12 de 29 itens no tatame. Mostrar os dois como "Progresso" sem
+   * distinguir junta o que o aluno faz sozinho com o que o professor viu.
+   */
+  medidaUsada: 'cartoes' | 'atestado' | null
   motivo: MotivoSemProgresso | null
   /** Faixa de cor do progresso, ou `null` junto com ele. */
   faixa: FaixaDeCor | null
@@ -222,6 +249,7 @@ function linhaVazia(
     demo: entrada.demo ?? false,
     temParticulares: entrada.temParticulares ?? false,
     progresso: null,
+    medidaUsada: null,
     motivo,
     faixa: null,
     porGrupo: {},
@@ -280,6 +308,7 @@ export function linhaDoAluno({
   demo = false,
   temParticulares = false,
   estado,
+  competentes = null,
   curriculo,
   agora,
 }: {
@@ -295,6 +324,16 @@ export function linhaDoAluno({
   estado: EstadoPersistido
   /** O curriculo DE `estuda`. `null` quando nao existe lista para ele. */
   curriculo: Curriculo | null
+  /**
+   * Quantos itens do curriculo o PROFESSOR atestou. Só é usado quando
+   * `curriculo.medida === 'atestado'`.
+   *
+   * `null` significa "nao conseguimos ler as atestacoes", e NAO "zero
+   * atestadas" — a distincao e a razao de o parametro nao ter default 0. Com
+   * default, uma falha de leitura viraria 0% e o professor concluiria que nao
+   * atestou nada.
+   */
+  competentes?: number | null
   agora: Date
 }): LinhaDaCentral {
   // O resumo ja resolve atividade, duvidas e aulas — e ja tem teste. As datas de
@@ -333,6 +372,7 @@ export function linhaDoAluno({
     return {
       ...base,
       progresso: null,
+      medidaUsada: null,
       motivo: 'sem-curriculo',
       faixa: null,
       porGrupo: {},
@@ -342,23 +382,36 @@ export function linhaDoAluno({
   }
 
   /**
-   * Curriculo medido por ATESTADO do professor (1o grau): o numero vem da fatia
-   * 2 do ADR-016. Ha curriculo e ha dado — a medida e que e outra. Dizer
-   * "sem curriculo" aqui seria mentir sobre um curriculo que existe, e medir por
-   * cartoes daria zero eterno, porque 11 dos 29 itens nao tem cartao nenhum.
+   * Curriculo medido por ATESTADO do professor (o 1o grau).
+   *
+   * ELE TEM NUMERO, e antes nao tinha — a versao anterior devolvia
+   * `progresso: null` com motivo `medido-por-atestado`, e a coluna mostrava `—`
+   * para sempre. Havia dado (as atestacoes), havia denominador (os itens do
+   * curriculo) e a tela nao mostrava nenhum dos dois.
+   *
+   * MEDIR POR CARTOES AQUI CONTINUA ERRADO, e por isso o ramo existe: 11 dos 29
+   * itens do 1o grau nao tem cartao nenhum, entao dominio de cartao daria zero
+   * eterno. A medida certa e quantos itens o professor confirmou no tatame.
    *
    * A MEDIDA VEM DO CURRICULO, E NAO DA META (ADR-017, decisao 6). Enquanto vinha
    * da meta, o meu caso era medido errado: persigo o 3o grau (medida de atestado)
    * e estudo o curriculo de azul (medida de cartoes) — a medida de uma prova
-   * aplicada ao conteudo de outra, que produziria `—` para quem tem 81 itens de
-   * cartao em andamento.
+   * aplicada ao conteudo de outra.
    */
   if (curriculo.medida === 'atestado') {
+    const total = curriculo.itens.length
     return {
       ...base,
-      progresso: null,
-      motivo: 'medido-por-atestado',
-      faixa: null,
+      // `null` so quando NAO CONSEGUIMOS LER as atestacoes. Zero atestadas e um
+      // numero, e ele precisa aparecer: e o primeiro dia de todo aluno novo.
+      progresso: competentes === null || total === 0 ? null : competentes / total,
+      medidaUsada: 'atestado',
+      motivo: competentes === null || total === 0 ? 'atestado-nao-lido' : null,
+      faixa: competentes === null || total === 0 ? null : faixaDaPontuacao(competentes / total),
+      // POR GRUPO FICA VAZIO DE PROPOSITO. As colunas da tabela sao dominio de
+      // CARTAO por grupo tecnico, e atestacao nao se divide assim sem um segundo
+      // agrupamento que ainda nao existe. Inventar valor por coluna aqui poria
+      // numero de atestado sob um cabecalho que promete cartao.
       porGrupo: {},
       validado: null,
       aguardandoValidacao: null,
@@ -376,6 +429,7 @@ export function linhaDoAluno({
   return {
     ...base,
     progresso: geral.dominio,
+    medidaUsada: 'cartoes',
     motivo: null,
     faixa: faixaDaPontuacao(geral.dominio),
     porGrupo,
@@ -506,6 +560,7 @@ export function linhasDaAcademia({
   cadastros,
   convites = [],
   estados,
+  competentes,
   curriculoPorId,
   agora,
 }: {
@@ -516,6 +571,14 @@ export function linhasDaAcademia({
    */
   convites?: readonly ConviteNaLista[]
   estados: ReadonlyMap<string, EstadoPersistido>
+  /**
+   * Quantos itens o professor atestou, por uid. Ausente do mapa = nao lido.
+   *
+   * OPCIONAL PORQUE SO IMPORTA A QUEM E MEDIDO POR ATESTADO, e quem busca o azul
+   * nunca consulta este mapa. Passar sempre obrigaria a Central a ler
+   * `competencias` de vinte alunos para usar em dois.
+   */
+  competentes?: ReadonlyMap<string, number>
   /**
    * O curriculo de um id de curriculo. `null` quando nao existe lista para ele.
    *
@@ -546,7 +609,15 @@ export function linhasDaAcademia({
       }
       // Ausente do mapa = nunca sincronizou. NAO e zero, e nao sabemos.
       if (!e) return linhaSemDados(base)
-      return linhaDoAluno({ ...base, estado: e, curriculo: curriculoPorId(p.estuda), agora })
+      return linhaDoAluno({
+        ...base,
+        estado: e,
+        curriculo: curriculoPorId(p.estuda),
+        // `?? null` e nao `?? 0`: fora do mapa significa "nao lido", e virar zero
+        // faria falha de leitura parecer professor que nao atestou nada.
+        competentes: competentes?.get(p.uid) ?? null,
+        agora,
+      })
     })
 
   const dosConvites = convites
@@ -605,9 +676,10 @@ export function mediaDaTurma(linhas: readonly LinhaDaCentral[]): MediaDaTurma {
     convidado: 0,
     'sem-dados': 0,
     'sem-curriculo': 0,
-    // Medido por atestado: fora da media de cartoes por DESENHO, e nao por
-    // falta. Contar junto com "sem curriculo" faria a tela dizer que falta algo.
-    'medido-por-atestado': 0,
+    // Atestacoes ilegiveis: FALHA DE LEITURA, e nao ausencia de atestado. Contar
+    // junto com "sem curriculo" faria a tela dizer que falta lista, quando falta
+    // conexao.
+    'atestado-nao-lido': 0,
   }
   let soma = 0
   let considerados = 0

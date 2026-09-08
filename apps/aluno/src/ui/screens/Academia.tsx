@@ -125,8 +125,15 @@ export function Academia({ estado, aoRecarregar }: AcademiaProps) {
               {l.motivo === 'sem-curriculo' && (
                 <div className="aluno-nota">meta sem currículo ainda</div>
               )}
-              {l.motivo === 'medido-por-atestado' && (
-                <div className="aluno-nota">medido pelo seu atestado</div>
+              {/* A NOTA MUDOU DE SENTIDO: antes ela explicava um travessao
+                  ("medido pelo seu atestado", sem numero). Agora o numero
+                  aparece, e o que a nota faz e dizer DE ONDE ele vem — porque
+                  40% de cartao e 40% de atestado nao querem dizer o mesmo. */}
+              {l.medidaUsada === 'atestado' && l.progresso !== null && (
+                <div className="aluno-nota">do seu atestado, não de cartões</div>
+              )}
+              {l.motivo === 'atestado-nao-lido' && (
+                <div className="aluno-nota">não consegui ler as atestações</div>
               )}
               {l.duvidasAbertas > 0 && (
                 <div className="aluno-duvidas">

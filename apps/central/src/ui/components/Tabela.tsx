@@ -71,8 +71,10 @@ export function Tabela({
     if (l.motivo === 'sem-dados') return 'Este aluno ainda não sincronizou nenhuma vez.'
     if (l.motivo === 'sem-curriculo')
       return 'O currículo que este aluno estuda ainda não tem lista de itens.'
-    if (l.motivo === 'medido-por-atestado')
-      return 'Currículo medido pelo seu atestado, e não por cartões. Ver a aba do 1º grau.'
+    // FALHA DE LEITURA, e nao ausencia de atestado: a frase precisa cobrar a
+    // conexao, e nao o professor.
+    if (l.motivo === 'atestado-nao-lido')
+      return 'Não consegui ler as atestações deste aluno. É falha de leitura — tente recarregar.'
     return null
   }
 
@@ -141,6 +143,15 @@ export function Tabela({
               )}
               <td className="num">
                 <strong style={{ color: corDaFaixa(l.faixa) }}>{porcento(l.progresso)}</strong>
+                {/* A MEDIDA JUNTO DO NUMERO. Sem isto, "24%" de atestado e "24%"
+                    de cartao ficam identicos na mesma coluna — e um e o que o
+                    aluno recupera de cabeca, o outro e o que o professor
+                    confirmou no tatame. */}
+                {l.medidaUsada === 'atestado' && l.progresso !== null && (
+                  <span className="medida-nota" title="Fração dos itens que VOCÊ atestou">
+                    atestado
+                  </span>
+                )}
                 {/* Medidor so onde ha numero: uma barra de largura zero se le
                     como "zero por cento", e ausencia nao e zero. */}
                 {l.progresso !== null && (
