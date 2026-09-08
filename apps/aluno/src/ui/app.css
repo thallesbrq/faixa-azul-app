@@ -1907,3 +1907,124 @@
   color: var(--cor-texto-suave);
   margin-top: 3px;
 }
+
+/* ---------------------------------------------------------------------------
+   PROGRAMA DA TURMA (celular) — a tela de quem vai DAR a aula.
+
+   FILA VERTICAL e nao grade: no celular a pergunta e "o que eu dou hoje?", e a
+   resposta tem de estar no topo sem paginar. A grade semanal e da Central, onde
+   o professor esta montando.
+   --------------------------------------------------------------------------- */
+.programa-turmas {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+/* OS BOTOES DE TURMA FICAM LADO A LADO, e nao empilhados.
+   `.botao` no app do aluno e de largura cheia — desenhado para acao principal
+   numa tela de celular. Com duas turmas isso gastava duas linhas inteiras para
+   dois nomes de tres letras, empurrando a aula de hoje para fora da primeira
+   dobra: exatamente a informacao que quem cobre a aula abre o app para ver. */
+.programa-turmas .botao {
+  width: auto;
+  flex: 0 0 auto;
+  min-width: 84px;
+  padding: 8px 16px;
+}
+
+.programa-fila {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.programa-aula {
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--cor-fundo);
+}
+
+/* A AULA DE HOJE E O MOTIVO DE ABRIR O APP. Ela precisa se destacar sem o dedo
+   procurar: quem cobre uma aula abre isto na porta do tatame. */
+.programa-aula--hoje {
+  border-color: var(--laranja);
+  background: var(--laranja-suave);
+  box-shadow: 0 0 0 2px var(--laranja-suave);
+}
+
+.programa-aula-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.programa-aula-quando {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.programa-hoje {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--laranja-texto);
+}
+
+.programa-aula-corpo {
+  margin-top: 8px;
+}
+
+.programa-foco {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.programa-tecnicas {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* LISTA VERTICAL e nao chips: nomes de tecnica sao longos ("Ida para as costas a
+   partir da raspagem pendulo") e em chips lado a lado eles quebram no meio,
+   ficando ilegiveis num aparelho de 375px. */
+.programa-tecnicas li {
+  font-size: 0.85rem;
+  padding-left: 14px;
+  position: relative;
+}
+
+.programa-tecnicas li::before {
+  content: '·';
+  position: absolute;
+  left: 4px;
+  font-weight: 700;
+}
+
+/* O rotulo pontual e VISIVELMENTE outra coisa: nao e item do curriculo, e quem
+   cobre precisa saber que aquilo foi acrescentado a mao. */
+.programa-tecnica--rotulo {
+  color: var(--laranja-texto);
+  font-style: italic;
+}
+
+/* Aula com data e sem conteudo: quem cobre chega e nao ha o que dar. Dizer
+   antes e o unico jeito de dar tempo. */
+.programa-sem-conteudo {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--amarelo-atencao);
+}

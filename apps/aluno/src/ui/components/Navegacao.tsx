@@ -10,7 +10,7 @@
 import type { Papel } from '@faixa-azul/core/domain/papeis'
 import { podeVerAcademia } from '@faixa-azul/core/domain/papeis'
 
-export type Tela = 'aulas' | 'hoje' | 'curriculo' | 'simulado' | 'progresso' | 'perfil' | 'torre'
+export type Tela = 'programa' | 'aulas' | 'hoje' | 'curriculo' | 'simulado' | 'progresso' | 'perfil' | 'torre'
 
 /**
  * A ORDEM AQUI E A ORDEM NA BARRA — e agora ela concorda com a tela que abre.
@@ -40,8 +40,22 @@ const ABAS_DO_ALUNO: { id: Tela; rotulo: string; icone: string }[] = [
  * deixaria cada uma com 53px no 375px e enterraria a Central — que e a unica
  * razao de ele abrir o app — no meio de telas que ele nunca usa.
  */
+/**
+ * QUATRO ABAS, E O `Programa` E A QUARTA — e o espaco existe aqui e nao no aluno.
+ *
+ * O aluno ja tem SEIS abas. Uma setima daria 53px cada num aparelho de 375px, e
+ * o comentario acima registra que foi exatamente por isso que o professor ficou
+ * com tres. Entao a tela do PROGRAMA DA TURMA entra na barra do professor, onde
+ * cabe — e e la que ela e usada: quem cobre uma aula tem papel de professor.
+ *
+ * O CUSTO DISSO, escrito para nao virar esquecimento: o ALUNO nao ve o programa
+ * da turma. Ele se beneficiaria ("o que vem na proxima aula?"), e a razao de nao
+ * ter e orcamento de largura, nao decisao de produto. Quando alguma aba do aluno
+ * sair, esta e a primeira candidata a entrar.
+ */
 const ABAS_DO_PROFESSOR: { id: Tela; rotulo: string; icone: string }[] = [
   { id: 'torre', rotulo: 'Central', icone: '🗼' },
+  { id: 'programa', rotulo: 'Programa', icone: '🗓' },
   { id: 'curriculo', rotulo: 'Currículo', icone: '📋' },
   { id: 'perfil', rotulo: 'Perfil', icone: '👤' },
 ]

@@ -270,3 +270,90 @@ export function rotuloDaSemana(domingo: Date): string {
   }
   return `${fmt(domingo, { day: 'numeric', month: 'short' })} a ${fmt(sabado, { day: 'numeric', month: 'short', year: 'numeric' })}`
 }
+
+// ---------------------------------------------------------------------------
+// A fila: o que vem a seguir
+// ---------------------------------------------------------------------------
+
+export interface AulaNaFila {
+  numero: number
+  slot: string
+  /** `YYYY-MM-DD` local. */
+  data: string
+  /** O `Date` ao meio-dia, para formatar sem risco de fuso. */
+  quando: Date
+  inicio: string
+  fim: string
+  diaDaSemana: number
+  /** E hoje? A tela destaca — e o que o substituto abre o app para ver. */
+  hoje: boolean
+}
+
+/**
+ * As proximas aulas agendadas, de hoje para frente.
+ *
+ * ESTA E A FORMA CERTA PARA CELULAR, e a grade semanal nao e. No computador o
+ * professor esta MONTANDO: ele precisa ver a semana, os espacos livres e o que
+ * ja esta ocupado. No celular, na porta do tatame, a pergunta e outra e e uma so:
+ * "o que eu dou hoje?". Uma paginacao semana a semana obrigaria o substituto a
+ * navegar ate achar hoje — e ele tem cinco minutos e uma mao livre.
+ *
+ * INCLUI HOJE, e nao "a partir de amanha": a comparacao e por DATA
+ * (`YYYY-MM-DD`), entao a aula das 8h continua na fila as 14h do mesmo dia. Quem
+ * abre o app depois da aula quer conferir o que foi dado, e nao ver a aula
+ * desaparecer.
+ */
+export function proximasAulas({
+  aulas,
+  hoje,
+  quantas = 8,
+  horarios,
+}: {
+  aulas: readonly AulaAgendavel[]
+  hoje: Date
+  quantas?: number
+  /** Os horarios da turma, para resolver o fim de cada aula. */
+  horarios: readonly HorarioSemanal[]
+}): AulaNaFila[] {
+  const limite = comoDataLocal(hoje)
+
+  const fila: AulaNaFila[] = []
+  for (const a of aulas) {
+    const p = partesDoSlot(a.slot)
+    // Slot invalido (dado editado a mao, versao antiga) e ignorado em silencio
+    // aqui — `montarPlanner` ja mostra a aula, e a fila nao e o lugar de acusar.
+    if (!p) continue
+    if (p.data < limite) continue
+
+    const quando = daDataLocal(p.data)
+    const h = horarios.find(
+      (x) => x.diaDaSemana === quando.getDay() && x.inicio === p.inicio,
+    )
+
+    fila.push({
+      numero: a.numero,
+      slot: a.slot,
+      data: p.data,
+      quando,
+      inicio: p.inicio,
+      /**
+       * O FIM VEM DO HORARIO DA TURMA, com o inicio como reserva.
+       *
+       * A aula guarda so o inicio (esta no id do slot). Se o horario da turma
+       * mudar depois de agendada, o fim acompanha — o que e o certo: a duracao e
+       * propriedade da turma, nao daquela terca.
+       *
+       * Sem horario correspondente, `fim` repete o inicio. A tela mostra
+       * `08:00–08:00`, que e visivelmente estranho — e melhor que `08:00–` ou
+       * `08:00–undefined`.
+       */
+      fim: h?.fim ?? p.inicio,
+      diaDaSemana: quando.getDay(),
+      hoje: p.data === limite,
+    })
+  }
+
+  return fila
+    .sort((a, b) => (a.data === b.data ? a.inicio.localeCompare(b.inicio) : a.data.localeCompare(b.data)))
+    .slice(0, quantas)
+}

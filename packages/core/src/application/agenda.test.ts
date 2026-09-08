@@ -9,6 +9,7 @@ import {
   idDoSlot,
   partesDoSlot,
   proximaAulaSemData,
+  proximasAulas,
   rotuloDaSemana,
   semanasEntre,
   slotPorAula,
@@ -266,5 +267,87 @@ describe('proximaAulaSemData', () => {
 
   it('aula sem slot conta como sem data, mesmo estando na lista', () => {
     expect(proximaAulaSemData([aula(1), aula(2, '2026-09-10T0800')])).toBe(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// A fila do celular (o professor substituto na porta do tatame)
+// ---------------------------------------------------------------------------
+
+describe('proximasAulas', () => {
+  const horarios = [
+    { diaDaSemana: 2, inicio: '08:00', fim: '09:00' },
+    { diaDaSemana: 4, inicio: '08:00', fim: '09:00' },
+  ]
+  // 08/09 e terca, 10/09 quinta, 15/09 terca, 17/09 quinta.
+  const agendadas = [
+    aula(1, '2026-09-08T0800'),
+    aula(2, '2026-09-10T0800'),
+    aula(3, '2026-09-15T0800'),
+    aula(4, '2026-09-17T0800'),
+    aula(9), // sem data
+  ]
+
+  it('devolve de hoje para frente, em ordem', () => {
+    const f = proximasAulas({ aulas: agendadas, hoje: new Date(2026, 8, 10, 12), horarios })
+    expect(f.map((x) => x.numero)).toEqual([2, 3, 4])
+  })
+
+  it('INCLUI HOJE — a aula das 8h nao desaparece as 14h', () => {
+    /**
+     * A comparacao e por DATA e nao por instante. Quem abre o app depois da aula
+     * quer conferir o que foi dado; ver a aula sumir do topo seria a tela
+     * apagando o que acabou de acontecer.
+     */
+    const deTarde = proximasAulas({ aulas: agendadas, hoje: new Date(2026, 8, 8, 14, 30), horarios })
+    expect(deTarde[0].numero).toBe(1)
+    expect(deTarde[0].hoje).toBe(true)
+  })
+
+  it('marca o que e hoje, e so isso', () => {
+    const f = proximasAulas({ aulas: agendadas, hoje: new Date(2026, 8, 10, 12), horarios })
+    expect(f.filter((x) => x.hoje).map((x) => x.numero)).toEqual([2])
+  })
+
+  it('aula SEM data nao entra na fila', () => {
+    const f = proximasAulas({ aulas: agendadas, hoje: new Date(2026, 8, 1, 12), horarios })
+    expect(f.map((x) => x.numero)).not.toContain(9)
+  })
+
+  it('resolve o FIM pelo horario da turma, e nao pelo que foi gravado', () => {
+    // A duracao e propriedade da turma, nao daquela terca: se o horario mudar,
+    // o fim acompanha as aulas ja agendadas.
+    const f = proximasAulas({ aulas: [aula(1, '2026-09-08T0800')], hoje: new Date(2026, 8, 8, 12), horarios })
+    expect(f[0].fim).toBe('09:00')
+
+    const outro = proximasAulas({
+      aulas: [aula(1, '2026-09-08T0800')],
+      hoje: new Date(2026, 8, 8, 12),
+      horarios: [{ diaDaSemana: 2, inicio: '08:00', fim: '09:30' }],
+    })
+    expect(outro[0].fim).toBe('09:30')
+  })
+
+  it('sem horario correspondente, o fim repete o inicio em vez de sumir', () => {
+    // `08:00–08:00` e visivelmente estranho, e melhor que `08:00–undefined`.
+    const f = proximasAulas({ aulas: [aula(1, '2026-09-08T0800')], hoje: new Date(2026, 8, 8, 12), horarios: [] })
+    expect(f[0].fim).toBe('08:00')
+  })
+
+  it('slot invalido e ignorado, e nao estoura', () => {
+    // Dado editado a mao ou gravado por versao antiga. `montarPlanner` ja mostra
+    // a aula como desconhecida; a fila nao e o lugar de acusar.
+    const f = proximasAulas({ aulas: [aula(1, 'ontem'), aula(2, '2026-09-08T0800')], hoje: new Date(2026, 8, 1, 12), horarios })
+    expect(f.map((x) => x.numero)).toEqual([2])
+  })
+
+  it('respeita o limite de quantas', () => {
+    const f = proximasAulas({ aulas: agendadas, hoje: new Date(2026, 8, 1, 12), quantas: 2, horarios })
+    expect(f).toHaveLength(2)
+    expect(f.map((x) => x.numero)).toEqual([1, 2])
+  })
+
+  it('nada agendado devolve fila vazia', () => {
+    expect(proximasAulas({ aulas: [aula(1)], hoje: new Date(2026, 8, 8, 12), horarios })).toEqual([])
   })
 })

@@ -14,6 +14,19 @@ import { Treino } from './screens/Treino'
 import { Perfil } from './screens/Perfil'
 import { Academia } from './screens/Academia'
 import { abasDoPapel } from './components/Navegacao'
+import { Programa } from './screens/Programa'
+
+/**
+ * "Hoje", fixado na CARGA DO MODULO e nao a cada render.
+ *
+ * `new Date()` no corpo de um componente e um objeto novo em cada render, e ele
+ * entra nas dependencias de todo `useMemo` que o recebe. Esta sessao gastou um
+ * deploy num laco de render por essa forma exata, na Central.
+ *
+ * O custo de fixar: um app aberto atravessando a meia-noite continua achando que
+ * e ontem. Quem deixa o app aberto a noite inteira recarrega de manha.
+ */
+const HOJE = new Date()
 import { useAcademia } from './useAcademia'
 import { curriculoPorId } from '@faixa-azul/core/seed/curriculos'
 import { useSessao } from './useSessao'
@@ -314,6 +327,17 @@ export function App() {
           */}
           {tela === 'torre' && souProfessorNaNuvem && (
             <Academia estado={academia.estado} aoRecarregar={academia.recarregar} />
+          )}
+
+          {/*
+            O PROGRAMA DA TURMA — a tela de quem vai DAR a aula.
+            Ela le `programas/{turma}/aulas/{n}`, que as regras abrem a qualquer
+            pessoa ativa da academia (ADR-017, decisao 3). Precisa da sessao na
+            nuvem porque sem `app` nao ha o que ler; sem ela, mostra o mesmo
+            convite para entrar que a Central mostra.
+          */}
+          {tela === 'programa' && (
+            <Programa logado={naNuvem !== null} hoje={HOJE} />
           )}
 
           {/* Sem cadastro de professor na nuvem nao ha academia para ler — e as
