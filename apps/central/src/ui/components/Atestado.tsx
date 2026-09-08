@@ -232,6 +232,10 @@ export interface AtestadoProps {
   registros: readonly RegistroDeCompetencia[]
   graduacoes: readonly RegistroDeGraduacao[]
   meta: string
+  /** De onde saiu a lista: da PROVA (fecha o grau) ou do ESTUDO (só registra). */
+  origemDoCurriculo: 'prova' | 'estudo'
+  /** O id do currículo em uso, para nomear qual lista está na folha. */
+  idDoCurriculo: string
   /** `null` enquanto o app não contar presença (fatia 3 do ADR-016). */
   aulasCumpridas: number | null
   fase: FaseDoAtestado
@@ -246,6 +250,8 @@ export function Atestado({
   registros,
   graduacoes,
   meta,
+  origemDoCurriculo,
+  idDoCurriculo,
   aulasCumpridas,
   fase,
   mensagem,
@@ -264,7 +270,11 @@ export function Atestado({
       <section className="cartao">
         <div className="topo-grade">
           <div>
-            <h3 style={{ margin: 0 }}>{nomeDaMeta(meta)}</h3>
+            <h3 style={{ margin: 0 }}>
+              {origemDoCurriculo === 'prova'
+                ? nomeDaMeta(meta)
+                : `Competências · ${nomeDaMeta(idDoCurriculo)}`}
+            </h3>
             <p className="apoio" style={{ margin: '4px 0 0' }}>
               <strong style={{ color: corDaFaixa(faixaDaPontuacao(folha.progresso)) }}>
                 {folha.atestados} de {folha.total}
@@ -282,6 +292,22 @@ export function Atestado({
             />
           </div>
         </div>
+
+        {/*
+          A FOLHA DIZ QUANDO NAO ESTA FECHANDO GRAU NENHUM.
+          Sem esta linha, marcar 81 itens de azul pareceria completar o 4o grau —
+          e a barra encheria confirmando a leitura errada. O aviso troca a
+          promessa: aqui voce registra o que VIU, e o grau fica para quando a
+          lista dele chegar.
+        */}
+        {origemDoCurriculo === 'estudo' && (
+          <p className="aviso" style={{ marginTop: 12, marginBottom: 0 }}>
+            A lista de itens do <strong>{nomeDaMeta(meta)}</strong> ainda não chegou. Esta
+            folha mostra o currículo que ele <strong>treina</strong> ({nomeDaMeta(idDoCurriculo)}):
+            atestar aqui registra o que você viu no tatame, e <strong>não</strong> fecha o{' '}
+            {nomeDaMeta(meta)}.
+          </p>
+        )}
 
         {/* AS AULAS SAO REQUISITO SEPARADO, e a tela nao finge saber. `—` aqui
             significa "o app nao conta isso ainda" — nao zero. */}

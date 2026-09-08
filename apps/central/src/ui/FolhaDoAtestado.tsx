@@ -20,6 +20,8 @@ export function FolhaDoAtestado({
   curriculo,
   modulos,
   meta,
+  origemDoCurriculo,
+  idDoCurriculo,
   aulasCumpridas,
   aoConceder,
 }: {
@@ -29,6 +31,20 @@ export function FolhaDoAtestado({
   curriculo: Curriculo
   modulos: readonly Modulo[]
   meta: string
+  /**
+   * De onde saiu a lista que esta na folha.
+   *
+   * `'prova'`: e a lista da meta. Atestar tudo FECHA o gate do grau.
+   * `'estudo'`: a lista da meta nao chegou, e a folha mostra a do que ele treina.
+   *   Atestar registra o que voce viu e NAO fecha grau nenhum.
+   *
+   * A folha PRECISA dizer isso. Sem essa distincao, marcar 81 itens de azul
+   * pareceria completar o 4o grau — e a barra encheria confirmando a leitura
+   * errada.
+   */
+  origemDoCurriculo: 'prova' | 'estudo'
+  /** O id do curriculo em uso, para a folha nomear qual lista e. */
+  idDoCurriculo: string
   aulasCumpridas: number | null
   /** Chamado DEPOIS de gravar a graduacao, para a meta do aluno avancar. */
   aoConceder: (metaConcedida: string) => Promise<void>
@@ -42,6 +58,8 @@ export function FolhaDoAtestado({
       registros={a.registros}
       graduacoes={a.graduacoes}
       meta={meta}
+      origemDoCurriculo={origemDoCurriculo}
+      idDoCurriculo={idDoCurriculo}
       aulasCumpridas={aulasCumpridas}
       fase={a.fase}
       mensagem={a.mensagem}

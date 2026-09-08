@@ -12,8 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { curriculoPorId, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
-import { MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
+import { curriculoPorId, modulosDoCurriculo, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
 import { metaSeguinte } from '@faixa-azul/core/domain/metas'
 import { nomeDaTurma, SEM_TURMA, TURMAS } from '@faixa-azul/core/domain/turmas'
 import { ROTULO_GRUPO } from '@faixa-azul/core/domain/taxonomia'
@@ -24,6 +23,7 @@ import {
   ordenarLinhas,
 } from '@faixa-azul/core/application/central'
 import type { Curriculo } from '@faixa-azul/core/application/central'
+import { curriculoParaAtestar } from '@faixa-azul/core/application/atestado'
 import { useSessaoDoProfessor } from './useSessaoDoProfessor'
 import { useRota } from './useRota'
 import type { EstadoDaCentral } from './useSessaoDoProfessor'
@@ -292,6 +292,14 @@ export function Central({
       )
     }
 
+    // A REGRA MORA NO CORE (`curriculoParaAtestar`), e nao aqui: ela ja errou
+    // duas vezes como ternario dentro do JSX, onde nao havia como testa-la.
+    const curriculoDoAtestado = curriculoParaAtestar({
+      meta: linha.meta,
+      estuda: linha.estuda,
+      curriculoPorId,
+    })
+
     return (
       <>
         <Cabecalho quem={sessao.cadastro.nome} aoSair={aoSair} />
@@ -309,20 +317,40 @@ export function Central({
           curriculo={curriculoPorId(linha.estuda) ?? CURRICULO_DAS_COLUNAS}
           atestado={
             /**
-             * SO QUANDO O CURRICULO E MEDIDO POR ATESTADO, e a pergunta mudou de
-             * dono: era `medidaDoProgresso(linha.meta)`, e com `meta` e `estuda`
-             * separados (ADR-017, decisao 6) a meta nao decide mais a medida. A
-             * folha aparece para quem ESTUDA o 1o grau — nao para quem o
-             * persegue estudando o curriculo de azul.
+             * A FOLHA APARECE SEMPRE QUE HA O QUE ATESTAR, e nao so quando a
+             * medida do progresso e atestado. Esta condicao ja errou duas vezes,
+             * e o erro atual era o pior dos tres.
+             *
+             * ERA `medidaDoProgresso(linha.meta) === 'atestado'`. Virou
+             * `curriculoPorId(linha.estuda)?.medida === 'atestado'` quando `meta`
+             * e `estuda` se separaram — e eu escrevi no comentario que a folha
+             * "aparece para quem ESTUDA o 1o grau, nao para quem o persegue
+             * estudando azul". Isso trancou fora exatamente o caso que motivou a
+             * separacao existir: quem persegue um grau estudando o curriculo de
+             * azul NUNCA podia ser atestado. Era o Floki, e era o Thalles.
+             *
+             * O QUE EU CONFUNDI: tratei "atestar" e "medir progresso" como a
+             * mesma decisao. Nao sao. Atestar e o professor REGISTRANDO O QUE
+             * VIU — vale para qualquer item que o aluno treina. `medida` decide
+             * qual numero vai na coluna Progresso. E o gate ("apto ao grau") usa
+             * a lista da PROVA, quando ela existe.
+             *
+             * Dai a resolucao em duas tentativas: a lista da prova primeiro
+             * (`meta`), e a do que ele treina como reserva (`estuda`). Com
+             * `meta: '4grau'` — cuja lista nao chegou — o professor passa a poder
+             * atestar os itens de azul, e a folha DIZ que isso registra o que ele
+             * viu e nao fecha o 4o grau. Ver `origemDoCurriculo` na folha.
              */
-            curriculoPorId(linha.estuda)?.medida === 'atestado' ? (
+            curriculoDoAtestado !== null ? (
               <FolhaDoAtestado
                 app={sessao.app}
                 alunoUid={linha.uid}
                 professorUid={sessao.sessao.uid}
-                curriculo={curriculoPorId(linha.estuda) as Curriculo}
-                modulos={MODULOS_1GRAU}
+                curriculo={curriculoDoAtestado.curriculo}
+                modulos={modulosDoCurriculo(curriculoDoAtestado.id)}
                 meta={linha.meta}
+                origemDoCurriculo={curriculoDoAtestado.origem}
+                idDoCurriculo={curriculoDoAtestado.id}
                 // `null` porque o app ainda nao conta presenca (fatia 3).
                 aulasCumpridas={null}
                 aoConceder={async (metaConcedida) => {

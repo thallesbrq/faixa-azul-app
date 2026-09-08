@@ -140,3 +140,63 @@ export function aulasFaltando(aulas: Atestado['aulas']): number | null {
   if (aulas.cumpridas === null) return null
   return Math.max(0, aulas.exigidas - aulas.cumpridas)
 }
+
+// ---------------------------------------------------------------------------
+// Qual lista a folha do atestado usa
+// ---------------------------------------------------------------------------
+
+export interface EscolhaDoCurriculo {
+  /** O id da lista escolhida: 'azul', '1grau', ... */
+  id: string
+  curriculo: Curriculo
+  /**
+   * `'prova'`: a lista da META. Atestar tudo FECHA o gate do grau.
+   * `'estudo'`: a lista da meta nao chegou, e esta e a do que ele TREINA.
+   *   Atestar registra o que o professor viu e nao fecha grau nenhum.
+   */
+  origem: 'prova' | 'estudo'
+}
+
+/**
+ * A lista que a folha do atestado mostra — DUAS TENTATIVAS, nesta ordem.
+ *
+ * ESTA REGRA JA ERROU DUAS VEZES NA TELA, e por isso ela mora aqui e nao num
+ * ternario dentro do JSX:
+ *
+ *   1a versao: `medidaDoProgresso(meta) === 'atestado'`
+ *   2a versao: `curriculoPorId(estuda)?.medida === 'atestado'`
+ *
+ * A segunda trancou fora exatamente o caso que motivou `meta` e `estuda` se
+ * separarem: quem persegue um grau ESTUDANDO o curriculo de azul nunca podia ser
+ * atestado. Era o Floki, e era o desenvolvedor.
+ *
+ * O QUE ESTAVA CONFUNDIDO: "atestar" e "medir progresso" tratados como a mesma
+ * decisao. Nao sao.
+ *   - ATESTAR e o professor registrando o que VIU. Vale para qualquer item que o
+ *     aluno treina, e nao depende de medida nenhuma.
+ *   - `medida` decide qual numero vai na coluna Progresso.
+ *   - o GATE do grau usa a lista da PROVA, quando ela existe.
+ *
+ * Dai a ordem: a prova primeiro, porque e contra ela que o grau fecha; o estudo
+ * como reserva, porque registrar o que se viu vale mesmo sem a lista da prova.
+ *
+ * `null` NAO E LACUNA A CORRIGIR: e "nao ha o que atestar" — meta e estudo sem
+ * lista. A folha nao aparece, e e o certo.
+ */
+export function curriculoParaAtestar({
+  meta,
+  estuda,
+  curriculoPorId,
+}: {
+  meta: string
+  estuda: string
+  curriculoPorId: (id: string) => Curriculo | null
+}): EscolhaDoCurriculo | null {
+  const daProva = curriculoPorId(meta)
+  if (daProva) return { id: meta, curriculo: daProva, origem: 'prova' }
+
+  const doEstudo = curriculoPorId(estuda)
+  if (doEstudo) return { id: estuda, curriculo: doEstudo, origem: 'estudo' }
+
+  return null
+}

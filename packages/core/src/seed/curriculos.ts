@@ -13,8 +13,9 @@
  */
 
 import type { Curriculo } from '../domain/curriculo'
-import { CARTOES_TEORIA, CONTEUDOS, ITENS, REQUISITOS } from './index'
-import { ITENS_1GRAU } from './primeiro-grau'
+import type { Modulo } from '../domain/types'
+import { CARTOES_TEORIA, CONTEUDOS, ITENS, MODULOS, REQUISITOS } from './index'
+import { ITENS_1GRAU, MODULOS_1GRAU } from './primeiro-grau'
 
 /**
  * O exame de azul: os 81 itens da banca, todos ativos (ADR-017, decisao 7).
@@ -73,4 +74,23 @@ export function curriculoPorId(id: string): Curriculo | null {
   if (id === 'azul') return CURRICULO_AZUL
   if (id === '1grau') return CURRICULO_1GRAU
   return null
+}
+
+/**
+ * Os MODULOS de um curriculo — os titulos e a ordem das secoes do atestado.
+ *
+ * VIVE JUNTO DE `curriculoPorId` de proposito. Antes disso, a Central passava
+ * `modulos={MODULOS_1GRAU}` cravado para a folha do atestado. Funcionava porque
+ * a folha so aparecia para o 1o grau; no instante em que ela passou a servir
+ * outro curriculo (ver abaixo), o cravado ficaria ERRADO em silencio — a folha
+ * do azul com os titulos do 1o grau, e as secoes na ordem de outra prova.
+ *
+ * Curriculo sem modulos proprios devolve lista vazia, e nao os de outro: com
+ * `[]` o atestado agrupa tudo numa secao sem titulo, que e visivelmente uma
+ * lacuna. Com os modulos errados, pareceria certo.
+ */
+export function modulosDoCurriculo(id: string): readonly Modulo[] {
+  if (id === 'azul') return MODULOS
+  if (id === '1grau') return MODULOS_1GRAU
+  return []
 }

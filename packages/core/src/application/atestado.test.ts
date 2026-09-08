@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aulasFaltando, montarAtestado } from './atestado'
+import { aulasFaltando, curriculoParaAtestar, montarAtestado } from './atestado'
 import type { RegistroDeCompetencia } from '../domain/competencia'
 import type { Curriculo } from '../domain/curriculo'
 import type { Modulo, TechniqueItem } from '../domain/types'
@@ -215,5 +215,63 @@ describe('com o curriculo REAL do 1o grau', () => {
     expect(a.progresso).toBe(1)
     // E o professor ainda tem de conferir as 35 aulas de cabeca.
     expect(aulasFaltando(a.aulas)).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Qual lista a folha usa (o defeito que trancou o Floki fora)
+// ---------------------------------------------------------------------------
+
+describe('curriculoParaAtestar', () => {
+  const azul: Curriculo = {
+    itens: [], conteudos: [], requisitos: [], cartoesTeoria: [], medida: 'cartoes',
+  }
+  const g1: Curriculo = {
+    itens: [], conteudos: [], requisitos: [], cartoesTeoria: [], medida: 'atestado',
+  }
+  const porId = (id: string) => (id === 'azul' ? azul : id === '1grau' ? g1 : null)
+
+  it('a lista da PROVA vem primeiro — e contra ela que o grau fecha', () => {
+    const e = curriculoParaAtestar({ meta: '1grau', estuda: 'azul', curriculoPorId: porId })
+    expect(e).toEqual({ id: '1grau', curriculo: g1, origem: 'prova' })
+  })
+
+  it('CAI NO ESTUDO quando a lista da prova nao chegou — o caso do Floki', () => {
+    /**
+     * O DEFEITO QUE ISTO CONSERTA, e ele chegou a producao.
+     *
+     * A condicao na tela era `curriculoPorId(estuda)?.medida === 'atestado'`, e
+     * eu escrevi no comentario que a folha "aparece para quem ESTUDA o 1o grau,
+     * nao para quem o persegue estudando azul". Isso trancou fora exatamente o
+     * caso que motivou `meta` e `estuda` se separarem: Floki tem `meta: '4grau'`
+     * (lista nao recebida) e `estuda: 'azul'` — e NAO havia como atesta-lo.
+     *
+     * A confusao: atestar e medir progresso tratados como a mesma decisao.
+     * Atestar e o professor registrando o que VIU, e vale para qualquer item que
+     * o aluno treina — inclusive num curriculo medido por CARTOES.
+     */
+    const e = curriculoParaAtestar({ meta: '4grau', estuda: 'azul', curriculoPorId: porId })
+    expect(e).toEqual({ id: 'azul', curriculo: azul, origem: 'estudo' })
+  })
+
+  it('a MEDIDA do curriculo nao decide se da para atestar', () => {
+    // `azul` e medido por cartoes e ainda assim entra na folha. Foi esta
+    // confusao que causou o defeito acima.
+    const e = curriculoParaAtestar({ meta: 'azul', estuda: 'azul', curriculoPorId: porId })
+    expect(e?.curriculo.medida).toBe('cartoes')
+    expect(e?.origem).toBe('prova')
+  })
+
+  it('sem lista nenhuma devolve null — a folha nao aparece, e e o certo', () => {
+    expect(
+      curriculoParaAtestar({ meta: '2grau', estuda: '', curriculoPorId: porId }),
+    ).toBeNull()
+  })
+
+  it('meta desconhecida cai no estudo em vez de sumir com a folha', () => {
+    // Um `roxa` gravado por versao futura nao pode apagar a capacidade de
+    // registrar o que o professor viu.
+    const e = curriculoParaAtestar({ meta: 'roxa', estuda: 'azul', curriculoPorId: porId })
+    expect(e?.origem).toBe('estudo')
   })
 })
