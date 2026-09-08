@@ -10,9 +10,40 @@
  * botao de recarregar desfaz. A alternativa — esperar o Firestore a cada clique —
  * faria montar 25 aulas parecer travamento, e montar e uma sequencia de dezenas
  * de cliques.
+ *
+ * ---------------------------------------------------------------------------
+ * O PLANNER E DERIVADO (`useMemo`), E NAO GUARDADO EM ESTADO. Isso conserta um
+ * laco infinito que chegou a producao, e a forma da correcao importa mais que a
+ * linha que a causou.
+ *
+ * O QUE ACONTECEU: `App.tsx` passava
+ *
+ *     itensConhecidos={[...CURRICULO_AZUL.itens, ...ITENS_1GRAU]}
+ *
+ * — um array NOVO a cada render. A cadeia era:
+ *
+ *     array novo  ->  `desenhar` com identidade nova
+ *                 ->  `carregar` (que dependia de `desenhar`) tambem nova
+ *                 ->  `useEffect([carregar])` roda de novo
+ *                 ->  `setEstado` -> render -> array novo -> ...
+ *
+ * Efeito visivel: a tela PISCANDO e sem conteudo, relendo o Firestore a cada
+ * volta. O laco nao dava erro em lugar nenhum.
+ *
+ * POR QUE NAO BASTA HOISTAR A CONSTANTE: isso conserta este caso e deixa a
+ * armadilha armada — o proximo `useMemo` esquecido no chamador reabre o mesmo
+ * laco. Derivando com `useMemo`, um array instavel apenas RECALCULA (barato,
+ * puro) em vez de disparar um efeito. O efeito de carga passa a depender de
+ * `[app, turma]` e mais nada, que sao as duas coisas que de fato mudam o que
+ * precisa ser lido.
+ *
+ * A CONSTANTE FOI HOISTADA TAMBEM, no chamador — por desperdicio, nao por
+ * correcao: reagrupar 81 itens em 12 blocos a cada tecla digitada no campo de
+ * foco e trabalho jogado fora.
+ * ---------------------------------------------------------------------------
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FirebaseApp } from 'firebase/app'
 import { abrirProgramas } from '@faixa-azul/core/nuvem/programas'
 import type { Programas } from '@faixa-azul/core/nuvem/programas'
@@ -42,6 +73,7 @@ export function usePrograma({
   itensDoBolsao,
   itensConhecidos,
   itensDo1Grau,
+  abrir = abrirProgramas,
 }: {
   app: FirebaseApp
   turma: string
@@ -49,75 +81,128 @@ export function usePrograma({
   itensConhecidos: readonly TechniqueItem[]
   /** Os 29 do 1o grau, para o botao de aplicar a sugestao. */
   itensDo1Grau: readonly TechniqueItem[]
-}) {
-  const [estado, setEstado] = useState<EstadoDoProgramaNaTela>({
-    fase: 'carregando',
-    planner: null,
-    mensagem: null,
-    gravando: false,
-  })
-  const nuvem = useRef<Programas | null>(null)
   /**
-   * As aulas GUARDADAS, separadas do que a tela desenha.
+   * Como abrir a camada de nuvem. Injetavel, e nao por gosto por injecao.
+   *
+   * O laco infinito acima passou por 658 testes e por uma inspecao na tela
+   * porque a pagina de amostra montava o COMPONENTE, chamando `montarPlanner`
+   * direto — ela nunca montou ESTE HOOK. Ou seja: o caminho de verificacao
+   * passava ao lado do codigo que quebrou.
+   *
+   * Com a fabrica injetavel, a amostra monta o hook de verdade contra uma loja
+   * em memoria, e passa a exercitar o carregamento, o `useMemo`, as gravacoes e
+   * o "aplicar sugestao" — o codigo que roda em producao, sem Firebase.
+   */
+  abrir?: (app: FirebaseApp) => Promise<Programas>
+}) {
+  const [aulas, setAulas] = useState<AulaDoPrograma[]>([])
+  const [fase, setFase] = useState<EstadoDoProgramaNaTela['fase']>('carregando')
+  const [mensagem, setMensagem] = useState<string | null>(null)
+  const [gravando, setGravando] = useState(false)
+  const nuvem = useRef<Programas | null>(null)
+
+  /**
+   * A FABRICA MORA NUMA REF, e o efeito de carga NAO depende dela.
+   *
+   * Medido, e nao suposto: com `abrir` nas dependencias do efeito, uma fabrica
+   * nova a cada render produz ~85 renders por segundo — e foi assim que eu
+   * confirmei que o contador de renders da pagina de amostra detecta o defeito
+   * (486 -> 588 em 1,2 s).
+   *
+   * A identidade de "como abrir a conexao" nao pode decidir SE relemos o
+   * programa. Quem decide isso e `[app, turma]`, e mais nada. Numa ref, um
+   * chamador desatento nao reabre o laco.
+   */
+  const abrirRef = useRef(abrir)
+  abrirRef.current = abrir
+
+  /**
+   * A ORIGEM DA VERDADE E `aulas`, e o planner sai dela.
    *
    * `montarPlanner` produz 81 caixas a partir de poucas aulas guardadas; guardar
    * a saida dele e reconstruir as aulas a partir dela seria derivar duas vezes,
-   * na direcao errada. A fonte e esta lista.
+   * na direcao errada.
    */
-  const aulas = useRef<AulaDoPrograma[]>([])
+  const planner = useMemo(
+    () => montarPlanner({ turma, aulas, itensDoBolsao, itensConhecidos }),
+    [turma, aulas, itensDoBolsao, itensConhecidos],
+  )
 
-  const desenhar = useCallback(() => {
-    setEstado((a) => ({
-      ...a,
-      fase: 'pronto',
-      planner: montarPlanner({ turma, aulas: aulas.current, itensDoBolsao, itensConhecidos }),
-    }))
-  }, [turma, itensDoBolsao, itensConhecidos])
-
-  const carregar = useCallback(async () => {
-    setEstado((a) => ({ ...a, fase: 'carregando', mensagem: null }))
-    try {
-      if (!nuvem.current) nuvem.current = await abrirProgramas(app)
-      aulas.current = await nuvem.current.aulasDe(turma)
-      desenhar()
-    } catch (e) {
-      setEstado((a) => ({
-        ...a,
-        fase: 'erro',
-        mensagem: (e as Error)?.message ?? 'Não foi possível ler o programa desta turma.',
-      }))
-    }
-  }, [app, turma, desenhar])
-
+  /**
+   * O EFEITO DE CARGA DEPENDE DE `[app, turma]` E MAIS NADA.
+   *
+   * Era `[carregar]`, e `carregar` dependia de `desenhar`, que dependia dos
+   * arrays de itens — a corrente que fechou o laco. Ler o programa depende de
+   * QUAL PROGRAMA, e nada mais.
+   */
   useEffect(() => {
-    void carregar()
-  }, [carregar])
+    let cancelado = false
+    setFase('carregando')
+    setMensagem(null)
+
+    void (async () => {
+      try {
+        if (!nuvem.current) nuvem.current = await abrirRef.current(app)
+        const lidas = await nuvem.current.aulasDe(turma)
+        // Trocar de turma no meio de uma leitura descartaria a resposta antiga
+        // sobre a nova — a guarda evita ver o programa da RG2 na tela da RGI.
+        if (cancelado) return
+        setAulas(lidas)
+        setFase('pronto')
+      } catch (e) {
+        if (cancelado) return
+        setFase('erro')
+        setMensagem((e as Error)?.message ?? 'Não foi possível ler o programa desta turma.')
+      }
+    })()
+
+    return () => {
+      cancelado = true
+    }
+    // `abrir` fica FORA de proposito — ver `abrirRef` acima.
+  }, [app, turma])
+
+  const recarregar = useCallback(async () => {
+    setFase('carregando')
+    setMensagem(null)
+    try {
+      if (!nuvem.current) nuvem.current = await abrirRef.current(app)
+      setAulas(await nuvem.current.aulasDe(turma))
+      setFase('pronto')
+    } catch (e) {
+      setFase('erro')
+      setMensagem((e as Error)?.message ?? 'Não foi possível ler o programa desta turma.')
+    }
+  }, [app, turma])
 
   /** Aplica uma mudanca numa aula: local primeiro, rede depois. */
   const mudar = useCallback(
     async (numero: number, f: (a: AulaDoPrograma) => AulaDoPrograma) => {
-      const atual = aulas.current.find((a) => a.numero === numero) ?? aulaVazia(numero)
-      const nova = f(atual)
-      // Sem mudanca real (clique repetido no mesmo item) nao grava nada.
-      if (nova === atual) return
+      let nova: AulaDoPrograma | null = null
+      setAulas((atuais) => {
+        const atual = atuais.find((a) => a.numero === numero) ?? aulaVazia(numero)
+        const proxima = f(atual)
+        // Sem mudanca real (clique repetido no mesmo item) nao grava nada.
+        if (proxima === atual) return atuais
+        nova = proxima
+        return [...atuais.filter((a) => a.numero !== numero), proxima]
+      })
+      if (nova === null) return
 
-      aulas.current = [...aulas.current.filter((a) => a.numero !== numero), nova]
-      desenhar()
-
-      setEstado((a) => ({ ...a, gravando: true, mensagem: null }))
+      setGravando(true)
+      setMensagem(null)
       try {
-        if (!nuvem.current) nuvem.current = await abrirProgramas(app)
+        if (!nuvem.current) nuvem.current = await abrirRef.current(app)
         await nuvem.current.gravarAula(turma, nova)
       } catch (e) {
-        setEstado((a) => ({
-          ...a,
-          mensagem: `Não consegui gravar a aula ${numero}: ${(e as Error)?.message ?? 'erro'}. Recarregue para ver o que está salvo.`,
-        }))
+        setMensagem(
+          `Não consegui gravar a aula ${numero}: ${(e as Error)?.message ?? 'erro'}. Recarregue para ver o que está salvo.`,
+        )
       } finally {
-        setEstado((a) => ({ ...a, gravando: false }))
+        setGravando(false)
       }
     },
-    [app, turma, desenhar],
+    [app, turma],
   )
 
   /**
@@ -128,11 +213,12 @@ export function usePrograma({
    * dele — e a sugestao existe para poupar trabalho, nao para destrui-lo.
    */
   const aplicarSugestao = useCallback(async () => {
-    setEstado((a) => ({ ...a, gravando: true, mensagem: null }))
+    setGravando(true)
+    setMensagem(null)
     try {
       const plano = sugestaoDo1Grau(itensDo1Grau)
       const ocupadas = new Set(
-        aulas.current.filter((a) => a.itemIds.length > 0 || a.rotulos.length > 0).map((a) => a.numero),
+        aulas.filter((a) => a.itemIds.length > 0 || a.rotulos.length > 0).map((a) => a.numero),
       )
       const novas: AulaDoPrograma[] = []
       for (const [numero, itemIds] of plano) {
@@ -140,45 +226,43 @@ export function usePrograma({
         novas.push({ ...aulaVazia(numero), itemIds })
       }
       if (novas.length === 0) {
-        setEstado((a) => ({
-          ...a,
-          gravando: false,
-          mensagem: 'As aulas do 1º grau já têm conteúdo — nada foi sobrescrito.',
-        }))
+        setMensagem('As aulas do 1º grau já têm conteúdo — nada foi sobrescrito.')
         return
       }
 
-      if (!nuvem.current) nuvem.current = await abrirProgramas(app)
+      if (!nuvem.current) nuvem.current = await abrirRef.current(app)
       // EM LOTE: sao ~25 documentos, e um laco deixaria a turma pela metade se a
       // rede caisse no meio.
       await nuvem.current.gravarVarias(turma, novas)
-      aulas.current = [
-        ...aulas.current.filter((a) => !novas.some((n) => n.numero === a.numero)),
+      setAulas((atuais) => [
+        ...atuais.filter((a) => !novas.some((n) => n.numero === a.numero)),
         ...novas,
-      ]
-      desenhar()
-      setEstado((a) => ({
-        ...a,
-        gravando: false,
-        mensagem: `Sugestão aplicada em ${novas.length} ${novas.length === 1 ? 'aula' : 'aulas'}. Mova o que quiser.`,
-      }))
+      ])
+      setMensagem(
+        `Sugestão aplicada em ${novas.length} ${novas.length === 1 ? 'aula' : 'aulas'}. Mova o que quiser.`,
+      )
     } catch (e) {
-      setEstado((a) => ({
-        ...a,
-        gravando: false,
-        mensagem: (e as Error)?.message ?? 'Não foi possível aplicar a sugestão.',
-      }))
+      setMensagem((e as Error)?.message ?? 'Não foi possível aplicar a sugestão.')
+    } finally {
+      setGravando(false)
     }
-  }, [app, turma, itensDo1Grau, desenhar])
+  }, [app, turma, itensDo1Grau, aulas])
 
   return {
-    estado,
-    recarregar: carregar,
+    estado: { fase, planner: fase === 'carregando' ? null : planner, mensagem, gravando },
+    recarregar,
     aplicarSugestao,
     porItem: (numero: number, itemId: string) => mudar(numero, (a) => porItemNaAula(a, itemId)),
     tirarItem: (numero: number, itemId: string) => mudar(numero, (a) => tirarItemDaAula(a, itemId)),
     acrescentarRotulo: (numero: number, r: RotuloDaAula) => mudar(numero, (a) => porRotulo(a, r)),
     removerRotulo: (numero: number, id: string) => mudar(numero, (a) => tirarRotulo(a, id)),
-    mudarFoco: (numero: number, foco: string) => mudar(numero, (a) => ({ ...a, foco })),
+    /**
+     * O FOCO GRAVA NO BLUR, e nao a cada tecla.
+     *
+     * A versao anterior chamava `mudar` no `onChange`: digitar "guarda fechada"
+     * eram quinze gravacoes no Firestore, quinze escritas cobradas, e a ultima
+     * podendo chegar fora de ordem e gravar "guarda fechad".
+     */
+    mudarFoco: (numero: number, foco: string) => mudar(numero, (a) => (a.foco === foco ? a : { ...a, foco })),
   }
 }

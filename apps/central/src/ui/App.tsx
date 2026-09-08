@@ -453,6 +453,25 @@ function Cabecalho({ quem, aoSair }: { quem?: string; aoSair?: () => void }) {
 }
 
 /**
+ * TODOS OS ITENS QUE UMA AULA PODE REFERENCIAR: azul + os 29 do 1o grau.
+ *
+ * CONSTANTE DE MODULO, e nao um array montado no corpo do componente. Como
+ * expressao inline (`[...CURRICULO_AZUL.itens, ...ITENS_1GRAU]`) ela era um
+ * array NOVO a cada render, e isso fechou um laco infinito no `usePrograma` que
+ * chegou a producao: a tela piscava sem conteudo, relendo o Firestore a cada
+ * volta. Ver o cabecalho de `usePrograma`, onde o defeito esta descrito inteiro.
+ *
+ * O laco em si ja esta consertado na estrutura do hook — um array instavel agora
+ * so recalcula. Esta constante existe pelo DESPERDICIO: reagrupar 81 itens em 12
+ * blocos a cada tecla digitada e trabalho jogado fora.
+ *
+ * Os 29 do 1o grau tem ids proprios e NAO estao no curriculo de azul (ADR-016):
+ * sem eles aqui, as 25 aulas sugeridas apareceriam inteiras como "tecnica que
+ * nao existe mais" — dado certo exibido como erro.
+ */
+const ITENS_CONHECIDOS = [...CURRICULO_AZUL.itens, ...ITENS_1GRAU]
+
+/**
  * O planner de uma turma. Existe como componente para o `usePrograma` viver
  * dentro dele — ver o comentario da rota em `App`.
  */
@@ -470,13 +489,7 @@ function PlannerDaTurma({
     turma,
     // O BOLSAO E O CURRICULO DE AZUL INTEIRO (81 itens), como pedido.
     itensDoBolsao: CURRICULO_AZUL.itens,
-    /**
-     * CONHECIDOS = azul + os 29 do 1o grau. Os do 1o grau tem ids proprios e NAO
-     * estao no curriculo de azul (ADR-016): sem eles aqui, as 25 aulas sugeridas
-     * apareceriam inteiras como "tecnica que nao existe mais" — dado certo
-     * exibido como erro.
-     */
-    itensConhecidos: [...CURRICULO_AZUL.itens, ...ITENS_1GRAU],
+    itensConhecidos: ITENS_CONHECIDOS,
     itensDo1Grau: ITENS_1GRAU,
   })
 

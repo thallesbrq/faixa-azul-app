@@ -273,13 +273,14 @@ function Aula({
         </p>
       ) : (
         <>
-          <input
-            className="aula-foco"
-            value={aula.foco}
-            onChange={(e) => aoMudarFoco(e.target.value)}
-            placeholder="Foco da aula (opcional)"
-            aria-label={`Foco da aula ${aula.numero}`}
-            onClick={(e) => e.stopPropagation()}
+          {/* GRAVA NO BLUR, e nao a cada tecla: digitar "guarda fechada" eram
+              quinze gravacoes no Firestore, quinze escritas cobradas, e a
+              ultima podendo chegar fora de ordem e gravar "guarda fechad".
+              O rascunho local mora aqui; a gravacao acontece ao sair do campo. */}
+          <FocoDaAula
+            numero={aula.numero}
+            valor={aula.foco}
+            aoConfirmar={aoMudarFoco}
           />
 
           {aula.itens.length === 0 && aula.rotulos.length === 0 && (
@@ -351,6 +352,49 @@ function Aula({
         </>
       )}
     </section>
+  )
+}
+
+/**
+ * O campo de foco da aula, com rascunho local.
+ *
+ * O `value` VEM DE FORA e o rascunho e interno: sem o rascunho, cada tecla
+ * dependeria de uma ida ao Firestore para reaparecer na tela, e o cursor pularia.
+ * Sem o `value` de fora, o campo nao acompanharia um "aplicar sugestao" nem uma
+ * recarga. `key` no chamador nao resolve porque a aula nao remonta.
+ */
+function FocoDaAula({
+  numero,
+  valor,
+  aoConfirmar,
+}: {
+  numero: number
+  valor: string
+  aoConfirmar: (foco: string) => void
+}) {
+  const [rascunho, setRascunho] = useState(valor)
+  // O valor de fora manda quando ele muda por outro caminho (recarga, sugestao).
+  const [ultimoDeFora, setUltimoDeFora] = useState(valor)
+  if (valor !== ultimoDeFora) {
+    setUltimoDeFora(valor)
+    setRascunho(valor)
+  }
+
+  return (
+    <input
+      className="aula-foco"
+      value={rascunho}
+      onChange={(e) => setRascunho(e.target.value)}
+      onBlur={() => {
+        if (rascunho !== valor) aoConfirmar(rascunho)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+      }}
+      placeholder="Foco da aula (opcional)"
+      aria-label={`Foco da aula ${numero}`}
+      onClick={(e) => e.stopPropagation()}
+    />
   )
 }
 
