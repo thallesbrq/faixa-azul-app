@@ -377,6 +377,7 @@ export function Central({
                 curriculo={curriculoDoAtestado.curriculo}
                 modulos={modulosDoCurriculo(curriculoDoAtestado.id)}
                 meta={linha.meta}
+                turma={linha.turma}
                 origemDoCurriculo={curriculoDoAtestado.origem}
                 idDoCurriculo={curriculoDoAtestado.id}
                 // `null` porque o app ainda nao conta presenca (fatia 3).

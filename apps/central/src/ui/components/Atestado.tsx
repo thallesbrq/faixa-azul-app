@@ -21,6 +21,7 @@ import { useState } from 'react'
 import { aulasFaltando, montarAtestado } from '@faixa-azul/core/application/atestado'
 import type { Atestado as FolhaDeAtestado, LinhaDoAtestado } from '@faixa-azul/core/application/atestado'
 import type { OrigemDaCompetencia, RegistroDeCompetencia } from '@faixa-azul/core/domain/competencia'
+import { procedenciaDaAtestacao } from '@faixa-azul/core/domain/competencia'
 import type { RegistroDeGraduacao } from '@faixa-azul/core/nuvem/competencias'
 import type { Curriculo } from '@faixa-azul/core/domain/curriculo'
 import type { Modulo } from '@faixa-azul/core/domain/types'
@@ -51,16 +52,34 @@ function dataCurta(iso: string): string {
 function Linha({
   linha,
   gravando,
+  procedencia,
   aoAtestar,
 }: {
   linha: LinhaDoAtestado
   gravando: boolean
+  /** O texto que o app escreve quando o professor so clica. */
+  procedencia: string
   aoAtestar: (e: { itemId: string; competente: boolean; texto: string; origem: OrigemDaCompetencia }) => void
 }) {
-  const [aberto, setAberto] = useState(false)
+  const [abertoParaNota, setAbertoParaNota] = useState(false)
   const [texto, setTexto] = useState('')
   const [origem, setOrigem] = useState<OrigemDaCompetencia>('aula_regular')
   const retirando = linha.competente
+
+  const gravar = (comTexto: string) => {
+    aoAtestar({
+      itemId: linha.item.id,
+      competente: !retirando,
+      // O TEXTO DO PROFESSOR MANDA QUANDO EXISTE; a procedencia entra quando ele
+      // so clicou. Nunca string vazia: `criarCompetencia` recusa, e a regra do
+      // Firestore tambem — o que se perdeu foi a OBRIGACAO de digitar, nao a
+      // exigencia de o registro dizer algo.
+      texto: comTexto.trim() === '' ? procedencia : comTexto.trim(),
+      origem,
+    })
+    setTexto('')
+    setAbertoParaNota(false)
+  }
 
   return (
     <li className={linha.competente ? 'linha-atestado linha-atestado--ok' : 'linha-atestado'}>
@@ -72,23 +91,54 @@ function Linha({
           {linha.vezes > 1 && <span className="atestado-vezes">{linha.vezes} registros</span>}
         </span>
 
-        <button
-          className={linha.competente ? 'botao-texto' : 'botao botao--pequeno'}
-          onClick={() => setAberto((a) => !a)}
-          disabled={gravando}
-        >
-          {aberto ? 'cancelar' : linha.competente ? 'retirar' : 'atestar'}
-        </button>
+        <div className="atestado-botoes">
+          {/*
+            UM CLIQUE, E O CAMPO DE TEXTO SAIU DO CAMINHO.
+
+            Este formulario exigia texto para gravar, com a frase "o texto e
+            obrigatorio: e ele que faz a folha valer como evidencia". Das seis
+            primeiras atestacoes feitas em producao, CINCO tinham o texto "ok".
+
+            O campo obrigatorio nao produziu justificativa: produziu atrito e a
+            palavra "ok". Agora o clique grava a procedencia que o app escreve
+            (`RGI · 08/09/2026`), que diz onde e quando — e o professor escreve
+            quando TIVER algo a dizer, no botao de nota ao lado.
+          */}
+          <button
+            className={linha.competente ? 'botao-texto' : 'botao botao--pequeno'}
+            onClick={() => gravar('')}
+            disabled={gravando}
+            title={
+              retirando
+                ? `Retira o atestado e grava "${procedencia}"`
+                : `Atesta e grava "${procedencia}"`
+            }
+          >
+            {retirando ? 'retirar' : 'atestar'}
+          </button>
+
+          {/* A NOTA E OPCIONAL E FICA ESCONDIDA ATRAS DE UM LINK: quem tem algo a
+              dizer sobre um item especifico ainda pode, e quem so quer marcar 29
+              itens nao paga por isso. */}
+          <button
+            className="botao-texto atestado-nota"
+            onClick={() => setAbertoParaNota((a) => !a)}
+            disabled={gravando}
+            title="Escrever uma observação sobre este item"
+          >
+            {abertoParaNota ? 'cancelar' : 'nota'}
+          </button>
+        </div>
       </div>
 
-      {linha.ultimo && !aberto && (
+      {linha.ultimo && !abertoParaNota && (
         <div className="atestado-quando">
           {linha.competente ? 'atestado' : 'retirado'} em {dataCurta(linha.ultimo.registradaEm)} ·{' '}
           {ROTULO_ORIGEM[linha.ultimo.origem]} — “{linha.ultimo.texto}”
         </div>
       )}
 
-      {aberto && (
+      {abertoParaNota && (
         <div className="atestado-form">
           <label className="campo">
             {retirando ? 'Por que está retirando?' : 'O que você viu?'}
@@ -115,30 +165,16 @@ function Linha({
               <option value="exame">exame</option>
             </select>
 
-            <button
-              className="botao botao--pequeno"
-              disabled={texto.trim() === '' || gravando}
-              onClick={() => {
-                aoAtestar({
-                  itemId: linha.item.id,
-                  competente: !retirando,
-                  texto: texto.trim(),
-                  origem,
-                })
-                setTexto('')
-                setAberto(false)
-              }}
-            >
+            {/* SEM `disabled` POR TEXTO VAZIO: gravar sem nota e um caminho
+                valido agora — cai na procedencia. O botao que travava era o
+                pedagio. */}
+            <button className="botao botao--pequeno" disabled={gravando} onClick={() => gravar(texto)}>
               {retirando ? 'Retirar' : 'Atestar'}
             </button>
           </div>
-          {/* O botao fica desabilitado sem texto, e a tela diz POR QUE — senao
-              parece defeito. */}
-          {texto.trim() === '' && (
-            <p className="apoio" style={{ margin: '6px 0 0', fontSize: '0.72rem' }}>
-              O texto é obrigatório: é ele que faz a folha valer como evidência.
-            </p>
-          )}
+          <p className="apoio" style={{ margin: '6px 0 0', fontSize: '0.72rem' }}>
+            Sem escrever nada, fica gravado <strong>“{procedencia}”</strong>.
+          </p>
         </div>
       )}
     </li>
@@ -232,6 +268,18 @@ export interface AtestadoProps {
   registros: readonly RegistroDeCompetencia[]
   graduacoes: readonly RegistroDeGraduacao[]
   meta: string
+  /**
+   * A turma do aluno, para a procedencia que o app escreve quando o professor so
+   * clica: `"RGI · 08/09/2026"`.
+   *
+   * SEM O NUMERO DA AULA, ao contrario da matriz de acompanhamento — e a
+   * assimetria e deliberada. A matriz nasce do PROGRAMA: ela sabe que o item foi
+   * dado na aula 5 e escreve isso. Esta folha e uma revisao por aluno, aberta a
+   * qualquer momento, e o item pode nem estar no programa (os 81 de azul nao
+   * estao). Inventar um numero de aula aqui gravaria uma aula que talvez nao
+   * tenha existido.
+   */
+  turma: string
   /** De onde saiu a lista: da PROVA (fecha o grau) ou do ESTUDO (só registra). */
   origemDoCurriculo: 'prova' | 'estudo'
   /** O id do currículo em uso, para nomear qual lista está na folha. */
@@ -250,6 +298,7 @@ export function Atestado({
   registros,
   graduacoes,
   meta,
+  turma,
   origemDoCurriculo,
   idDoCurriculo,
   aulasCumpridas,
@@ -261,6 +310,14 @@ export function Atestado({
   if (fase === 'carregando') return <p className="apoio">Lendo as competências…</p>
 
   const folha = montarAtestado({ curriculo, modulos, registros, meta, aulasCumpridas })
+  /**
+   * A procedencia e calculada UMA VEZ e passada para as linhas.
+   *
+   * `new Date()` dentro de cada linha seria 81 objetos por render e 81 textos
+   * que podem discordar no segundo — dois itens atestados no mesmo clique
+   * levariam datas diferentes se a meia-noite caisse no meio.
+   */
+  const procedencia = procedenciaDaAtestacao({ turma, aula: null, data: null, agora: new Date() })
   const gravando = fase === 'gravando'
   const faltamAulas = aulasFaltando(folha.aulas)
   const jaConcedida = graduacoes.some((g) => g.meta === meta)
@@ -349,21 +406,60 @@ export function Atestado({
         <Conceder folha={folha} meta={meta} gravando={gravando} aoConceder={aoConceder} />
       )}
 
-      {folha.grupos.map((g) => (
+      {folha.grupos.map((g) => {
+        /**
+         * OS ITENS DO GRUPO QUE FALTAM — o que "atestar a area inteira" grava.
+         *
+         * SO OS NAO ATESTADOS entram. Incluir os ja atestados gravaria registro
+         * repetido num log append-only: poluicao PERMANENTE, e a folha passaria a
+         * mostrar "3 registros" em itens onde nada aconteceu duas vezes.
+         */
+        const faltando = g.linhas.filter((l) => !l.competente)
+        return (
         <section className="cartao" key={g.moduloId}>
           <h3>
             {g.nome}
             <span className="contagem-linhas">
               {g.atestados} de {g.total}
             </span>
+            {faltando.length > 0 && (
+              <button
+                className="botao botao--pequeno atestado-grupo"
+                disabled={gravando}
+                onClick={() => {
+                  // Um por um, e nao um lote: `aoAtestar` da folha grava UM
+                  // registro. Trocar para lote aqui exigiria mudar a interface
+                  // do hook e a da matriz junto — e com 10 itens no maior grupo
+                  // do 1o grau, dez gravacoes seguidas sao instantaneas.
+                  for (const l of faltando) {
+                    aoAtestar({
+                      itemId: l.item.id,
+                      competente: true,
+                      texto: procedencia,
+                      origem: 'aula_regular',
+                    })
+                  }
+                }}
+                title={`Atesta os ${faltando.length} itens de ${g.nome} que faltam, gravando "${procedencia}"`}
+              >
+                atestar os {faltando.length} que faltam
+              </button>
+            )}
           </h3>
           <ul className="lista-atestado">
             {g.linhas.map((l) => (
-              <Linha key={l.item.id} linha={l} gravando={gravando} aoAtestar={aoAtestar} />
+              <Linha
+                key={l.item.id}
+                linha={l}
+                gravando={gravando}
+                procedencia={procedencia}
+                aoAtestar={aoAtestar}
+              />
             ))}
           </ul>
         </section>
-      ))}
+        )
+      })}
     </>
   )
 }

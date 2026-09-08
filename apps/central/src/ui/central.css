@@ -1736,3 +1736,37 @@
   font-size: 0.75rem;
   cursor: default;
 }
+
+/* ---------------------------------------------------------------------------
+   FOLHA DO ATESTADO — um clique, e a nota como opcional.
+
+   O formulario exigia texto para gravar. Das seis primeiras atestacoes em
+   producao, cinco tinham o texto "ok": o campo obrigatorio produzia atrito e
+   nao justificativa. Agora `atestar` grava direto e `nota` fica ao lado, para
+   quem TEM algo a dizer.
+   --------------------------------------------------------------------------- */
+.atestado-botoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* A nota e discreta de proposito: ela e a excecao, e um botao do mesmo peso do
+   `atestar` faria o professor achar que tem de escolher entre os dois. */
+.atestado-nota {
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+}
+
+.atestado-nota:hover:not(:disabled) {
+  color: var(--laranja-texto);
+}
+
+/* "Atestar os N que faltam" no cabecalho do grupo — o "atestar a area inteira"
+   dentro da folha, onde o professor ja esta olhando. */
+.atestado-grupo {
+  margin-left: auto;
+  font-size: 0.72rem;
+  padding: 3px 10px;
+}

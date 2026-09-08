@@ -20,6 +20,7 @@ export function FolhaDoAtestado({
   curriculo,
   modulos,
   meta,
+  turma,
   origemDoCurriculo,
   idDoCurriculo,
   aulasCumpridas,
@@ -31,6 +32,8 @@ export function FolhaDoAtestado({
   curriculo: Curriculo
   modulos: readonly Modulo[]
   meta: string
+  /** A turma do aluno, para a procedencia do atestado de um clique. */
+  turma: string
   /**
    * De onde saiu a lista que esta na folha.
    *
@@ -58,6 +61,7 @@ export function FolhaDoAtestado({
       registros={a.registros}
       graduacoes={a.graduacoes}
       meta={meta}
+      turma={turma}
       origemDoCurriculo={origemDoCurriculo}
       idDoCurriculo={idDoCurriculo}
       aulasCumpridas={aulasCumpridas}
