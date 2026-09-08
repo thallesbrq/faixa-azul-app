@@ -55,6 +55,25 @@ mim mesmo o 1º grau. O log append-only do ADR-010 existe para que a evidência 
 não seja reescrevível — um desenvolvedor que assina a própria graduação faz o log virar
 decoração. Admin é o papel que **vê tudo e não pode se graduar.**
 
+**O papel existe e NÃO está em uso — decidido em 08/09/2026, com o gatilho escrito.**
+
+Estamos em *family and friends*: pré-produção com pessoas reais e **consentimento delas**. Aí
+o desenvolvedor tem de ser `professor`, por duas razões que valem mais que a simetria:
+
+1. **Exercitar o pipeline exige assinar.** A folha do atestado e o gate dos 29 itens não são
+   testáveis por quem não atesta. Um pré-prod em que a etapa final não roda não testou nada.
+2. **O Prof. João é CLIENTE, não administrador de sistema.** Depender dele para trocar papéis
+   põe administração de acesso nas mãos de quem foi contratado para dar aula.
+
+O risco que isso deixa aberto é real e é o mesmo do parágrafo acima — mas hoje ele não morde,
+porque não existe graduação real no log: o cadastro do Floki nasce `demo: true` e os dados
+dele são declaradamente semeados.
+
+> **Gatilho para mover o desenvolvedor a `admin`: o dia em que o Prof. João conceder o
+> primeiro grau a um aluno real.** Nesse instante `graduacoes` deixa de ser demonstração e
+> passa a ser evidência, e um log em que o desenvolvedor podia ter assinado o próprio grau não
+> é evidência. As regras e os testes já sustentam a troca; ela é um campo em um documento.
+
 ### 2. O admin não toca em `papel` — de ninguém, inclusive o próprio
 
 Sem isto a decisão 1 é teatro: bastaria eu me promover a `professor` e assinar. Nas regras,
@@ -195,7 +214,13 @@ invisível. Kainã é resolvido sem papel novo.
 professor sair, nomear outro exige o console. E o `demo` do Floki é um campo que vai ficar
 errado se eu esquecer de desligá-lo quando começar a treinar de verdade como ele.
 
-**Não decidido:** o aviso de privacidade não existe ainda, e ele **precede** os convites de
-Willian, Roberto e Eduardo — no instante em que os três entram, passa a haver dado pessoal de
-terceiros coletado sem aviso, e coleta não se desfaz depois. O acordo escrito com a academia
-como controladora segue bloqueando o lançamento, não os testes.
+**Sobre o aviso de privacidade:** ele **não** bloqueia esta fase. O modelo é *family and
+friends* — pessoas reais, com consentimento obtido diretamente por quem as conhece, para um
+teste de pré-produção. Consentimento verbal informado entre conhecidos é base legal suficiente
+para isso; o que ele **não** cobre é o lançamento aberto.
+
+Fica então dividido em dois, em vez de tratado como um bloqueio único:
+
+- **agora (pré-prod, family and friends):** consentimento das quatro pessoas. Feito.
+- **antes do lançamento:** aviso de privacidade na tela e acordo escrito com a academia como
+  controladora dos dados. Continua bloqueando o lançamento, e só ele.
