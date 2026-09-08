@@ -15,6 +15,7 @@
 import { useMemo } from 'react'
 import type { FirebaseApp } from 'firebase/app'
 import { agendaDoPrograma, proximaAulaSemData, rotuloDaSemana, slotsDaSemana } from '@faixa-azul/core/application/agenda'
+import { resumoDasAulas } from '@faixa-azul/core/application/programa'
 import { CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
 import { ITENS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
 import type { AulaNoPlanner } from '@faixa-azul/core/application/programa'
@@ -77,6 +78,7 @@ export function GradeDaTurma({
   )
 
   const proxima = useMemo(() => proximaAulaSemData(aulas), [aulas])
+  const conteudo = useMemo(() => resumoDasAulas(aulas), [aulas])
 
   if (programa.estado.fase === 'carregando') {
     return (
@@ -104,6 +106,7 @@ export function GradeDaTurma({
       <GradeDeHorario
         turma={turma}
         slots={slots}
+        conteudo={conteudo}
         rotulo={rotuloDaSemana(semana.domingo)}
         podeVoltar={semana.podeVoltar}
         podeAvancar={semana.podeAvancar}

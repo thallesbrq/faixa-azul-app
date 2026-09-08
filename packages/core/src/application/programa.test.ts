@@ -15,6 +15,8 @@ import {
   tirarItemDaAula,
   tirarRotulo,
   tipoPrecisaPosicao,
+  aulaTemConteudo,
+  resumoDasAulas,
 } from './programa'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '../seed/primeiro-grau'
 import { CURRICULO_AZUL } from '../seed/curriculos'
@@ -340,5 +342,91 @@ describe('os modulos do 1o grau', () => {
       'g1-finalizacoes',
       'g1-saidas',
     ])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// O conteudo da aula para quem NAO a montou (o professor substituto)
+// ---------------------------------------------------------------------------
+
+describe('resumoDasAulas', () => {
+  const base = {
+    turma: 'RGI',
+    itensDoBolsao: CURRICULO_AZUL.itens,
+    itensConhecidos: [...CURRICULO_AZUL.itens, ...ITENS_1GRAU],
+  }
+
+  it('traz as TECNICAS de cada aula, e nao so o numero', () => {
+    /**
+     * A razao de ser desta funcao, e o pedido foi literal: "caso o professor Joao
+     * nao for na aula um professor substituto pode ver". Para quem montou, `Aula
+     * 6` basta. Para um substituto, o numero e a mesma informacao que uma caixa
+     * vazia.
+     */
+    const plano = sugestaoDo1Grau(ITENS_1GRAU)
+    const aulas = [...plano].map(([numero, itemIds]) => ({ ...aulaVazia(numero), itemIds }))
+    const r = resumoDasAulas(montarPlanner({ ...base, aulas }).aulas)
+
+    const aula1 = r.get(1)!
+    expect(aula1.tecnicas).toHaveLength(1)
+    expect(aula1.tecnicas[0]).toBe('Ukemi')
+    expect(aulaTemConteudo(aula1)).toBe(true)
+  })
+
+  it('usa `slot` quando o item nao tem `nome` — senao um quarto da grade fica em branco', () => {
+    /**
+     * MEDIDO, e nao suposto: 25 dos 81 itens do curriculo de azul tem `nome`
+     * vazio e so o `slot` preenchido (a posicao na prova, tipo "Raspada 1").
+     * Mostrar o `nome` cru deixaria essas linhas vazias na Grade — e o
+     * substituto leria um espaco em branco onde deveria haver uma tecnica.
+     */
+    const semNome = CURRICULO_AZUL.itens.find((i) => i.ativo && i.nome === '')
+    expect(semNome, 'o seed deveria ter item sem nome').toBeDefined()
+
+    const aulas = [{ ...aulaVazia(4), itemIds: [semNome!.id] }]
+    const r = resumoDasAulas(montarPlanner({ ...base, aulas }).aulas)
+    expect(r.get(4)?.tecnicas).toEqual([semNome!.slot])
+    expect(r.get(4)?.tecnicas[0]).not.toBe('')
+  })
+
+  it('o ROTULO pontual entra descrito, junto das tecnicas', () => {
+    // O substituto precisa ver o que foi acrescentado a mao: aquilo nao esta em
+    // lista nenhuma que ele possa consultar.
+    const aulas = [
+      { ...aulaVazia(9), rotulos: [{ id: 'r', posicao: 'Montada', tipo: 'finalizacao', nome: 'Gravata romana' }] },
+    ]
+    const r = resumoDasAulas(montarPlanner({ ...base, aulas }).aulas)
+    expect(r.get(9)?.rotulos).toEqual(['Montada · Finalização · Gravata romana'])
+    expect(aulaTemConteudo(r.get(9))).toBe(true)
+  })
+
+  it('o FOCO viaja, porque e a frase que resume a aula', () => {
+    const aulas = [{ ...aulaVazia(5), foco: 'abrir a guarda em pé' }]
+    const r = resumoDasAulas(montarPlanner({ ...base, aulas }).aulas)
+    expect(r.get(5)?.foco).toBe('abrir a guarda em pé')
+    // Foco sozinho JA e conteudo: uma aula sem tecnica do curriculo mas com o
+    // foco escrito diz ao substituto o que fazer.
+    expect(aulaTemConteudo(r.get(5))).toBe(true)
+  })
+
+  it('AULA VAZIA NAO TEM CONTEUDO — e a Grade avisa em vez de mostrar branco', () => {
+    // Se o professor faltar numa terca cuja aula esta vazia, o substituto chega e
+    // nao ha o que dar. Dizer isso ANTES do dia e o unico jeito de dar tempo.
+    const r = resumoDasAulas(montarPlanner({ ...base, aulas: [] }).aulas)
+    expect(aulaTemConteudo(r.get(6))).toBe(false)
+    expect(aulaTemConteudo(undefined)).toBe(false)
+  })
+
+  it('id orfao viaja como desconhecido, e nao desaparece', () => {
+    const aulas = [{ ...aulaVazia(3), itemIds: ['fantasma'] }]
+    const r = resumoDasAulas(montarPlanner({ ...base, aulas }).aulas)
+    expect(r.get(3)?.desconhecidos).toEqual(['fantasma'])
+    // Um id orfao NAO conta como conteudo: nao ha tecnica para dar.
+    expect(aulaTemConteudo(r.get(3))).toBe(false)
+  })
+
+  it('cobre as 81 caixas, para nenhum slot ficar sem resposta', () => {
+    const r = resumoDasAulas(montarPlanner({ ...base, aulas: [] }).aulas)
+    expect(r.size).toBe(81)
   })
 })

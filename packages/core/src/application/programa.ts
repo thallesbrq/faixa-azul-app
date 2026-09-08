@@ -478,3 +478,54 @@ export function porRotulo(aula: AulaDoPrograma, rotulo: RotuloDaAula): AulaDoPro
 export function tirarRotulo(aula: AulaDoPrograma, id: string): AulaDoPrograma {
   return { ...aula, rotulos: aula.rotulos.filter((r) => r.id !== id) }
 }
+
+// ---------------------------------------------------------------------------
+// O conteudo de uma aula, para quem NAO a montou
+// ---------------------------------------------------------------------------
+
+export interface ResumoDaAula {
+  numero: number
+  foco: string
+  /** Nomes das tecnicas do curriculo programadas nesta aula. */
+  tecnicas: string[]
+  /** Os rotulos pontuais, ja descritos numa linha. */
+  rotulos: string[]
+  /** Ids guardados que nao existem mais — a tela avisa em vez de esconder. */
+  desconhecidos: string[]
+}
+
+/**
+ * O conteudo de cada aula, indexado pelo numero.
+ *
+ * POR QUE ISTO EXISTE, e o pedido foi literal: "e importante que o calendario da
+ * turma que contem o conteudo dos treinos seja visualizado, pois a ideia e caso o
+ * professor Joao nao for na aula um professor substituto pode ver".
+ *
+ * A Grade de Horario mostrava so `Aula 6`. Para quem MONTOU a aula, o numero
+ * basta — ele lembra o que pos ali. Para um SUBSTITUTO, o numero nao diz nada: ele
+ * chega na terca as 8h e precisa saber que tecnicas dar. Um numero sem conteudo e
+ * a mesma informacao que uma caixa vazia.
+ *
+ * `nome || slot` PARA O NOME DA TECNICA: 25 dos 81 itens do curriculo de azul tem
+ * `nome` vazio e so o `slot` preenchido (a posicao na prova, tipo "Raspada 1").
+ * Mostrar o `nome` cru deixaria um quarto da grade com linhas em branco.
+ */
+export function resumoDasAulas(aulas: readonly AulaNoPlanner[]): Map<number, ResumoDaAula> {
+  const porNumero = new Map<number, ResumoDaAula>()
+  for (const a of aulas) {
+    porNumero.set(a.numero, {
+      numero: a.numero,
+      foco: a.foco,
+      tecnicas: a.itens.map((i) => i.nome || i.slot),
+      rotulos: a.rotulos.map(descreverRotulo),
+      desconhecidos: a.desconhecidos,
+    })
+  }
+  return porNumero
+}
+
+/** A aula tem algo para um substituto ler? */
+export function aulaTemConteudo(r: ResumoDaAula | undefined): boolean {
+  if (!r) return false
+  return r.tecnicas.length > 0 || r.rotulos.length > 0 || r.foco.trim() !== ''
+}

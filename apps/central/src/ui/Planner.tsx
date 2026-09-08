@@ -31,7 +31,14 @@ import {
   descreverRotulo,
   tipoPrecisaPosicao,
 } from '@faixa-azul/core/application/programa'
-import type { AulaNoPlanner, BlocoDoPrograma, EstadoDoPlanner, RotuloDaAula } from '@faixa-azul/core/application/programa'
+import type {
+  AulaNoPlanner,
+  BlocoDoPrograma,
+  EstadoDoPlanner,
+  ResumoDaAula,
+  RotuloDaAula,
+} from '@faixa-azul/core/application/programa'
+import { resumoDasAulas } from '@faixa-azul/core/application/programa'
 import {
   agendaDoPrograma,
   daDataLocal,
@@ -125,6 +132,7 @@ export function Planner({
    * ficar com uma versao velha e oferecer um horario que outro acabou de ocupar.
    */
   const agenda = useMemo(() => agendaDoPrograma(planner.aulas), [planner.aulas])
+  const conteudo = useMemo(() => resumoDasAulas(planner.aulas), [planner.aulas])
 
   const do1Grau = planner.aulas.filter((a) => a.bloco === '1grau')
   const montadasNo1Grau = do1Grau.filter((a) => a.itens.length > 0 || a.rotulos.length > 0).length
@@ -237,6 +245,7 @@ export function Planner({
               aula={a}
               turma={turma}
               agenda={agenda}
+              conteudo={conteudo}
               hoje={hoje}
               gravando={gravando}
               selecionada={a.numero === selecionada}
@@ -259,6 +268,7 @@ function Aula({
   aula,
   turma,
   agenda,
+  conteudo,
   hoje,
   gravando,
   selecionada,
@@ -273,6 +283,7 @@ function Aula({
   aula: AulaNoPlanner
   turma: string
   agenda: ReadonlyMap<string, number>
+  conteudo: ReadonlyMap<number, ResumoDaAula>
   hoje: Date
   gravando: boolean
   selecionada: boolean
@@ -413,6 +424,7 @@ function Aula({
               aula={aula}
               turma={turma}
               agenda={agenda}
+              conteudo={conteudo}
               hoje={hoje}
               gravando={gravando}
               aoFechar={() => setAbrindoAgenda(false)}
@@ -587,6 +599,7 @@ function ModalDaAgenda({
   aula,
   turma,
   agenda,
+  conteudo,
   hoje,
   gravando,
   aoFechar,
@@ -596,6 +609,7 @@ function ModalDaAgenda({
   aula: AulaNoPlanner
   turma: string
   agenda: ReadonlyMap<string, number>
+  conteudo: ReadonlyMap<number, ResumoDaAula>
   hoje: Date
   gravando: boolean
   aoFechar: () => void
@@ -632,6 +646,7 @@ function ModalDaAgenda({
         <GradeDeHorario
           turma={turma}
           slots={slots}
+          conteudo={conteudo}
           rotulo={rotuloDaSemana(semana.domingo)}
           podeVoltar={semana.podeVoltar}
           podeAvancar={semana.podeAvancar}

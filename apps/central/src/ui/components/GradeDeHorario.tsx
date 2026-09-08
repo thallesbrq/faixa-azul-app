@@ -15,15 +15,27 @@
  * SO OS SLOTS DA TURMA APARECEM, e nao os sete dias. Uma grade com segunda,
  * quarta e sexta vazias para uma turma de terca e quinta gasta cinco setimos da
  * largura dizendo "nao ha aula" — e o professor ja sabe.
+ *
+ * O CONTEUDO APARECE NO SLOT, e nao so o numero da aula. O pedido foi literal:
+ * "e importante que o calendario da turma que contem o conteudo dos treinos seja
+ * visualizado, pois a ideia e caso o professor Joao nao for na aula um professor
+ * substituto pode ver".
+ *
+ * Para quem MONTOU a aula, `Aula 6` basta — ele lembra o que pos ali. Para um
+ * SUBSTITUTO, o numero e a mesma informacao que uma caixa vazia: ele chega na
+ * terca as 8h e precisa saber que tecnicas dar.
  */
 
 import type { SlotDaSemana } from '@faixa-azul/core/application/agenda'
 import { DIAS_DA_SEMANA, rotuloDoDia } from '@faixa-azul/core/application/agenda'
+import type { ResumoDaAula } from '@faixa-azul/core/application/programa'
+import { aulaTemConteudo } from '@faixa-azul/core/application/programa'
 import { nomeDaTurma } from '@faixa-azul/core/domain/turmas'
 
 export function GradeDeHorario({
   turma,
   slots,
+  conteudo,
   rotulo,
   podeVoltar,
   podeAvancar,
@@ -38,6 +50,15 @@ export function GradeDeHorario({
 }: {
   turma: string
   slots: readonly SlotDaSemana[]
+  /**
+   * O conteudo de cada aula, por numero. Vem de `resumoDasAulas`.
+   *
+   * MAPA E NAO CAMPO NO SLOT: o slot e sobre TEMPO (quando, ocupado, passado) e o
+   * conteudo e sobre CURRICULO. Juntar os dois faria `slotsDaSemana` — que hoje e
+   * puro e testado contra fuso — precisar do curriculo inteiro para responder que
+   * horas e a aula.
+   */
+  conteudo: ReadonlyMap<number, ResumoDaAula>
   rotulo: string
   podeVoltar: boolean
   podeAvancar: boolean
@@ -129,6 +150,9 @@ export function GradeDeHorario({
              */
             const podeDesignar = comFoco ? true : !ocupado && proximaSemData !== null
 
+            const resumo = s.aula === null ? undefined : conteudo.get(s.aula)
+            const temConteudo = aulaTemConteudo(resumo)
+
             return (
               <li
                 key={s.id}
@@ -141,6 +165,7 @@ export function GradeDeHorario({
                   .filter(Boolean)
                   .join(' ')}
               >
+                <div className="grade-slot-linha">
                 <div className="grade-slot-quando">
                   <strong>{DIAS_DA_SEMANA[s.diaDaSemana]}</strong> {rotuloDoDia(s.quando)}
                   <span className="grade-slot-hora">
@@ -193,6 +218,55 @@ export function GradeDeHorario({
                         ? `Designar aula ${proximaSemData}`
                         : 'Livre'}
                   </button>
+                )}
+                </div>
+
+                {/*
+                  O CONTEUDO DO TREINO — a razao de ser desta parte da tela.
+                  Sem ele, um substituto le "Aula 6" e nao sabe o que dar.
+                */}
+                {ocupado && (
+                  <div className="grade-slot-conteudo">
+                    {resumo?.foco.trim() !== '' && resumo?.foco !== undefined && (
+                      <p className="grade-slot-foco">{resumo.foco}</p>
+                    )}
+
+                    {temConteudo ? (
+                      <ul className="grade-slot-tecnicas">
+                        {resumo?.tecnicas.map((t) => (
+                          <li key={t}>
+                            <span className="chip-item chip-item--posto">{t}</span>
+                          </li>
+                        ))}
+                        {/* O rotulo pontual aparece com a MESMA marca tracejada
+                            do planner: ele nao e item do curriculo, e o
+                            substituto precisa saber que aquilo foi acrescentado
+                            a mao — nao esta em lista nenhuma para ele consultar. */}
+                        {resumo?.rotulos.map((r) => (
+                          <li key={r}>
+                            <span className="chip-item chip-item--rotulo">{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      /* AULA AGENDADA E VAZIA E UM AVISO, e nao um espaco em
+                         branco: se o Prof. Joao faltar nesta terca, o substituto
+                         chega e nao ha o que dar. Dizer isso ANTES do dia e o
+                         unico jeito de dar tempo de montar. */
+                      <p className="grade-slot-sem-conteudo">
+                        A aula {s.aula} não tem técnica programada — um substituto não
+                        teria o que dar.
+                      </p>
+                    )}
+
+                    {resumo && resumo.desconhecidos.length > 0 && (
+                      <p className="grade-slot-sem-conteudo">
+                        {resumo.desconhecidos.length}{' '}
+                        {resumo.desconhecidos.length === 1 ? 'técnica' : 'técnicas'} desta aula
+                        não existe(m) mais no currículo.
+                      </p>
+                    )}
+                  </div>
                 )}
               </li>
             )

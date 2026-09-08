@@ -1440,15 +1440,52 @@
 }
 
 .grade-slot {
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: var(--cor-fundo);
+}
+
+/* O cabecalho do slot: quando, e a acao. O conteudo do treino vem ABAIXO, em
+   largura cheia — nomes de tecnica sao longos e nao cabem ao lado da hora. */
+.grade-slot-linha {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border: 1px solid var(--cor-borda);
-  border-radius: 10px;
-  background: var(--cor-fundo);
+}
+
+/* O CONTEUDO DO TREINO — a parte que um substituto le. Separado por uma linha
+   tenue: ele pertence ao slot, e nao e o slot. */
+.grade-slot-conteudo {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cor-borda);
+}
+
+.grade-slot-foco {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.grade-slot-tecnicas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Aula agendada e VAZIA e um aviso, e nao um espaco em branco: se o professor
+   faltar nessa terca, o substituto chega e nao ha o que dar. */
+.grade-slot-sem-conteudo {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--amarelo-atencao);
+  font-weight: 600;
 }
 
 /* Slot com aula: fundo cheio na etiqueta e borda firme, para "tem aula" e
