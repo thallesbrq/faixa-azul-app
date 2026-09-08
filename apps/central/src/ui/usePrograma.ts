@@ -58,6 +58,7 @@ import {
 } from '@faixa-azul/core/application/programa'
 import type { AulaDoPrograma, EstadoDoPlanner, RotuloDaAula } from '@faixa-azul/core/application/programa'
 import type { TechniqueItem } from '@faixa-azul/core/domain/types'
+import { contar } from './diagnostico'
 
 export interface EstadoDoProgramaNaTela {
   fase: 'carregando' | 'pronto' | 'erro'
@@ -102,6 +103,32 @@ export function usePrograma({
   const nuvem = useRef<Programas | null>(null)
 
   /**
+   * ESPELHO DE `aulas` NUMA REF, e isto conserta um defeito PROVADO em producao.
+   *
+   * A versao anterior lia a aula atual DENTRO do updater de `setAulas` e
+   * atribuia o resultado a uma variavel de fechamento:
+   *
+   *     let nova = null
+   *     setAulas((atuais) => { ...; nova = proxima; return [...] })
+   *     if (nova === null) return          // <- SEMPRE null aqui
+   *     await gravarAula(turma, nova)      // <- nunca chegava
+   *
+   * `setAulas` nao roda o updater na hora: ele e ENFILEIRADO e executado na
+   * proxima renderizacao. Entao a checagem logo abaixo lia `null`, a funcao
+   * retornava, e a gravacao nunca acontecia. O item APARECIA na tela (o estado
+   * local atualizava) e nao ia para o Firestore.
+   *
+   * COMO EU SOUBE: `programas/RGI/aulas` tinha ZERO documentos depois de ele ter
+   * feito varias interacoes. Nao foi dedução — foi a colecao vazia.
+   *
+   * E POR QUE A MINHA VERIFICACAO NO NAVEGADOR NAO PEGOU: a loja em memoria da
+   * pagina de amostra nao reclama de escrita que nao chega, e a tela mostrava o
+   * item posto (estado local). Eu conferi o que aparecia, nao o que gravava.
+   */
+  const aulasRef = useRef<AulaDoPrograma[]>([])
+  aulasRef.current = aulas
+
+  /**
    * A FABRICA MORA NUMA REF, e o efeito de carga NAO depende dela.
    *
    * Medido, e nao suposto: com `abrir` nas dependencias do efeito, uma fabrica
@@ -136,6 +163,7 @@ export function usePrograma({
    * QUAL PROGRAMA, e nada mais.
    */
   useEffect(() => {
+    contar('cargaPrograma')
     let cancelado = false
     setFase('carregando')
     setMensagem(null)
@@ -147,6 +175,7 @@ export function usePrograma({
         // Trocar de turma no meio de uma leitura descartaria a resposta antiga
         // sobre a nova — a guarda evita ver o programa da RG2 na tela da RGI.
         if (cancelado) return
+        aulasRef.current = lidas
         setAulas(lidas)
         setFase('pronto')
       } catch (e) {
@@ -167,7 +196,8 @@ export function usePrograma({
     setMensagem(null)
     try {
       if (!nuvem.current) nuvem.current = await abrirRef.current(app)
-      setAulas(await nuvem.current.aulasDe(turma))
+      aulasRef.current = await nuvem.current.aulasDe(turma)
+      setAulas(aulasRef.current)
       setFase('pronto')
     } catch (e) {
       setFase('erro')
@@ -178,16 +208,16 @@ export function usePrograma({
   /** Aplica uma mudanca numa aula: local primeiro, rede depois. */
   const mudar = useCallback(
     async (numero: number, f: (a: AulaDoPrograma) => AulaDoPrograma) => {
-      let nova: AulaDoPrograma | null = null
-      setAulas((atuais) => {
-        const atual = atuais.find((a) => a.numero === numero) ?? aulaVazia(numero)
-        const proxima = f(atual)
-        // Sem mudanca real (clique repetido no mesmo item) nao grava nada.
-        if (proxima === atual) return atuais
-        nova = proxima
-        return [...atuais.filter((a) => a.numero !== numero), proxima]
-      })
-      if (nova === null) return
+      // A aula sai da REF e nao do updater — ver `aulasRef` acima.
+      const atual = aulasRef.current.find((a) => a.numero === numero) ?? aulaVazia(numero)
+      const nova = f(atual)
+      // Sem mudanca real (clique repetido no mesmo item) nao grava nada.
+      if (nova === atual) return
+
+      // A ref anda junto com o estado para dois cliques seguidos na mesma aula
+      // nao partirem os dois da mesma versao — o segundo apagaria o primeiro.
+      aulasRef.current = [...aulasRef.current.filter((a) => a.numero !== numero), nova]
+      setAulas(aulasRef.current)
 
       setGravando(true)
       setMensagem(null)
@@ -218,7 +248,9 @@ export function usePrograma({
     try {
       const plano = sugestaoDo1Grau(itensDo1Grau)
       const ocupadas = new Set(
-        aulas.filter((a) => a.itemIds.length > 0 || a.rotulos.length > 0).map((a) => a.numero),
+        aulasRef.current
+          .filter((a) => a.itemIds.length > 0 || a.rotulos.length > 0)
+          .map((a) => a.numero),
       )
       const novas: AulaDoPrograma[] = []
       for (const [numero, itemIds] of plano) {
@@ -234,10 +266,11 @@ export function usePrograma({
       // EM LOTE: sao ~25 documentos, e um laco deixaria a turma pela metade se a
       // rede caisse no meio.
       await nuvem.current.gravarVarias(turma, novas)
-      setAulas((atuais) => [
-        ...atuais.filter((a) => !novas.some((n) => n.numero === a.numero)),
+      aulasRef.current = [
+        ...aulasRef.current.filter((a) => !novas.some((n) => n.numero === a.numero)),
         ...novas,
-      ])
+      ]
+      setAulas(aulasRef.current)
       setMensagem(
         `Sugestão aplicada em ${novas.length} ${novas.length === 1 ? 'aula' : 'aulas'}. Mova o que quiser.`,
       )
@@ -246,7 +279,7 @@ export function usePrograma({
     } finally {
       setGravando(false)
     }
-  }, [app, turma, itensDo1Grau, aulas])
+  }, [app, turma, itensDo1Grau])
 
   return {
     estado: { fase, planner: fase === 'carregando' ? null : planner, mensagem, gravando },

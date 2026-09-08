@@ -27,6 +27,7 @@ import {
 import type { Curriculo, LinhaDaCentral } from '@faixa-azul/core/application/central'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import type { FirebaseApp } from 'firebase/app'
+import { contar } from './diagnostico'
 
 export interface EstadoDasLinhas {
   fase: 'carregando-pessoas' | 'carregando-estados' | 'pronto' | 'erro'
@@ -80,6 +81,7 @@ export function useLinhas({
   const comps = useRef<Competencias | null>(null)
 
   const carregar = useCallback(async () => {
+    contar('cargaLinhas')
     setEstado((a) => ({ ...a, fase: 'carregando-pessoas', mensagem: null }))
     try {
       const [pessoas, convites] = await Promise.all([

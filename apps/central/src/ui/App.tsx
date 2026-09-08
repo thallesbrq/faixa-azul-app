@@ -11,7 +11,7 @@
  * e nao existe versao util sem saber quem esta olhando.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { curriculoPorId, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
 import { MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
 import { metaSeguinte } from '@faixa-azul/core/domain/metas'
@@ -41,6 +41,15 @@ import { Planner } from './Planner'
 import { usePrograma } from './usePrograma'
 import { ITENS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
 import { horaCurta } from './formato'
+import {
+  CONTADORES,
+  DIAGNOSTICO_LIGADO,
+  contar,
+  observarMutacoes,
+  totalDeMutacoes,
+} from './diagnostico'
+
+observarMutacoes()
 
 /**
  * As COLUNAS da tabela vem do curriculo de azul, e nao da meta de cada aluno.
@@ -55,6 +64,7 @@ const CURRICULO_DAS_COLUNAS: Curriculo = CURRICULO_AZUL
 
 export function App() {
   const sessao = useSessaoDoProfessor()
+  contar('renders')
 
   if (sessao.estado.fase !== 'pronto') {
     return (
@@ -72,10 +82,74 @@ export function App() {
 
   // Componente proprio para os hooks da central so existirem quando ha sessao.
   // Chamar `useLinhas` no App faria ele rodar (e falhar) na tela de login.
-  return <Central sessao={sessao.estado} aoSair={sessao.sair} />
+  return (
+    <>
+      {DIAGNOSTICO_LIGADO && <PainelDeDiagnostico />}
+      <Central sessao={sessao.estado} aoSair={sessao.sair} />
+    </>
+  )
 }
 
-function Central({
+/**
+ * O painel do `?diag=1`.
+ *
+ * ATUALIZA POR `setInterval` E NAO POR RENDER, e a distincao e o ponto: se ele
+ * lesse os contadores durante o render da arvore, ele mostraria o estado no
+ * instante do laco e nao a TAXA. Uma taxa por segundo e o que distingue "abriu
+ * duas vezes" de "esta girando".
+ */
+function PainelDeDiagnostico() {
+  const [linha, setLinha] = useState('medindo…')
+  useEffect(() => {
+    let anterior = { ...CONTADORES, mutacoes: totalDeMutacoes() }
+    const id = window.setInterval(() => {
+      const agora = { ...CONTADORES, mutacoes: totalDeMutacoes() }
+      setLinha(
+        [
+          `renders ${agora.renders} (+${agora.renders - anterior.renders}/s)`,
+          `dom ${agora.mutacoes} (+${agora.mutacoes - anterior.mutacoes}/s)`,
+          `programa ${agora.cargaPrograma}`,
+          `linhas ${agora.cargaLinhas}`,
+          `sessao ${agora.sessao}`,
+        ].join(' · '),
+      )
+      anterior = agora
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  return (
+    <p
+      id="painel-de-diagnostico"
+      style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        margin: 0,
+        padding: '6px 12px',
+        background: '#111214',
+        color: '#7ee787',
+        fontFamily: 'ui-monospace, monospace',
+        fontSize: 12,
+        textAlign: 'center',
+      }}
+    >
+      {linha}
+    </p>
+  )
+}
+
+/**
+ * EXPORTADO para a pagina de diagnostico montar a arvore REAL.
+ *
+ * A pagina de amostra montava so o `Planner` — e foi por isso que um laco de
+ * render no `usePrograma` passou por 658 testes e por uma inspecao na tela. Um
+ * defeito de arvore precisa da arvore: `Central` + seus memos + a rota +
+ * `PlannerDaTurma` + `usePrograma`.
+ */
+export function Central({
   sessao,
   aoSair,
 }: {

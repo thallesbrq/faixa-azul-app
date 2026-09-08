@@ -29,6 +29,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { contar } from './diagnostico'
+import { podeVerAcademia } from '@faixa-azul/core/domain/papeis'
 import type { FirebaseApp } from 'firebase/app'
 import { APP_ALUNO } from '@faixa-azul/core/chaves'
 import { CONFIG_ALUNO } from '@faixa-azul/core/nuvem/config'
@@ -147,10 +149,30 @@ export function useSessaoDoProfessor() {
       }
     }
 
-    if (!cadastro || cadastro.papel !== 'professor' || !cadastro.ativo) {
+    /**
+     * QUEM ENTRA NA CENTRAL: professor OU admin (ADR-017, decisao 1).
+     *
+     * DEFEITO LATENTE CORRIGIDO. A comparacao era `papel !== 'professor'`, e o
+     * papel `admin` existe desde o ADR-017 justamente para o desenvolvedor ver a
+     * academia inteira sem poder assinar evidencia. Com a comparacao antiga, o
+     * primeiro admin de verdade cairia em "esta conta nao tem cadastro nesta
+     * academia" — a mensagem MAIS errada possivel, porque ele tem cadastro, tem
+     * permissao de leitura nas regras, e a tela diria que nao existe.
+     *
+     * Nao deu problema ainda porque ninguem e admin: a decisao foi manter o
+     * desenvolvedor como professor durante o family and friends. Ou seja, era uma
+     * armadilha esperando o dia em que a decisao mudasse — e nesse dia o sintoma
+     * apontaria para as regras, que estariam certas.
+     *
+     * `podeVerAcademia` em vez de listar os papeis: e exatamente a pergunta que
+     * decide isto, e escreve-la assim faz um papel futuro cair no lado certo sem
+     * ninguem lembrar deste arquivo.
+     */
+    if (!cadastro || !podeVerAcademia(cadastro.papel) || !cadastro.ativo) {
       setEstado({ fase: 'sem-permissao', sessao, cadastro })
       return
     }
+    contar('sessao')
     setEstado({ fase: 'pronto', sessao, cadastro, dados: d, app: n.app })
   }, [])
 
