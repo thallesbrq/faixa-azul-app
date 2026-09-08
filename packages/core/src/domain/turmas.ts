@@ -42,18 +42,78 @@
  * desconhecido seria a unica coisa impedindo o professor de ver "RG1A" como
  * dado perdido.
  *
- * RG2 FICA COM O NOME ANTIGO ate ele nomear o intermediario. Renomear agora
- * para adivinhar o nome dele criaria a segunda migracao em duas semanas.
+ */
+
+/**
+ * Um horario semanal recorrente da turma.
+ *
+ * `diaDaSemana` segue `Date.getDay()`: 0 = domingo, 2 = terca, 4 = quinta.
+ * `inicio` e `fim` sao HORA LOCAL em 'HH:MM' — nao UTC, e nao um `Date`.
+ *
+ * POR QUE TEXTO E NAO `Date`: "terca as 8h" nao e um instante, e uma regra que
+ * se repete. Guardar como `Date` obrigaria a escolher uma data qualquer para
+ * pendurar a hora, e essa data vazaria para o calculo — o classico erro de somar
+ * fuso a uma coisa que nao tem dia.
+ */
+export interface HorarioSemanal {
+  diaDaSemana: number
+  inicio: string
+  fim: string
+}
+
+/**
+ * As turmas da Rilion Gracie Garopaba, COM OS HORARIOS.
+ *
+ * O horario mora aqui porque o cabecalho deste arquivo ja dizia a resposta antes
+ * de eu precisar dela: "Turma e HORARIO, e nada mais". Uma colecao separada de
+ * agenda semanal seria um segundo lugar guardando a mesma identidade.
+ *
+ * RG2 VIROU RGA. Diferente de RG1A/RG1B, esta renomeacao NAO foi gratuita: havia
+ * um convite pendente apontando para `RG2`, e as regras exigem que a turma do
+ * cadastro coincida com a do convite. Sem tratar isso, o convidado nasceria numa
+ * turma que a interface nao oferece mais — visivel, sem horario e sem planner. O
+ * convite foi corrigido para RGA junto com esta mudanca.
+ *
+ * OS DIAS DA RGA SAO SUPOSICAO DECLARADA: o horario (19h-20h) veio do professor,
+ * os dias nao. Assumi os mesmos da RGI. Trocar e editar as duas linhas abaixo.
  */
 export const TURMAS = [
-  { id: 'RGI', nome: 'RGI', descricao: 'Iniciantes — faixa branca' },
-  { id: 'RG2', nome: 'RG2', descricao: 'Intermediário / avançado' },
+  {
+    id: 'RGI',
+    nome: 'RGI',
+    descricao: 'Iniciantes — faixa branca',
+    horarios: [
+      { diaDaSemana: 2, inicio: '08:00', fim: '09:00' },
+      { diaDaSemana: 4, inicio: '08:00', fim: '09:00' },
+    ] as HorarioSemanal[],
+  },
+  {
+    id: 'RGA',
+    nome: 'RGA',
+    descricao: 'Avançado — 19h',
+    horarios: [
+      { diaDaSemana: 2, inicio: '19:00', fim: '20:00' },
+      { diaDaSemana: 4, inicio: '19:00', fim: '20:00' },
+    ] as HorarioSemanal[],
+  },
 ] as const
 
 export interface Turma {
   id: string
   nome: string
   descricao: string
+  horarios: readonly HorarioSemanal[]
+}
+
+/**
+ * Os horarios de uma turma. Turma desconhecida devolve lista VAZIA.
+ *
+ * Vazio e o estado honesto: sem horario nao ha slot, e a Grade mostra "esta
+ * turma nao tem horario cadastrado" em vez de uma semana em branco que parece
+ * defeito. Inventar um horario padrao poria aula onde nao ha aula.
+ */
+export function horariosDaTurma(id: string): readonly HorarioSemanal[] {
+  return turmaPorId(id)?.horarios ?? []
 }
 
 /** O que um cadastro sem turma guarda. Nunca `undefined`: o campo sempre existe. */

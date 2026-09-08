@@ -1395,3 +1395,148 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* ---------------------------------------------------------------------------
+   GRADE DE HORARIO
+
+   LISTA E NAO TABELA DE SETE COLUNAS. Uma turma de terca e quinta gastaria
+   cinco setimos da largura mostrando dias sem aula — e o professor ja sabe que
+   nao ha aula na segunda. Cada slot e uma linha larga, legivel de longe.
+   --------------------------------------------------------------------------- */
+.grade-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.grade-topo h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.grade-navegacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grade-semana {
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-width: 190px;
+  text-align: center;
+}
+
+.grade-slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grade-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: var(--cor-fundo);
+}
+
+/* Slot com aula: fundo cheio na etiqueta e borda firme, para "tem aula" e
+   "livre" se distinguirem sem ler o texto. */
+.grade-slot--ocupado {
+  background: var(--cor-superficie);
+  border-color: var(--preto);
+}
+
+/* O slot da aula que a modal esta agendando. */
+.grade-slot--foco {
+  border-color: var(--laranja);
+  box-shadow: 0 0 0 2px var(--laranja-suave);
+}
+
+/* JA PASSOU FICA VISIVEL E ESMAECIDO, e nao escondido: a aula dada e o que vai
+   contar para o 1o grau, e sumir com a semana passada esconderia o que
+   aconteceu. */
+.grade-slot--passado {
+  opacity: 0.72;
+}
+
+.grade-slot-quando {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.grade-slot-hora {
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-suave);
+}
+
+.grade-slot-passado {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+}
+
+.grade-slot-aula {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   A MODAL DE AGENDAMENTO DO CARD
+   -------------------------------------------------------------------------- */
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(17, 18, 20, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+}
+
+.modal-conteudo {
+  width: 100%;
+  max-width: 620px;
+}
+
+.modal-acoes {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* As duas acoes do card lado a lado: "+ tecnica" e a data. */
+.aula-acoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Aula COM data: o botao mostra a data e ganha acento, para saber se a aula 6
+   esta agendada nao exigir abrir a modal — 80 vezes. */
+.aula-data {
+  border-color: var(--laranja);
+  color: var(--laranja-texto);
+  font-weight: 700;
+}

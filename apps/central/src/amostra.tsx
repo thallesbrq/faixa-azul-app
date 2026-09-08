@@ -38,6 +38,8 @@ import '@faixa-azul/core/tokens.css'
 import './ui/central.css'
 
 const ITENS_DO_BOLSAO = CURRICULO_AZUL.itens
+/** Fixado na carga do modulo: `new Date()` por render alimenta laco de render. */
+const HOJE = new Date()
 
 /** Loja em memoria com a interface da nuvem. Mesmo contrato, zero rede. */
 function lojaEmMemoria(): Programas {
@@ -136,6 +138,9 @@ function Amostra() {
         aoAcrescentarRotulo={(n, r) => void programa.acrescentarRotulo(n, r)}
         aoRemoverRotulo={(n, id) => void programa.removerRotulo(n, id)}
         aoMudarFoco={(n, f) => void programa.mudarFoco(n, f)}
+        aoDesignar={(n, slotId) => void programa.agendar(n, slotId)}
+        aoDesagendar={(n) => void programa.desagendar(n)}
+        hoje={HOJE}
       />
     </>
   )

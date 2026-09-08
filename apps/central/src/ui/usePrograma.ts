@@ -48,6 +48,7 @@ import type { FirebaseApp } from 'firebase/app'
 import { abrirProgramas } from '@faixa-azul/core/nuvem/programas'
 import type { Programas } from '@faixa-azul/core/nuvem/programas'
 import {
+  agendarAula,
   aulaVazia,
   montarPlanner,
   porItemNaAula,
@@ -281,9 +282,62 @@ export function usePrograma({
     }
   }, [app, turma, itensDo1Grau])
 
+  /**
+   * Agenda uma aula num slot, DESALOJANDO quem estava la.
+   *
+   * DUAS INVARIANTES, e o dado garante so uma. `slot` na aula garante que uma
+   * aula tem no maximo uma data (o campo e singular). O outro lado — um slot com
+   * no maximo uma aula — e garantido AQUI: se o slot estava ocupado, a aula
+   * anterior perde a data no mesmo lote.
+   *
+   * EM LOTE E NAO EM DUAS GRAVACOES: se a segunda falhasse, ficariam duas aulas
+   * no mesmo slot — exatamente o estado que `agendaDoPrograma` tem de desempatar
+   * arbitrariamente. Um lote atomico faz esse desempate ser codigo defensivo em
+   * vez de rotina.
+   *
+   * Devolve o numero da aula desalojada (ou `null`), para a tela DIZER o que
+   * saiu. Trocar em silencio faria o professor procurar uma aula que ele mesmo
+   * moveu.
+   */
+  const agendar = useCallback(
+    async (numero: number, slot: string): Promise<number | null> => {
+      const atuais = aulasRef.current
+      const alvo = atuais.find((a) => a.numero === numero) ?? aulaVazia(numero)
+      if (alvo.slot === slot) return null
+
+      // Quem ocupava o slot — ignorando a propria aula, que so esta se movendo.
+      const ocupante = slot === '' ? undefined : atuais.find((a) => a.slot === slot && a.numero !== numero)
+
+      const mudadas: AulaDoPrograma[] = [agendarAula(alvo, slot)]
+      if (ocupante) mudadas.push(agendarAula(ocupante, ''))
+
+      const semAsMudadas = atuais.filter((a) => !mudadas.some((m) => m.numero === a.numero))
+      aulasRef.current = [...semAsMudadas, ...mudadas]
+      setAulas(aulasRef.current)
+
+      setGravando(true)
+      setMensagem(null)
+      try {
+        if (!nuvem.current) nuvem.current = await abrirRef.current(app)
+        await nuvem.current.gravarVarias(turma, mudadas)
+      } catch (e) {
+        setMensagem(
+          `Não consegui agendar a aula ${numero}: ${(e as Error)?.message ?? 'erro'}. Recarregue para ver o que está salvo.`,
+        )
+      } finally {
+        setGravando(false)
+      }
+      return ocupante?.numero ?? null
+    },
+    [app, turma],
+  )
+
   return {
     estado: { fase, planner: fase === 'carregando' ? null : planner, mensagem, gravando },
     recarregar,
+    agendar,
+    /** Tira a data da aula, devolvendo-a para a fila das não agendadas. */
+    desagendar: (numero: number) => agendar(numero, ''),
     aplicarSugestao,
     porItem: (numero: number, itemId: string) => mudar(numero, (a) => porItemNaAula(a, itemId)),
     tirarItem: (numero: number, itemId: string) => mudar(numero, (a) => tirarItemDaAula(a, itemId)),

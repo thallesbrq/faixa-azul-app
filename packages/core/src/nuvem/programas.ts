@@ -85,6 +85,9 @@ export async function abrirProgramas(app: FirebaseApp): Promise<Programas> {
             ? x.rotulos.map(comoRotulo).filter((r): r is RotuloDaAula => r !== null)
             : [],
           foco: typeof x.foco === 'string' ? x.foco : '',
+          // Aula gravada antes deste campo nao tem a chave: `''` e o que ela de
+          // fato e — sem data.
+          slot: typeof x.slot === 'string' ? x.slot : '',
         } satisfies AulaDoPrograma
       })
     },
@@ -95,6 +98,7 @@ export async function abrirProgramas(app: FirebaseApp): Promise<Programas> {
         itemIds: aula.itemIds,
         rotulos: aula.rotulos,
         foco: aula.foco,
+        slot: aula.slot,
         alteradoEm: new Date().toISOString(),
       })
     },
@@ -107,6 +111,7 @@ export async function abrirProgramas(app: FirebaseApp): Promise<Programas> {
           itemIds: aula.itemIds,
           rotulos: aula.rotulos,
           foco: aula.foco,
+          slot: aula.slot,
           alteradoEm: new Date().toISOString(),
         })
       }

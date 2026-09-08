@@ -19,7 +19,7 @@
  * dois cliques, e arrasto acessivel por teclado exige um vocabulario inteiro.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AULAS_DO_1GRAU,
   AULAS_PRE_PREENCHIDAS,
@@ -32,7 +32,16 @@ import {
   tipoPrecisaPosicao,
 } from '@faixa-azul/core/application/programa'
 import type { AulaNoPlanner, BlocoDoPrograma, EstadoDoPlanner, RotuloDaAula } from '@faixa-azul/core/application/programa'
+import {
+  agendaDoPrograma,
+  daDataLocal,
+  partesDoSlot,
+  rotuloDaSemana,
+  slotsDaSemana,
+} from '@faixa-azul/core/application/agenda'
 import { ROTULO_BLOCO } from '@faixa-azul/core/domain/taxonomia'
+import { useSemana } from './useSemana'
+import { GradeDeHorario } from './components/GradeDeHorario'
 import { nomeDaTurma } from '@faixa-azul/core/domain/turmas'
 import type { TechniqueItem } from '@faixa-azul/core/domain/types'
 
@@ -55,6 +64,9 @@ export function Planner({
   aoAcrescentarRotulo,
   aoRemoverRotulo,
   aoMudarFoco,
+  aoDesignar,
+  aoDesagendar,
+  hoje,
 }: {
   planner: EstadoDoPlanner
   turma: string
@@ -67,6 +79,10 @@ export function Planner({
   aoAcrescentarRotulo: (numero: number, r: RotuloDaAula) => void
   aoRemoverRotulo: (numero: number, id: string) => void
   aoMudarFoco: (numero: number, foco: string) => void
+  /** Designa a aula para o slot. A modal do card chama com a aula conhecida. */
+  aoDesignar: (numero: number, slotId: string) => void
+  aoDesagendar: (numero: number) => void
+  hoje: Date
 }) {
   const [filtro, setFiltro] = useState<BlocoDoPrograma | 'todas'>('1grau')
   /**
@@ -100,6 +116,15 @@ export function Planner({
       }))
       .filter((g) => g.itens.length > 0)
   }, [planner.bolsao, buscaNoBolsao])
+
+  /**
+   * slot -> aula, para a modal de cada card saber o que ja esta ocupado.
+   *
+   * DERIVADA UMA VEZ AQUI e passada para os 81 cards. Cada card montando a
+   * propria seria a mesma volta 81 vezes por render — e, pior, um card poderia
+   * ficar com uma versao velha e oferecer um horario que outro acabou de ocupar.
+   */
+  const agenda = useMemo(() => agendaDoPrograma(planner.aulas), [planner.aulas])
 
   const do1Grau = planner.aulas.filter((a) => a.bloco === '1grau')
   const montadasNo1Grau = do1Grau.filter((a) => a.itens.length > 0 || a.rotulos.length > 0).length
@@ -210,12 +235,18 @@ export function Planner({
             <Aula
               key={a.numero}
               aula={a}
+              turma={turma}
+              agenda={agenda}
+              hoje={hoje}
+              gravando={gravando}
               selecionada={a.numero === selecionada}
               aoSelecionar={() => setSelecionada(a.numero)}
               aoTirarItem={(itemId) => aoTirarItem(a.numero, itemId)}
               aoAcrescentarRotulo={(r) => aoAcrescentarRotulo(a.numero, r)}
               aoRemoverRotulo={(id) => aoRemoverRotulo(a.numero, id)}
               aoMudarFoco={(foco) => aoMudarFoco(a.numero, foco)}
+              aoDesignar={(slotId) => aoDesignar(a.numero, slotId)}
+              aoDesagendar={aoDesagendar}
             />
           ))}
         </div>
@@ -226,22 +257,35 @@ export function Planner({
 
 function Aula({
   aula,
+  turma,
+  agenda,
+  hoje,
+  gravando,
   selecionada,
   aoSelecionar,
   aoTirarItem,
   aoAcrescentarRotulo,
   aoRemoverRotulo,
   aoMudarFoco,
+  aoDesignar,
+  aoDesagendar,
 }: {
   aula: AulaNoPlanner
+  turma: string
+  agenda: ReadonlyMap<string, number>
+  hoje: Date
+  gravando: boolean
   selecionada: boolean
   aoSelecionar: () => void
   aoTirarItem: (itemId: string) => void
   aoAcrescentarRotulo: (r: RotuloDaAula) => void
   aoRemoverRotulo: (id: string) => void
   aoMudarFoco: (foco: string) => void
+  aoDesignar: (slotId: string) => void
+  aoDesagendar: (numero: number) => void
 }) {
   const [abrindoRotulo, setAbrindoRotulo] = useState(false)
+  const [abrindoAgenda, setAbrindoAgenda] = useState(false)
   const experimental = aula.bloco === 'experimental'
 
   return (
@@ -338,16 +382,46 @@ function Aula({
               }}
             />
           ) : (
-            <button
-              className="botao botao--claro botao--pequeno aula-mais"
-              onClick={(e) => {
-                e.stopPropagation()
-                setAbrindoRotulo(true)
+            <div className="aula-acoes">
+              <button
+                className="botao botao--claro botao--pequeno"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setAbrindoRotulo(true)
+                }}
+                title="Acrescentar uma técnica que não está no currículo"
+              >
+                + técnica
+              </button>
+              {/* A DATA FICA NO BOTAO quando ha uma: sem isso, saber se a aula 6
+                  esta agendada exigiria abrir a modal — 80 vezes. */}
+              <button
+                className={aula.slot ? 'botao botao--claro botao--pequeno aula-data' : 'botao botao--claro botao--pequeno'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setAbrindoAgenda(true)
+                }}
+                title={aula.slot ? `Agendada em ${aula.slot}` : 'Designar esta aula a um horário'}
+              >
+                🗓 {aula.slot ? rotuloCurtoDoSlot(aula.slot) : 'sem data'}
+              </button>
+            </div>
+          )}
+
+          {abrindoAgenda && (
+            <ModalDaAgenda
+              aula={aula}
+              turma={turma}
+              agenda={agenda}
+              hoje={hoje}
+              gravando={gravando}
+              aoFechar={() => setAbrindoAgenda(false)}
+              aoDesignar={(slotId) => {
+                aoDesignar(slotId)
+                setAbrindoAgenda(false)
               }}
-              title="Acrescentar uma técnica que não está no currículo"
-            >
-              + técnica
-            </button>
+              aoDesagendar={aoDesagendar}
+            />
           )}
         </>
       )}
@@ -488,3 +562,105 @@ function FormularioDeRotulo({
 }
 
 export type { TechniqueItem }
+
+/** `2026-09-08T0800` -> `08/09 8h`, para caber no botao do card. */
+function rotuloCurtoDoSlot(slot: string): string {
+  const p = partesDoSlot(slot)
+  if (!p) return slot
+  const [, mes, dia] = p.data.split('-')
+  return `${dia}/${mes} ${Number(p.inicio.slice(0, 2))}h`
+}
+
+/**
+ * A modal de agendamento do card.
+ *
+ * REUSA `GradeDeHorario` com `aulaEmFoco`, e nao uma grade propria: a semana da
+ * modal e a semana da pagina da turma sao a MESMA informacao, e duas
+ * implementacoes divergiriam no primeiro ajuste de layout — o professor veria
+ * duas grades diferentes da mesma turma no mesmo dia.
+ *
+ * ABRE NA SEMANA DA AULA quando ela ja tem data, e na semana de hoje quando nao
+ * tem. Abrir sempre em hoje faria conferir a data da aula 40 custar dezenas de
+ * cliques de paginacao.
+ */
+function ModalDaAgenda({
+  aula,
+  turma,
+  agenda,
+  hoje,
+  gravando,
+  aoFechar,
+  aoDesignar,
+  aoDesagendar,
+}: {
+  aula: AulaNoPlanner
+  turma: string
+  agenda: ReadonlyMap<string, number>
+  hoje: Date
+  gravando: boolean
+  aoFechar: () => void
+  aoDesignar: (slotId: string) => void
+  aoDesagendar: (numero: number) => void
+}) {
+  const semana = useSemana(hoje)
+  const jaAbriu = useRef(false)
+
+  // Salta para a semana da aula UMA VEZ, na abertura. Fazer isso a cada render
+  // prenderia a paginacao: o professor clicaria em `→` e voltaria na hora.
+  useEffect(() => {
+    if (jaAbriu.current) return
+    jaAbriu.current = true
+    const p = partesDoSlot(aula.slot)
+    if (p) semana.irPara(daDataLocal(p.data))
+  }, [aula.slot, semana])
+
+  const slots = slotsDaSemana({ turma, domingo: semana.domingo, agenda, hoje })
+
+  return (
+    <div
+      className="modal-fundo"
+      onClick={(e) => {
+        // Fecha ao clicar FORA. `stopPropagation` no conteudo evita que um
+        // clique num horario feche a modal antes de designar.
+        if (e.target === e.currentTarget) aoFechar()
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Agendar a aula ${aula.numero}`}
+    >
+      <div className="modal-conteudo" onClick={(e) => e.stopPropagation()}>
+        <GradeDeHorario
+          turma={turma}
+          slots={slots}
+          rotulo={rotuloDaSemana(semana.domingo)}
+          podeVoltar={semana.podeVoltar}
+          podeAvancar={semana.podeAvancar}
+          aoVoltar={semana.voltar}
+          aoAvancar={semana.avancar}
+          aoIrParaHoje={semana.irParaHoje}
+          aulaEmFoco={aula.numero}
+          gravando={gravando}
+          aoDesignar={aoDesignar}
+          aoDesagendar={aoDesagendar}
+        />
+        <div className="modal-acoes">
+          {aula.slot && (
+            <button
+              className="botao botao--claro"
+              onClick={() => {
+                aoDesagendar(aula.numero)
+                aoFechar()
+              }}
+              disabled={gravando}
+            >
+              Tirar a data da aula {aula.numero}
+            </button>
+          )}
+          <button className="botao botao--principal" onClick={aoFechar}>
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

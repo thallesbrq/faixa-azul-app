@@ -38,6 +38,7 @@ import { MontarGrade } from './MontarGrade'
 import { FolhaDoAtestado } from './FolhaDoAtestado'
 import { Convidar } from './components/Convidar'
 import { Planner } from './Planner'
+import { GradeDaTurma } from './GradeDaTurma'
 import { usePrograma } from './usePrograma'
 import { ITENS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
 import { horaCurta } from './formato'
@@ -61,6 +62,20 @@ observarMutacoes()
  * mostra `—` nessas colunas, com o motivo escrito.
  */
 const CURRICULO_DAS_COLUNAS: Curriculo = CURRICULO_AZUL
+
+/**
+ * "Hoje", fixado na CARGA DO MODULO e nao a cada render.
+ *
+ * `new Date()` no corpo de um componente e um objeto novo em cada render, e ele
+ * entra nas dependencias de `useSemana` e de `slotsDaSemana`. Esta sessao ja
+ * gastou um deploy num laco de render exatamente por essa forma.
+ *
+ * O custo de fixar: uma aba aberta atravessando a meia-noite continua achando
+ * que e ontem. Um professor que deixa a Central aberta a noite inteira recarrega
+ * de manha; e o conserto (um `setInterval` verificando a virada) custaria mais
+ * complexidade do que o problema tem.
+ */
+const HOJE = new Date()
 
 export function App() {
   const sessao = useSessaoDoProfessor()
@@ -491,6 +506,13 @@ export function Central({
           <Barras linhas={daSelecao} aoEscolher={(uid) => irPara({ tela: 'aluno', uid })} />
         </div>
 
+        {/* A GRADE SO APARECE COM UMA TURMA SELECIONADA, e nao na visao "Todas".
+            Turma e horario: sem turma nao existe uma semana para mostrar, e
+            juntar as duas grades numa so daria um calendario que nao e de
+            ninguem. Componente proprio porque ele le o programa (81 aulas) — ver
+            `GradeDaTurma`. */}
+        {turma !== null && <GradeDaTurma app={sessao.app} turma={turma} hoje={HOJE} />}
+
         <section className="cartao">
           <h2>
             {titulo}
@@ -627,6 +649,20 @@ function PlannerDaTurma({
       aoAcrescentarRotulo={(n, r) => void programa.acrescentarRotulo(n, r)}
       aoRemoverRotulo={(n, id) => void programa.removerRotulo(n, id)}
       aoMudarFoco={(n, f) => void programa.mudarFoco(n, f)}
+      aoDesignar={(n, slotId) => {
+        void (async () => {
+          const desalojada = await programa.agendar(n, slotId)
+          // TROCA EM SILENCIO E O QUE NAO PODE ACONTECER: o professor
+          // procuraria depois uma aula que ele mesmo moveu.
+          if (desalojada !== null) {
+            window.alert(
+              `A aula ${desalojada} estava nesse horário e voltou para a fila sem data.`,
+            )
+          }
+        })()
+      }}
+      aoDesagendar={(n) => void programa.desagendar(n)}
+      hoje={HOJE}
     />
   )
 }

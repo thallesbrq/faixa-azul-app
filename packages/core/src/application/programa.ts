@@ -147,10 +147,37 @@ export interface AulaDoPrograma {
   rotulos: RotuloDaAula[]
   /** Uma linha que o professor escreve sobre o foco da aula. */
   foco: string
+  /**
+   * O slot em que esta aula foi agendada: `'2026-09-08T0800'`. `''` sem data.
+   *
+   * MORA NA AULA E NAO NUMA COLECAO DE AGENDA, e a escolha garante de graca a
+   * metade que importa da invariante: uma aula tem NO MAXIMO UMA data, porque o
+   * campo e singular. O outro lado (um slot com no maximo uma aula) nao e
+   * garantido pelo dado — duas abas poderiam reivindicar a mesma terca — e por
+   * isso `agendaDoPrograma` desempata de forma ESTAVEL (menor numero ganha) em
+   * vez de depender da ordem de leitura.
+   *
+   * A alternativa era `programas/{turma}/agenda/{slot}`, que garantiria o outro
+   * lado pelo id do documento e deixaria ESTE em aberto. Uma colecao a mais,
+   * regras a mais, e a mesma checagem no cliente — na direcao oposta.
+   */
+  slot: string
 }
 
 export function aulaVazia(numero: number): AulaDoPrograma {
-  return { numero, itemIds: [], rotulos: [], foco: '' }
+  return { numero, itemIds: [], rotulos: [], foco: '', slot: '' }
+}
+
+/**
+ * Agenda uma aula num slot, ou tira a data com `''`.
+ *
+ * NAO LIMPA O SLOT DE OUTRA AULA que estivesse ali. Quem chama tem a agenda
+ * inteira em memoria e sabe qual aula desalojar; fazer isso aqui exigiria passar
+ * todas as aulas para mudar uma, e a funcao deixaria de ser sobre uma aula.
+ */
+export function agendarAula(aula: AulaDoPrograma, slot: string): AulaDoPrograma {
+  if (aula.slot === slot) return aula
+  return { ...aula, slot }
 }
 
 /** Todos os numeros de aula do planner, do 0 ao 80. */
@@ -321,6 +348,8 @@ export interface AulaNoPlanner {
   itens: TechniqueItem[]
   rotulos: RotuloDaAula[]
   foco: string
+  /** O slot agendado, ou `''`. */
+  slot: string
   /** Ids guardados que nao existem mais no curriculo. A tela precisa avisar. */
   desconhecidos: string[]
 }
@@ -384,6 +413,7 @@ export function montarPlanner({
       itens,
       rotulos: g.rotulos,
       foco: g.foco,
+      slot: g.slot,
       desconhecidos,
     }
   })
