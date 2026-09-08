@@ -12,6 +12,24 @@ describe('rotaDoCaminho', () => {
     expect(rotaDoCaminho('/central/aluno/abc123', BASE)).toEqual({ tela: 'aluno', uid: 'abc123' })
   })
 
+  it('reconhece o planner de uma turma', () => {
+    expect(rotaDoCaminho('/central/turma/RGI', BASE)).toEqual({ tela: 'planner', turma: 'RGI' })
+  })
+
+  it('`turma` sem id nao e planner', () => {
+    // Mesma regra do `aluno` sem uid: cai na tabela em vez de abrir um planner
+    // de turma nenhuma.
+    expect(rotaDoCaminho('/central/turma', BASE)).toEqual({ tela: 'turmas' })
+    expect(rotaDoCaminho('/central/turma/', BASE)).toEqual({ tela: 'turmas' })
+  })
+
+  it('planner e aluno nao se confundem', () => {
+    // Os dois tem a mesma forma (`prefixo/id`), e trocar um pelo outro abriria a
+    // tela errada sem erro nenhum.
+    expect(rotaDoCaminho('/central/aluno/RGI', BASE).tela).toBe('aluno')
+    expect(rotaDoCaminho('/central/turma/RGI', BASE).tela).toBe('planner')
+  })
+
   it('caminho desconhecido cai na tabela, e nao em tela vazia', () => {
     // O rewrite do Hosting manda /central/** para o index: qualquer coisa que
     // alguem digite chega aqui. Cair na tabela e a saida util; tela em branco
@@ -46,6 +64,11 @@ describe('caminhoDaRota', () => {
       const caminho = caminhoDaRota({ tela: 'aluno', uid }, BASE)
       expect(rotaDoCaminho(caminho, BASE)).toEqual({ tela: 'aluno', uid })
     }
+  })
+
+  it('a volta do planner tambem fecha', () => {
+    const r = { tela: 'planner' as const, turma: 'RGI' }
+    expect(rotaDoCaminho(caminhoDaRota(r, BASE), BASE)).toEqual(r)
   })
 
   it('a tabela e a propria base', () => {

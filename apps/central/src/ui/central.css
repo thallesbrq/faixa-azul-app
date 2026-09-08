@@ -1119,3 +1119,279 @@
   border-color: var(--laranja);
   background: var(--laranja-suave);
 }
+
+/* ---------------------------------------------------------------------------
+   O PLANNER DA TURMA
+
+   DUAS COLUNAS COM ROLAGEM INDEPENDENTE, e nao a pagina inteira rolando: sao 81
+   caixas de aula, e se o bolsao rolasse junto o professor teria de subir ao topo
+   a cada item que quisesse por na aula 40. `position: sticky` no bolsao resolve
+   sem `position: fixed`, que quebraria dentro do fluxo do painel.
+   --------------------------------------------------------------------------- */
+.planner {
+  padding: 20px 24px 48px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.planner-topo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.planner-topo h1 {
+  font-size: 1.25rem;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.planner-contagem {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.planner-acoes {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.planner-filtros {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.planner-corpo {
+  display: grid;
+  /* Bolsao fixo em 300px e as aulas ocupando o resto: o bolsao tem nomes de
+     tecnica, que sao curtos e previsiveis; as aulas crescem com o conteudo. */
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  /* Numa tela estreita as duas colunas viram uma. O bolsao vai para cima
+     porque a acao comeca nele: escolher a tecnica vem antes de ver a aula. */
+  .planner-corpo {
+    grid-template-columns: 1fr;
+  }
+  .planner-bolsao {
+    position: static;
+    max-height: none;
+  }
+}
+
+.planner-bolsao {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  padding: 16px;
+}
+
+.planner-bolsao h2 {
+  font-size: 0.95rem;
+  margin: 0 0 8px;
+}
+
+.planner-busca {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  font: inherit;
+  margin-bottom: 12px;
+}
+
+.bolsao-grupo {
+  margin-bottom: 14px;
+}
+
+.bolsao-grupo h3 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cor-texto-suave);
+  margin: 0 0 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.bolsao-grupo ul,
+.aula-itens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* O grupo "fora do programa" e um alerta e nao um grupo: ele fica em laranja
+   porque e a lista do que o aluno nunca vai ter visto. */
+.bolsao-grupo--fora h3 {
+  color: var(--laranja-texto);
+}
+
+.chip-item {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 5px 9px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  cursor: pointer;
+  text-align: left;
+}
+
+.chip-item:hover:not(:disabled) {
+  border-color: var(--laranja);
+  background: var(--laranja-suave);
+}
+
+.chip-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Item JA POSTO numa aula: fundo cheio, para a aula se ler de longe como
+   "tem conteudo" sem contar os chips. */
+.chip-item--posto {
+  background: var(--preto);
+  border-color: var(--preto);
+  color: #fff;
+}
+
+.chip-item--posto:hover {
+  background: var(--vermelho-alerta);
+  border-color: var(--vermelho-alerta);
+}
+
+/* Rotulo do "+" e visivelmente OUTRA COISA: ele nao e item de currículo e nao
+   conta para o grau, e a cor diz isso sem legenda. */
+.chip-item--rotulo {
+  background: var(--laranja-suave);
+  border-color: var(--laranja);
+  color: var(--laranja-texto);
+  border-style: dashed;
+}
+
+.planner-aulas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.aula-cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+/* A aula SELECIONADA e o alvo dos cliques do bolsao. Sem um destaque forte, o
+   professor poe a tecnica na aula errada e nao percebe. */
+.aula-cartao--ativa {
+  border-color: var(--laranja);
+  box-shadow: 0 0 0 2px var(--laranja-suave);
+}
+
+.aula-cartao--experimental {
+  background: var(--cor-fundo);
+  border-style: dashed;
+  cursor: default;
+}
+
+.aula-cartao header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.aula-cartao h3 {
+  font-size: 0.9rem;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.aula-marca {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--laranja-texto);
+}
+
+.aula-bloco {
+  font-size: 0.65rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.aula-foco {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--cor-borda);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.78rem;
+  margin-bottom: 8px;
+  background: transparent;
+}
+
+.aula-foco:focus {
+  border-color: var(--laranja);
+  background: var(--cor-superficie);
+  outline: none;
+}
+
+.aula-mais {
+  margin-top: 8px;
+}
+
+.rotulo-form {
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--cor-fundo);
+  border: 1px dashed var(--laranja);
+  border-radius: 8px;
+}
+
+.rotulo-form .campo {
+  margin-bottom: 8px;
+}
+
+.rotulo-form-acoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.barra-planner {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

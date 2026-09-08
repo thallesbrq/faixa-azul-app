@@ -345,6 +345,73 @@ describe('isolamento entre academias', () => {
 
 
 // ---------------------------------------------------------------------------
+// O programa da turma (ADR-017, decisao 3)
+// ---------------------------------------------------------------------------
+
+describe('programa da turma', () => {
+  it('o PROFESSOR monta', async () => {
+    await assertSucceeds(
+      setDoc(doc(como(PROF), 'programas', 'RGI', 'aulas', '04'), {
+        numero: 4, itemIds: ['x'], rotulos: [], foco: 'guarda fechada',
+      }),
+    )
+  })
+
+  it('o ADMIN tambem monta — montar programa e administracao', async () => {
+    // Se desfaz: um clique volta. Nao exige autoridade de tatame.
+    await assertSucceeds(
+      setDoc(doc(como(ADMIN), 'programas', 'RGI', 'aulas', '05'), {
+        numero: 5, itemIds: ['y'], rotulos: [], foco: '',
+      }),
+    )
+  })
+
+  it('QUALQUER ALUNO ATIVO LE — inclusive de turma que nao e a dele', async () => {
+    /**
+     * ESTE E O TESTE QUE RESOLVE O KAINÃ SEM PAPEL NOVO.
+     *
+     * Ele e aluno da RG2 e ministra aula na RGI quando o pai viaja. Precisava ver
+     * o conteudo da aula da turma de iniciantes — e isso NAO e dado pessoal, e
+     * curriculo. Um papel de `monitor` seria um mecanismo de permissao a manter
+     * para comprar nada: ele veria o mesmo que todos veem.
+     */
+    await amb.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'programas', 'RGI', 'aulas', '01'), {
+        numero: 1, itemIds: ['ukemi'], rotulos: [], foco: 'aprender a cair',
+      })
+    })
+    // ALUNO_A esta na RGI; o de baixo esta na RG2 e le a RGI do mesmo jeito.
+    await assertSucceeds(getDoc(doc(como(ALUNO_A), 'programas', 'RGI', 'aulas', '01')))
+    await assertSucceeds(getDocs(collection(como(ALUNO_A), 'programas', 'RGI', 'aulas')))
+  })
+
+  it('mas o aluno NAO escreve — ele nao programa a propria aula', async () => {
+    await assertFails(
+      setDoc(doc(como(ALUNO_A), 'programas', 'RGI', 'aulas', '09'), {
+        numero: 9, itemIds: ['so-o-que-eu-gosto'], rotulos: [], foco: '',
+      }),
+    )
+  })
+
+  it('ver o programa NAO da acesso ao progresso de ninguem', async () => {
+    // A leitura aberta e do CURRICULO. Se ela vazasse para `estados`, o Kainã
+    // passaria a ver o progresso da turma inteira sem ser professor.
+    await assertFails(getDoc(doc(como(ALUNO_A), 'estados', ALUNO_B)))
+    await assertFails(getDoc(doc(como(ALUNO_A), 'resumos', ALUNO_B)))
+  })
+
+  it('aluno DESATIVADO nao le o programa', async () => {
+    // `souAtivo()` e nao `autenticado()`: quem saiu da academia para de ver o que
+    // vai ser dado nela.
+    await assertFails(getDoc(doc(como(ALUNO_DESATIVADO), 'programas', 'RGI', 'aulas', '01')))
+  })
+
+  it('anonimo nao le o programa', async () => {
+    await assertFails(getDoc(doc(anonimo(), 'programas', 'RGI', 'aulas', '01')))
+  })
+})
+
+// ---------------------------------------------------------------------------
 // O papel `admin` (ADR-017, decisao 1 e 2)
 //
 // A DIVISAO E "O QUE NAO SE DESFAZ": o admin administra o que se desfaz, o

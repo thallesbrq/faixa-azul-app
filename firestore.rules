@@ -418,6 +418,33 @@ service cloud.firestore {
       allow write: if mesmaAcademiaQue(alunoUid);
     }
 
+    // ------------------------------------------------------------ programas
+    /**
+     * O programa da turma: as 80 aulas que o professor monta, mais a
+     * experimental. `programas/{turma}/aulas/{numero}`.
+     *
+     * LEITURA ABERTA A QUEM ESTA ATIVO NA ACADEMIA (ADR-017, decisao 3), e nao
+     * so ao gestor. O programa NAO CONTEM DADO PESSOAL — e curriculo: que
+     * tecnicas serao dadas em que aula. Foi isto que dissolveu o pedido do Kainã
+     * (aluno da RG2 que ministra aula na RGI quando o pai viaja) sem inventar um
+     * papel de monitor: ele le o programa como qualquer um, e continua sem
+     * alcancar o progresso de aluno nenhum.
+     *
+     * O aluno tambem ganha: ele passa a poder ver o que vem na proxima aula.
+     *
+     * ESCRITA E DO GESTOR. Montar o programa e administracao — se desfaz, um
+     * clique volta — entao nao exige autoridade de tatame.
+     *
+     * A TURMA NAO E VALIDADA CONTRA UMA LISTA, e isso e deliberado: `TURMAS` e
+     * uma lista no cliente, e as regras nao a conhecem. Um gestor escrevendo em
+     * `programas/RG3` cria uma turma que nenhuma tela oferece — inconsequente, e
+     * o preco de nao ter de editar as regras a cada turma nova.
+     */
+    match /programas/{turma}/aulas/{numero} {
+      allow read: if souAtivo();
+      allow write: if souGestor();
+    }
+
     // ---------------------------------------------------------- validacoes
     // Append-only: o professor registra, ninguem edita nem apaga. Historico de
     // validacao que pode ser reescrito nao serve como evidencia de graduacao.

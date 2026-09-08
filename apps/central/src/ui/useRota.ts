@@ -18,7 +18,15 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
-export type Rota = { tela: 'turmas' } | { tela: 'aluno'; uid: string }
+export type Rota =
+  | { tela: 'turmas' }
+  | { tela: 'aluno'; uid: string }
+  /**
+   * O planner de uma turma. URL PROPRIA pelo mesmo motivo da pagina do aluno
+   * (ADR-015, decisao 11): endereco que se manda, e botao voltar funcionando.
+   * Guardar em `useState` daria a mesma aparencia e nenhuma das duas coisas.
+   */
+  | { tela: 'planner'; turma: string }
 
 const BASE = import.meta.env.BASE_URL
 
@@ -29,11 +37,15 @@ export function rotaDoCaminho(caminho: string, base = BASE): Rota {
   if (partes[0] === 'aluno' && partes[1]) {
     return { tela: 'aluno', uid: decodeURIComponent(partes[1]) }
   }
+  if (partes[0] === 'turma' && partes[1]) {
+    return { tela: 'planner', turma: decodeURIComponent(partes[1]) }
+  }
   return { tela: 'turmas' }
 }
 
 export function caminhoDaRota(rota: Rota, base = BASE): string {
   if (rota.tela === 'aluno') return `${base}aluno/${encodeURIComponent(rota.uid)}`
+  if (rota.tela === 'planner') return `${base}turma/${encodeURIComponent(rota.turma)}`
   return base
 }
 

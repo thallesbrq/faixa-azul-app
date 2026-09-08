@@ -37,6 +37,9 @@ import { Aluno } from './components/Aluno'
 import { MontarGrade } from './MontarGrade'
 import { FolhaDoAtestado } from './FolhaDoAtestado'
 import { Convidar } from './components/Convidar'
+import { Planner } from './Planner'
+import { usePrograma } from './usePrograma'
+import { ITENS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
 import { horaCurta } from './formato'
 
 /**
@@ -148,6 +151,32 @@ function Central({
 
   /** Nomes que ja existem na turma — cadastro OU convite pendente. */
   const nomesNaTurma = useMemo(() => daSelecao.map((l) => l.nome), [daSelecao])
+
+  /**
+   * O PLANNER E COMPONENTE PROPRIO, e nao um ramo aqui dentro — e a razao e a
+   * regra dos hooks, que ja me pegou tres vezes neste arquivo.
+   *
+   * Ele precisa de `usePrograma`, que le uma colecao diferente. Chamar esse hook
+   * aqui o faria rodar em TODA abertura da central, lendo 81 documentos de
+   * programa para desenhar a tabela de alunos. Chamar dentro do `if` quebraria a
+   * ordem dos hooks — "Rendered fewer hooks than expected", tela branca, e o erro
+   * apontando para um lugar que nao tem nada de errado.
+   *
+   * Componente proprio resolve os dois: o hook mora nele, e ele so monta quando a
+   * rota e o planner.
+   */
+  if (rota.tela === 'planner') {
+    return (
+      <>
+        <Cabecalho quem={sessao.cadastro.nome} aoSair={aoSair} />
+        <PlannerDaTurma
+          app={sessao.app}
+          turma={rota.turma}
+          aoVoltar={() => irPara({ tela: 'turmas' })}
+        />
+      </>
+    )
+  }
 
   /**
    * A pagina de um aluno le do MESMO carregamento da tabela, e nao faz leitura
@@ -304,6 +333,23 @@ function Central({
             ))}
           </div>
 
+          {/* UM BOTAO DE PLANNER POR TURMA, e nao um so que usa a turma
+              selecionada: com "Todas" escolhido nao existe resposta certa para
+              qual programa abrir, e um botao que as vezes nao funciona e pior do
+              que dois botoes que sempre funcionam. */}
+          <div className="barra-planner">
+            {TURMAS.map((t) => (
+              <button
+                key={t.id}
+                className="botao botao--claro botao--pequeno"
+                onClick={() => irPara({ tela: 'planner', turma: t.id })}
+                title={`As 80 aulas da ${t.nome}`}
+              >
+                📋 Planner {t.nome}
+              </button>
+            ))}
+          </div>
+
           <div className="barra-direita">
             {estado.lidoEm && <span className="apoio-inline">lido às {horaCurta(estado.lidoEm)}</span>}
             <button
@@ -403,5 +449,69 @@ function Cabecalho({ quem, aoSair }: { quem?: string; aoSair?: () => void }) {
         )}
       </div>
     </header>
+  )
+}
+
+/**
+ * O planner de uma turma. Existe como componente para o `usePrograma` viver
+ * dentro dele — ver o comentario da rota em `App`.
+ */
+function PlannerDaTurma({
+  app,
+  turma,
+  aoVoltar,
+}: {
+  app: Parameters<typeof usePrograma>[0]['app']
+  turma: string
+  aoVoltar: () => void
+}) {
+  const programa = usePrograma({
+    app,
+    turma,
+    // O BOLSAO E O CURRICULO DE AZUL INTEIRO (81 itens), como pedido.
+    itensDoBolsao: CURRICULO_AZUL.itens,
+    /**
+     * CONHECIDOS = azul + os 29 do 1o grau. Os do 1o grau tem ids proprios e NAO
+     * estao no curriculo de azul (ADR-016): sem eles aqui, as 25 aulas sugeridas
+     * apareceriam inteiras como "tecnica que nao existe mais" — dado certo
+     * exibido como erro.
+     */
+    itensConhecidos: [...CURRICULO_AZUL.itens, ...ITENS_1GRAU],
+    itensDo1Grau: ITENS_1GRAU,
+  })
+
+  if (programa.estado.fase === 'carregando') {
+    return (
+      <main className="painel">
+        <p className="apoio">Abrindo o programa da turma…</p>
+      </main>
+    )
+  }
+
+  if (programa.estado.fase === 'erro' || programa.estado.planner === null) {
+    return (
+      <main className="painel">
+        <p className="aviso">{programa.estado.mensagem ?? 'Não foi possível abrir o programa.'}</p>
+        <button className="botao botao--claro" onClick={aoVoltar}>
+          ← Turmas
+        </button>
+      </main>
+    )
+  }
+
+  return (
+    <Planner
+      planner={programa.estado.planner}
+      turma={turma}
+      gravando={programa.estado.gravando}
+      mensagem={programa.estado.mensagem}
+      aoVoltar={aoVoltar}
+      aoAplicarSugestao={() => void programa.aplicarSugestao()}
+      aoPorItem={(n, id) => void programa.porItem(n, id)}
+      aoTirarItem={(n, id) => void programa.tirarItem(n, id)}
+      aoAcrescentarRotulo={(n, r) => void programa.acrescentarRotulo(n, r)}
+      aoRemoverRotulo={(n, id) => void programa.removerRotulo(n, id)}
+      aoMudarFoco={(n, f) => void programa.mudarFoco(n, f)}
+    />
   )
 }
