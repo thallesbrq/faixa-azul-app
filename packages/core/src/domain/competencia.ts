@@ -37,11 +37,34 @@ export interface RegistroDeCompetencia {
   /** `true` atesta; `false` retira. Nunca a ausencia da linha anterior. */
   competente: boolean
   /**
-   * O que o professor disse, nas palavras dele. OBRIGATORIO.
+   * A PROCEDENCIA da atestacao. OBRIGATORIO — e nao mais uma justificativa.
    *
-   * Mesma exigencia de `criarValidacao`, e pelo mesmo motivo: atestacao sem
-   * justificativa nao e rastreavel. Numa graduacao isso importa mais ainda —
-   * "atestei" sem dizer o que viu nao ajuda ninguem seis meses depois.
+   * ---------------------------------------------------------------------------
+   * A EXIGENCIA CONTINUA, O QUE ELA GUARDA MUDOU, E O DADO REAL DECIDIU ISSO.
+   *
+   * Este campo nasceu como "o que o professor viu, nas palavras dele", com o
+   * argumento de que atestacao sem justificativa nao e rastreavel. Das seis
+   * primeiras atestacoes feitas em producao, CINCO tinham o texto `"ok"` e uma
+   * tinha `"guarda fechada"`.
+   *
+   * Ou seja: o campo obrigatorio nao produziu justificativa. Produziu atrito e a
+   * palavra "ok" — e atrito num gesto que se repete 29 vezes por aluno nao gera
+   * texto melhor, gera registro que nao acontece. E registro que nao acontece e
+   * pior que registro sem prosa.
+   *
+   * O QUE DE FATO RASTREIA e o que sempre esteve aqui do lado: `professorUid`
+   * (quem), `registradaEm` (quando), `itemId` (o que) e `origem` (em que
+   * contexto). Nada disso depende de digitacao.
+   *
+   * Entao o campo passa a guardar PROCEDENCIA gerada pelo app —
+   * `"Aula 5 · RGI · 22/09/2026"` — que e mais rastreavel do que `"ok"` e custa
+   * zero clique. A regra do Firestore continua exigindo texto nao vazio: ela
+   * impede registro anonimo, e isso nunca foi o problema.
+   *
+   * O professor AINDA pode escrever quando quiser (um item que ele quer comentar,
+   * uma retirada de atestado que precisa explicacao). O que saiu foi a
+   * obrigacao de digitar para o caso comum.
+   * ---------------------------------------------------------------------------
    */
   texto: string
   origem: OrigemDaCompetencia
@@ -62,9 +85,16 @@ export function criarCompetencia(entrada: {
   const { agora, ...resto } = entrada
 
   if (!resto.texto.trim()) {
+    /**
+     * A GUARDA FICA, e o que ela impede mudou de nome: registro sem procedencia.
+     *
+     * Quem chama deve passar `procedenciaDaAtestacao(...)` quando o professor nao
+     * escrever nada — nao string vazia. Um registro sem nenhum texto no log
+     * append-only e uma linha que ninguem sabe ler seis meses depois.
+     */
     throw new Error(
-      'atestar competencia exige o texto do que o professor viu — ' +
-        'atestacao sem justificativa nao serve como evidencia de graduacao',
+      'atestar competencia exige procedencia — use `procedenciaDaAtestacao` ' +
+        'quando o professor nao escrever nada',
     )
   }
   if (!resto.professorUid.trim()) {
@@ -124,4 +154,46 @@ export function historicoDoItem(
   return registros
     .filter((r) => r.itemId === itemId)
     .sort((a, b) => Date.parse(a.registradaEm) - Date.parse(b.registradaEm))
+}
+
+/**
+ * O texto de procedencia que o app escreve quando o professor so clica.
+ *
+ * SUBSTITUI A DIGITACAO, e nao a rastreabilidade. Ver o comentario de `texto` em
+ * `RegistroDeCompetencia`: o campo livre obrigatorio produziu `"ok"` cinco vezes
+ * em seis no uso real. Isto produz `"Aula 5 · RGI · 22/09/2026"`, que responde
+ * onde e quando o professor viu — que e a pergunta que a justificativa deveria
+ * responder e nao respondia.
+ *
+ * SEM AULA E UM CASO REAL: o professor pode atestar fora de aula (revendo a
+ * turma, ou num exame). Ai o texto diz so a data, e nao inventa uma aula.
+ */
+export function procedenciaDaAtestacao(entrada: {
+  turma: string
+  /** Numero da aula, quando a atestacao sai de uma aula do programa. */
+  aula?: number | null
+  /** `YYYY-MM-DD` da aula, quando ha. */
+  data?: string | null
+  agora: Date
+}): string {
+  const partes: string[] = []
+  if (entrada.aula !== null && entrada.aula !== undefined) partes.push(`Aula ${entrada.aula}`)
+  if (entrada.turma.trim() !== '') partes.push(entrada.turma)
+
+  const quando = entrada.data ?? null
+  if (quando) {
+    // Monta a data a partir do TEXTO `YYYY-MM-DD`, sem passar por `Date`: o
+    // caminho por `Date` reintroduz o risco de fuso que `application/agenda`
+    // existe para evitar.
+    const [ano, mes, dia] = quando.split('-')
+    partes.push(`${dia}/${mes}/${ano}`)
+  } else {
+    partes.push(
+      new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
+        entrada.agora,
+      ),
+    )
+  }
+
+  return partes.join(' · ')
 }

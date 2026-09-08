@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { curriculoPorId, modulosDoCurriculo, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
-import { metaSeguinte } from '@faixa-azul/core/domain/metas'
+import { metaSeguinte, SEM_META } from '@faixa-azul/core/domain/metas'
 import { nomeDaTurma, SEM_TURMA, TURMAS } from '@faixa-azul/core/domain/turmas'
 import { ROTULO_GRUPO } from '@faixa-azul/core/domain/taxonomia'
 import {
@@ -39,6 +39,7 @@ import { FolhaDoAtestado } from './FolhaDoAtestado'
 import { Convidar } from './components/Convidar'
 import { Planner } from './Planner'
 import { GradeDaTurma } from './GradeDaTurma'
+import { AcompanhamentoDaTurma } from './AcompanhamentoDaTurma'
 import { usePrograma } from './usePrograma'
 import { ITENS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
 import { horaCurta } from './formato'
@@ -211,35 +212,47 @@ export function Central({
   )
 
   /**
-   * A META PADRAO DE UM CONVIDADO SAI DA PROPRIA TURMA, e nao de uma constante.
+   * A META PADRAO DE UM CONVIDADO VEM DA TURMA, e agora de uma CONSTANTE.
    *
-   * A meta mais comum entre quem ja esta na turma e o melhor palpite disponivel,
-   * e ele e sempre corrigivel na pagina do aluno. Cravar `'1grau'` aqui daria a
-   * resposta certa para a RGI e a errada para toda turma futura — e o erro seria
-   * silencioso, porque a meta so aparece depois que a pessoa entra.
+   * ERA UMA HEURISTICA — "a meta mais comum entre quem ja esta na turma" — e ela
+   * errou em producao no primeiro uso real. A unica pessoa na RGI era o Floki,
+   * uma conta de DEMONSTRACAO de alguem com tres graus e `meta: '4grau'`. Willian
+   * e Henrique foram convidados herdando o 4o grau.
    *
-   * Turma vazia cai em `SEM_META`: sem ninguem para observar, adivinhar seria
-   * escolher a prova de alguem no escuro.
+   * A CONSEQUENCIA ERA O OPOSTO DO OBJETIVO: com `meta: '4grau'` eles nunca sao
+   * medidos contra os 29 itens do 1o grau, e como `estuda` nasce igual a meta (e
+   * o 4o grau nao tem lista), a folha do atestado deles NAO APARECERIA — o
+   * professor nao teria onde marcar nada. Os dois convites foram corrigidos a mao.
+   *
+   * O padrao inteligente acertaria numa turma povoada e errou numa turma de um
+   * habitante nao representativo. A constante e menos esperta e nao tem esse
+   * modo de falha: a RGI e a turma de INICIANTES, e a graduacao seguinte de um
+   * iniciante e o 1o grau, independentemente de quem mais esteja nela.
+   *
+   * Quando existir turma de intermediario com meta propria, isto vira um campo da
+   * `Turma` — e nao uma media do que ha dentro dela.
    */
-  const metaPadrao = useMemo(() => {
-    const contagem = new Map<string, number>()
-    for (const l of daSelecao) {
-      if (l.meta === '') continue
-      contagem.set(l.meta, (contagem.get(l.meta) ?? 0) + 1)
-    }
-    let melhor = ''
-    let quantos = 0
-    for (const [m, n] of contagem) {
-      if (n > quantos) {
-        melhor = m
-        quantos = n
-      }
-    }
-    return melhor
-  }, [daSelecao])
+  const metaPadrao = turma === 'RGI' ? '1grau' : SEM_META
 
   /** Nomes que ja existem na turma — cadastro OU convite pendente. */
   const nomesNaTurma = useMemo(() => daSelecao.map((l) => l.nome), [daSelecao])
+
+  /**
+   * Os alunos COM CONTA da turma, para a matriz de acompanhamento.
+   *
+   * O CONVIDADO FICA FORA: `motivo === 'convidado'` significa que o `uid` da
+   * linha e o E-MAIL e nao um uid (ver `LinhaDaCentral.uid`). Ler
+   * `competencias/{email}/registros` daria uma colecao vazia para sempre, e a
+   * matriz mostraria uma coluna de pendencias impossiveis de resolver — nao ha
+   * como atestar quem nao entrou.
+   */
+  const alunosDaTurma = useMemo(
+    () =>
+      daSelecao
+        .filter((l) => l.motivo !== 'convidado')
+        .map((l) => ({ uid: l.uid, nome: l.nome, estuda: l.estuda, meta: l.meta })),
+    [daSelecao],
+  )
 
   /**
    * O PLANNER E COMPONENTE PROPRIO, e nao um ramo aqui dentro — e a razao e a
@@ -512,6 +525,19 @@ export function Central({
             ninguem. Componente proprio porque ele le o programa (81 aulas) — ver
             `GradeDaTurma`. */}
         {turma !== null && <GradeDaTurma app={sessao.app} turma={turma} hoje={HOJE} />}
+
+        {/* A MATRIZ DE ACOMPANHAMENTO fica DEPOIS da grade, e a ordem e a da
+            pergunta: primeiro "o que ja foi dado" (a grade), depois "quem
+            aprendeu" (a matriz). O segundo so faz sentido depois do primeiro. */}
+        {turma !== null && (
+          <AcompanhamentoDaTurma
+            app={sessao.app}
+            turma={turma}
+            alunos={alunosDaTurma}
+            professorUid={sessao.sessao.uid}
+            hoje={HOJE}
+          />
+        )}
 
         <section className="cartao">
           <h2>

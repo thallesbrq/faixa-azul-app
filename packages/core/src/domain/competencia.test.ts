@@ -4,6 +4,7 @@ import {
   criarCompetencia,
   historicoDoItem,
   itensCompetentes,
+  procedenciaDaAtestacao,
 } from './competencia'
 import type { RegistroDeCompetencia } from './competencia'
 
@@ -37,16 +38,26 @@ describe('criarCompetencia', () => {
     expect(r.professorUid).toBe('prof-joao')
   })
 
-  it('EXIGE o texto do professor', () => {
-    // Mesma regra de `criarValidacao`: atestacao sem justificativa nao e
-    // rastreavel. Numa graduacao isso pesa mais — "atestei" sem dizer o que viu
-    // nao ajuda ninguem seis meses depois.
+  it('EXIGE procedencia — e o que ela guarda mudou de sentido', () => {
+    /**
+     * A GUARDA CONTINUA, O SIGNIFICADO MUDOU, E O DADO REAL DECIDIU.
+     *
+     * Este teste dizia "exige o texto do professor", com o argumento de que
+     * atestacao sem justificativa nao e rastreavel. Das seis primeiras
+     * atestacoes feitas em producao, CINCO tinham o texto `"ok"` — o campo
+     * obrigatorio nao produziu justificativa, produziu atrito.
+     *
+     * O campo passou a guardar PROCEDENCIA gerada pelo app
+     * (`procedenciaDaAtestacao`), que responde onde e quando o professor viu. A
+     * guarda fica porque registro sem nenhum texto num log append-only e uma
+     * linha que ninguem le seis meses depois.
+     */
     expect(() =>
       criarCompetencia({
         id: 'x', itemId: 'i1', competente: true, texto: '   ',
         origem: 'aula_regular', professorUid: 'p', agora: AGORA,
       }),
-    ).toThrow(/texto/)
+    ).toThrow(/procedencia/)
   })
 
   it('EXIGE o autor', () => {
@@ -58,14 +69,16 @@ describe('criarCompetencia', () => {
     ).toThrow(/autor/)
   })
 
-  it('retirar tambem exige texto', () => {
-    // Retirar um atestado e mais grave que dar: precisa dizer por que.
+  it('retirar tambem exige procedencia', () => {
+    // Retirar um atestado e mais grave que dar. Aqui o professor NORMALMENTE vai
+    // escrever — a tela oferece o campo — mas a guarda nao depende de ele
+    // escrever: ela impede a linha anonima.
     expect(() =>
       criarCompetencia({
         id: 'x', itemId: 'i1', competente: false, texto: '',
         origem: 'aula_regular', professorUid: 'p', agora: AGORA,
       }),
-    ).toThrow(/texto/)
+    ).toThrow(/procedencia/)
   })
 })
 
@@ -125,5 +138,58 @@ describe('competenciaAtual', () => {
     expect(competenciaAtual([]).size).toBe(0)
     expect(itensCompetentes([]).size).toBe(0)
     expect(historicoDoItem('i1', [])).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// A procedencia que substitui a digitacao
+// ---------------------------------------------------------------------------
+
+describe('procedenciaDaAtestacao', () => {
+  it('diz a aula, a turma e a data da AULA', () => {
+    // "Aula 5 · RGI · 22/09/2026" responde onde e quando o professor viu — a
+    // pergunta que a justificativa livre deveria responder e nao respondia.
+    expect(
+      procedenciaDaAtestacao({ turma: 'RGI', aula: 5, data: '2026-09-22', agora: AGORA }),
+    ).toBe('Aula 5 · RGI · 22/09/2026')
+  })
+
+  it('a data vem da AULA e nao de hoje', () => {
+    /**
+     * O professor pode arrumar hoje um registro de uma aula da semana passada.
+     * Gravar a data de hoje registraria quando ele ARRUMOU, e nao quando viu — e
+     * seis meses depois isso e a diferenca entre um log que se le e um que
+     * confunde.
+     */
+    const t = procedenciaDaAtestacao({
+      turma: 'RGI', aula: 3, data: '2026-09-15', agora: new Date(2026, 9, 30, 12),
+    })
+    expect(t).toContain('15/09/2026')
+    expect(t).not.toContain('30/10')
+  })
+
+  it('SEM AULA nao inventa uma — diz so a data de hoje', () => {
+    // Atestar fora de aula e caso real: revendo a turma, ou num exame.
+    const t = procedenciaDaAtestacao({ turma: 'RGI', aula: null, data: null, agora: AGORA })
+    expect(t).not.toMatch(/Aula/)
+    expect(t).toContain('RGI')
+  })
+
+  it('NAO monta a data por `Date` — o caminho que traz fuso de volta', () => {
+    /**
+     * A data chega como texto `YYYY-MM-DD` e sai como `DD/MM/YYYY` por corte de
+     * string. Passar por `new Date('2026-09-22')` a interpretaria como UTC e, em
+     * UTC-3, ela viraria 21/09 — o mesmo defeito que `application/agenda` existe
+     * para evitar, reintroduzido pela porta do texto.
+     */
+    expect(
+      procedenciaDaAtestacao({ turma: 'RGI', aula: 1, data: '2026-01-01', agora: AGORA }),
+    ).toContain('01/01/2026')
+  })
+
+  it('turma vazia nao deixa separador solto', () => {
+    expect(
+      procedenciaDaAtestacao({ turma: '', aula: 2, data: '2026-09-10', agora: AGORA }),
+    ).toBe('Aula 2 · 10/09/2026')
   })
 })

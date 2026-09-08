@@ -63,6 +63,29 @@ export interface Competencias {
     },
     agora: Date,
   ): Promise<void>
+  /**
+   * Atesta VARIOS pares (aluno, item) de uma vez — o "atestar a area inteira".
+   *
+   * EM LOTE E NAO NUM LACO DE `atestar`: atestar um grupo pode ser 15 escritas,
+   * e um laco deixaria metade gravada se a rede caisse no meio. Pior que isso: o
+   * log e append-only, entao a metade que passou NAO SAI. O professor ficaria com
+   * um grupo parcialmente atestado e sem como distinguir isso de escolha dele.
+   *
+   * O lote do Firestore aceita ate 500 escritas; 29 itens x 20 alunos = 580, e
+   * por isso `atestarEmLote` FATIA. A fatia quebra a atomicidade, e essa e a
+   * troca: com uma turma real (4 alunos, 29 itens = 116) uma fatia basta e o
+   * lote e atomico de verdade.
+   */
+  atestarEmLote(
+    pares: readonly { alunoUid: string; itemId: string }[],
+    entrada: {
+      competente: boolean
+      texto: string
+      origem: OrigemDaCompetencia
+      professorUid: string
+    },
+    agora: Date,
+  ): Promise<void>
   /** Graduacoes ja concedidas a este aluno. */
   graduacoesDe(alunoUid: string): Promise<RegistroDeGraduacao[]>
   conceder(
@@ -113,6 +136,37 @@ export async function abrirCompetencias(app: FirebaseApp): Promise<Competencias>
       const registro = criarCompetencia({ id: 'gerado-pelo-firestore', ...entrada, agora })
       const { id: _ignorado, ...campos } = registro
       await fs.addDoc(dosRegistros(alunoUid), campos)
+    },
+
+    async atestarEmLote(pares, entrada, agora) {
+      if (pares.length === 0) return
+
+      /**
+       * O LIMITE DO LOTE E 500 ESCRITAS. Fatiar em 400 deixa margem e mantem a
+       * conta longe da borda — um lote recusado por estar em 501 falharia
+       * inteiro, e a mensagem do Firestore nao diz que foi o tamanho.
+       */
+      const POR_LOTE = 400
+
+      for (let inicio = 0; inicio < pares.length; inicio += POR_LOTE) {
+        const fatia = pares.slice(inicio, inicio + POR_LOTE)
+        const lote = fs.writeBatch(db)
+        for (const par of fatia) {
+          // A VALIDACAO DO DOMINIO RODA POR PAR, antes de qualquer escrita: se um
+          // par for invalido, nada e gravado. Validar depois de montar o lote
+          // deixaria a decisao para o servidor, que recusaria o lote inteiro com
+          // uma mensagem de permissao.
+          const registro = criarCompetencia({
+            id: 'gerado-pelo-firestore',
+            itemId: par.itemId,
+            ...entrada,
+            agora,
+          })
+          const { id: _ignorado, ...campos } = registro
+          lote.set(fs.doc(dosRegistros(par.alunoUid)), campos)
+        }
+        await lote.commit()
+      }
     },
 
     async graduacoesDe(alunoUid) {

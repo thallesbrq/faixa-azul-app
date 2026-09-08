@@ -1577,3 +1577,162 @@
   color: var(--laranja-texto);
   font-weight: 700;
 }
+
+/* ---------------------------------------------------------------------------
+   MATRIZ DE ACOMPANHAMENTO — alunos x os 29 itens do 1o grau.
+
+   TABELA DE VERDADE, e nao cartoes: a pergunta e comparativa ("quem falta no
+   Ukemi?"), e comparar coluna com coluna e o que uma tabela faz e um cartao
+   nao. A rolagem horizontal fica no container, nunca no corpo da pagina.
+   --------------------------------------------------------------------------- */
+.ac-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ac-topo h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* O numero de pendencias e a unica coisa aqui que exige acao dele. */
+.ac-pendente-forte {
+  color: var(--laranja-texto);
+}
+
+.ac-tabela td,
+.ac-tabela th {
+  vertical-align: middle;
+}
+
+.ac-col-aluno {
+  text-align: center;
+  width: 92px;
+}
+
+.ac-col-aula {
+  text-align: center;
+  width: 88px;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+.ac-aluno-nome {
+  display: block;
+}
+
+.ac-aluno-placar {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A linha do MODULO: o titulo do professor e onde vive "atestar a area". */
+.ac-grupo th {
+  background: var(--cor-fundo);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cor-texto-suave);
+  padding-top: 12px;
+}
+
+.ac-atestar-grupo {
+  margin-left: 8px;
+  font-size: 0.68rem;
+  padding: 2px 8px;
+}
+
+/* Item cuja aula ainda nao foi dada fica esmaecido: ele esta la para o professor
+   saber que vem, e nao para ser confundido com pendencia. */
+.ac-linha--futuro td {
+  opacity: 0.6;
+}
+
+.ac-posicao {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--cor-texto-suave);
+}
+
+.ac-sem-aula,
+.ac-sem-data {
+  color: var(--amarelo-atencao);
+  font-weight: 700;
+  font-size: 0.68rem;
+}
+
+/* A CELULA E UM BOTAO, sempre — mesmo desabilitada. Um `<span>` para o estado
+   nao clicavel e um `<button>` para o clicavel dariam alturas diferentes na
+   mesma coluna, e a grade sairia torta. */
+.ac-celula {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  padding: 0;
+}
+
+.ac-celula:disabled {
+  cursor: default;
+}
+
+.ac-celula--atestado {
+  background: var(--verde-suave);
+  border-color: var(--verde-sucesso);
+  color: var(--verde-sucesso);
+}
+
+/* PENDENTE E O ESTADO QUE PEDE CLIQUE, e por isso e o unico com cor de acao. */
+.ac-celula--pendente {
+  background: var(--laranja-suave);
+  border-color: var(--laranja);
+  color: var(--laranja-texto);
+}
+
+.ac-celula--pendente:hover:not(:disabled) {
+  background: var(--laranja);
+  color: #fff;
+}
+
+.ac-celula--futuro {
+  background: transparent;
+  border-style: dashed;
+}
+
+/* RETIRADO nao e pendente: houve decisao. A cor de alerta impede que ele marque
+   de novo sem lembrar por que tirou. */
+.ac-celula--retirado {
+  background: var(--vermelho-suave);
+  border-color: var(--vermelho-alerta);
+  color: var(--vermelho-alerta);
+}
+
+.ac-legenda {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.ac-legenda .ac-celula {
+  width: 22px;
+  height: 22px;
+  font-size: 0.75rem;
+  cursor: default;
+}
