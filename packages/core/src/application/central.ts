@@ -14,12 +14,16 @@
  * 2. o curriculo de ROXA esta a caminho. Quando chegar, a central passa um seed
  *    diferente para as turmas avancadas, sem uma linha de reescrita aqui.
  *
- * AS COLUNAS SAO DERIVADAS DO CURRICULO ATIVO, e nao de uma constante. Hoje o
- * seed ativa Secoes 4 e 5 (56 de 81 itens), o que deixa quatro grupos com itens
- * e tres com zero. Uma coluna sempre vazia nao informa nada e ainda confunde:
- * o professor nao consegue distinguir "o aluno nao sabe" de "isso nao esta no
- * ar". Derivando, as colunas acompanham o que foi ativado — inclusive quando ele
- * ligar Quedas e Defesa Pessoal.
+ * AS COLUNAS SAO DERIVADAS DO CURRICULO, e nao de uma constante. Uma coluna
+ * sempre vazia nao informa nada e ainda confunde: o professor nao consegue
+ * distinguir "o aluno nao sabe" de "isso nao esta no ar".
+ *
+ * O SEED HOJE ATIVA OS 81 ITENS (ADR-017, decisao 7) — eram 56, so guardas e
+ * saidas. E a derivacao ganhou um segundo critério por causa disso: nao basta o
+ * item estar ATIVO, ele tem de ser alcancavel por CARTAO. Defesa Pessoal tem 11
+ * itens ativos e zero cartoes por item, e viraria uma coluna de 0% eterno — o
+ * proprio defeito que este paragrafo diz que derivar evita. Ver
+ * `gruposComItens` e `medivelPorCartoes`.
  */
 
 // A FORMA do curriculo mora no dominio (ver domain/curriculo); aqui esta o
@@ -28,7 +32,6 @@ import type { Curriculo } from '../domain/curriculo'
 export type { Curriculo }
 import type { GrupoTecnico } from '../domain/taxonomia'
 import { grupoDoKind, ORDEM_GRUPO } from '../domain/taxonomia'
-import { medidaDoProgresso, metaTemCurriculo } from '../domain/metas'
 import { gerarBaralho } from '../domain/cards'
 import { aplicarValidacoes } from '../domain/validacao'
 import type { EstadoPersistido } from '../persistence/repositorio'
@@ -46,15 +49,38 @@ import type { Situacao } from './torre'
 import { situacaoDoAluno } from './torre'
 
 /**
- * Grupos que tem pelo menos um item ATIVO — as colunas que valem hoje.
+ * Grupos que tem pelo menos um item MENSURAVEL POR CARTAO — as colunas da tabela.
  *
- * Devolve na ordem de `ORDEM_GRUPO` e nao na ordem em que aparecem nos itens:
- * a ordem das colunas nao pode depender de como o seed foi escrito.
+ * Devolve na ordem de `ORDEM_GRUPO` e nao na ordem em que aparecem nos itens: a
+ * ordem das colunas nao pode depender de como o seed foi escrito.
+ *
+ * ERA "TEM ITEM ATIVO", E ISSO PASSOU A NAO BASTAR (ADR-017, decisao 7). Com os
+ * 81 itens religados, Defesa Pessoal tem 11 itens ativos e ZERO cartoes — sem
+ * `passos` e fora de `KINDS_CLASSIFICAVEIS`, nenhum cartao carrega o `itemId`
+ * deles (o de reconhecimento cobre o modulo inteiro). A coluna existiria e
+ * mostraria 0% para sempre, e o professor nao teria como distinguir
+ * "o aluno nao sabe" de "isto nao e medido aqui" — precisamente o defeito que o
+ * cabecalho deste arquivo diz que derivar as colunas serve para evitar.
+ *
+ * GERA O BARALHO PARA DECIDIR, em vez de reimplementar a regra de quem tem
+ * cartao: duplicar essa regra faria a coluna e o numero dentro dela discordarem
+ * na primeira mudanca do gerador.
  */
 export function gruposComItens(curriculo: Curriculo): GrupoTecnico[] {
+  const comCartao = new Set(
+    gerarBaralho({
+      itens: curriculo.itens.filter((i) => i.ativo),
+      conteudos: curriculo.conteudos,
+      requisitos: curriculo.requisitos,
+      cartoesTeoria: curriculo.cartoesTeoria,
+    })
+      .map((c) => c.itemId)
+      .filter((id): id is string => typeof id === 'string'),
+  )
+
   const presentes = new Set<GrupoTecnico>()
   for (const i of curriculo.itens) {
-    if (i.ativo) presentes.add(grupoDoKind(i.kind))
+    if (i.ativo && comCartao.has(i.id)) presentes.add(grupoDoKind(i.kind))
   }
   return ORDEM_GRUPO.filter((g) => presentes.has(g))
 }
@@ -62,28 +88,54 @@ export function gruposComItens(curriculo: Curriculo): GrupoTecnico[] {
 /**
  * Por que uma celula mostra `—` em vez de um numero.
  *
- * TRES AUSENCIAS DIFERENTES, e confundi-las e o defeito que este tipo existe
+ * QUATRO AUSENCIAS DIFERENTES, e confundi-las e o defeito que este tipo existe
  * para impedir:
- * - `sem-dados`: a pessoa entrou mas nunca sincronizou. NAO SABEMOS.
- * - `meta-sem-curriculo`: 2o/3o/4o grau, ou meta nao definida. Medir contra um
- *   curriculo que nao e o dele produziria vermelho para quem nao esta mal.
+ * - `convidado`: o professor convidou e a pessoa nunca entrou. Nao ha conta, nao
+ *   ha app aberto, nao ha nada. E DIFERENTE de `sem-dados` num ponto que muda a
+ *   conversa: nao ha o que cobrar do aluno, ha o que cobrar do convite.
+ * - `sem-dados`: a pessoa TEM conta, entrou, e nunca sincronizou. NAO SABEMOS.
+ * - `sem-curriculo`: nao existe lista de itens para o que ele estuda (2o/3o/4o
+ *   grau, ou nada definido). Medir contra um curriculo que nao e o dele
+ *   produziria vermelho para quem nao esta mal.
  * - `medido-por-atestado`: o 1o grau. HA curriculo e HA dado — a medida e outra.
  *
- * Zero e uma quarta coisa, e essa tem numero: sincronizou e esta em zero.
+ * Zero e uma quinta coisa, e essa tem numero: sincronizou e esta em zero.
  *
- * A DECISAO MUDOU DE DONO: antes o motivo vinha da TURMA
- * (`medeCurriculoDeAzul`), e a RG2 era a razao. Agora vem da META do aluno —
- * porque um faixa branca novo e alguem com tres graus cabem na mesma turma e
- * precisam de provas diferentes (ADR-016, decisao 3).
+ * A DECISAO MUDOU DE DONO DUAS VEZES. Vinha da TURMA (`medeCurriculoDeAzul`), e
+ * a RG2 era a razao; passou para a META do aluno, porque um faixa branca novo e
+ * alguem com tres graus cabem na mesma turma e precisam de provas diferentes
+ * (ADR-016, decisao 3); e agora vem do CURRICULO QUE ELE ESTUDA, porque a prova
+ * que ele persegue e o conteudo que ele treina deixaram de ser o mesmo campo
+ * (ADR-017, decisao 6).
  */
-export type MotivoSemProgresso = 'sem-dados' | 'meta-sem-curriculo' | 'medido-por-atestado'
+export type MotivoSemProgresso =
+  | 'convidado'
+  | 'sem-dados'
+  | 'sem-curriculo'
+  | 'medido-por-atestado'
 
 export interface LinhaDaCentral {
+  /**
+   * O uid, ou o E-MAIL quando a linha e de um convidado.
+   *
+   * Um convidado nao tem uid — ele nasce no primeiro login. O e-mail e a chave
+   * que existe, e e o id do documento de convite. As duas nunca colidem: uid do
+   * Firebase nao contem `@`.
+   */
   uid: string
   nome: string
   turma: string
-  /** Meta do aluno — quem decide o curriculo e a medida. */
+  /** A PROVA que ele persegue: 1o grau, 2o, ..., azul. */
   meta: string
+  /**
+   * O CURRICULO que ele estuda no app — quem decide a medida do progresso.
+   *
+   * SEPARADO DE `meta` (ADR-017, decisao 6). Eu tenho `meta: '3grau'` e
+   * `estuda: 'azul'`: persigo o 3o grau e treino o curriculo de azul inteiro.
+   * Com um campo so, um dos dois estaria errado — ou eu seria medido contra uma
+   * lista que nao existe, ou apareceria perseguindo o azul.
+   */
+  estuda: string
   /** `null` quando ha motivo para nao medir — ver `motivo`. */
   progresso: number | null
   motivo: MotivoSemProgresso | null
@@ -105,6 +157,31 @@ export interface LinhaDaCentral {
   totalDeAulas: number
   /** `null` quando nunca sincronizou: nem "parado" nem "em dia" seria verdade. */
   situacao: Situacao | null
+  /**
+   * Cadastro de demonstracao — dado semeado, nao treinado no tatame.
+   *
+   * EXISTE PARA O PROFESSOR NAO SER ENGANADO PELA MINHA PROPRIA TELA. Preciso
+   * ver a visao de aluno com numeros dentro dela, e o unico caminho honesto e uma
+   * conta de verdade cujo estado foi semeado por login (ADR-017, decisao 5) — as
+   * alternativas eram afrouxar a regra que impede o professor de escrever no
+   * estado do aluno, ou sintetizar numeros na tela, que mostraria valor inventado
+   * com aparencia de medido.
+   *
+   * Sem esta etiqueta o Prof. Joao veria em RGI um aluno que ele nunca conheceu,
+   * com progresso, sem saber que sou eu. Fica desligavel: quando eu comecar a
+   * treinar de verdade como Floki, o campo passa a ser mentira ao contrario.
+   */
+  demo: boolean
+  /**
+   * Contratou aulas particulares?
+   *
+   * DECIDE UMA COISA SO NA TELA: se o contador de particulares aparece. As aulas
+   * da TURMA sao o contador principal — elas sao o gate do 1o grau — e os
+   * particulares sao servico contratado, que a maioria da turma nao tem.
+   * Mostrar "0 de 10 particulares" para quem nunca contratou inventaria uma
+   * divida inexistente.
+   */
+  temParticulares: boolean
 }
 
 /**
@@ -127,17 +204,25 @@ function derivarPorItem(estado: EstadoPersistido, curriculo: Curriculo, agora: D
   return progressoPorItem(itens, baralho, estado.revisoes, agora)
 }
 
-/** Aluno cujo estado nunca chegou ao servidor. */
-export function linhaSemDados(entrada: {
-  uid: string
-  nome: string
-  turma: string
-  meta: string
-}): LinhaDaCentral {
+/** O esqueleto de uma linha sem nenhuma medida. Base dos dois casos abaixo. */
+function linhaVazia(
+  entrada: {
+    uid: string
+    nome: string
+    turma: string
+    meta: string
+    estuda: string
+    demo?: boolean
+    temParticulares?: boolean
+  },
+  motivo: MotivoSemProgresso,
+): LinhaDaCentral {
   return {
     ...entrada,
+    demo: entrada.demo ?? false,
+    temParticulares: entrada.temParticulares ?? false,
     progresso: null,
-    motivo: 'sem-dados',
+    motivo,
     faixa: null,
     porGrupo: {},
     validado: null,
@@ -150,11 +235,50 @@ export function linhaSemDados(entrada: {
   }
 }
 
+/** Aluno que TEM conta, entrou, e cujo estado nunca chegou ao servidor. */
+export function linhaSemDados(entrada: {
+  uid: string
+  nome: string
+  turma: string
+  meta: string
+  estuda: string
+  demo?: boolean
+  temParticulares?: boolean
+}): LinhaDaCentral {
+  return linhaVazia(entrada, 'sem-dados')
+}
+
+/**
+ * Pessoa CONVIDADA que nunca entrou. O convite e o pre-cadastro (ADR-017,
+ * decisao 4).
+ *
+ * NAO INVENTA COLECAO NOVA: `convites/{email}` ja guarda `nome`, `turma` e
+ * `meta` — faltava so renderizar. O que ele pediu ("ja coloque na central os
+ * alunos") ja existia como estado, invisivel.
+ *
+ * `uid` RECEBE O E-MAIL, e nao um id vazio nem um id inventado: e a unica chave
+ * que existe antes do primeiro login, e e o que a tela usa para cancelar o
+ * convite. Ver o comentario de `LinhaDaCentral.uid`.
+ */
+export function linhaConvidada(entrada: {
+  email: string
+  nome: string
+  turma: string
+  meta: string
+  estuda: string
+}): LinhaDaCentral {
+  const { email, ...resto } = entrada
+  return linhaVazia({ ...resto, uid: email }, 'convidado')
+}
+
 export function linhaDoAluno({
   uid,
   nome,
   turma,
   meta,
+  estuda,
+  demo = false,
+  temParticulares = false,
   estado,
   curriculo,
   agora,
@@ -162,10 +286,14 @@ export function linhaDoAluno({
   uid: string
   nome: string
   turma: string
-  /** Decide contra QUE prova ele e medido, e por qual medida. */
+  /** A prova que ele persegue. Nao decide mais a medida — ver `estuda`. */
   meta: string
+  /** O curriculo que ele treina. Decide a medida (`curriculo.medida`). */
+  estuda: string
+  demo?: boolean
+  temParticulares?: boolean
   estado: EstadoPersistido
-  /** O curriculo DA META dele. `null` quando a meta nao tem um. */
+  /** O curriculo DE `estuda`. `null` quando nao existe lista para ele. */
   curriculo: Curriculo | null
   agora: Date
 }): LinhaDaCentral {
@@ -178,6 +306,9 @@ export function linhaDoAluno({
   const base = {
     uid,
     meta,
+    estuda,
+    demo,
+    temParticulares,
     // O nome do CADASTRO manda, e nao o do perfil local. Quem renomeia a si
     // mesmo no aparelho nao renomeia a linha da central do professor.
     nome: nome.trim() === '' ? resumo.nome : nome,
@@ -189,12 +320,20 @@ export function linhaDoAluno({
     situacao: situacaoDoAluno(resumo),
   }
 
-  // Sem curriculo para a meta: atividade sim, progresso nao.
-  if (!metaTemCurriculo(meta) || curriculo === null) {
+  /**
+   * Sem curriculo para o que ele estuda: atividade sim, progresso nao.
+   *
+   * A CONDICAO ENCOLHEU e isso e ganho da separacao `meta`/`estuda`: era
+   * `!metaTemCurriculo(meta) || curriculo === null`, duas perguntas que podiam
+   * discordar — uma meta marcada `temCurriculo: true` cujo seed nao resolvesse
+   * passaria pela primeira e morreria na segunda. Agora ha uma so fonte: existe
+   * o curriculo do que ele estuda, ou nao existe.
+   */
+  if (curriculo === null) {
     return {
       ...base,
       progresso: null,
-      motivo: 'meta-sem-curriculo',
+      motivo: 'sem-curriculo',
       faixa: null,
       porGrupo: {},
       validado: null,
@@ -203,12 +342,18 @@ export function linhaDoAluno({
   }
 
   /**
-   * Meta medida por ATESTADO do professor (1o grau): o numero vem da fatia 2 do
-   * ADR-016. Ha curriculo e ha dado — a medida e que e outra. Dizer
+   * Curriculo medido por ATESTADO do professor (1o grau): o numero vem da fatia
+   * 2 do ADR-016. Ha curriculo e ha dado — a medida e que e outra. Dizer
    * "sem curriculo" aqui seria mentir sobre um curriculo que existe, e medir por
    * cartoes daria zero eterno, porque 11 dos 29 itens nao tem cartao nenhum.
+   *
+   * A MEDIDA VEM DO CURRICULO, E NAO DA META (ADR-017, decisao 6). Enquanto vinha
+   * da meta, o meu caso era medido errado: persigo o 3o grau (medida de atestado)
+   * e estudo o curriculo de azul (medida de cartoes) — a medida de uma prova
+   * aplicada ao conteudo de outra, que produziria `—` para quem tem 81 itens de
+   * cartao em andamento.
    */
-  if (medidaDoProgresso(meta) === 'atestado') {
+  if (curriculo.medida === 'atestado') {
     return {
       ...base,
       progresso: null,
@@ -319,7 +464,20 @@ export interface CadastroNaLista {
   papel: string
   turma: string
   meta: string
+  estuda: string
   ativo: boolean
+  demo?: boolean
+  temParticulares?: boolean
+}
+
+/** O minimo que esta funcao precisa saber de um convite pendente. */
+export interface ConviteNaLista {
+  email: string
+  nome: string
+  papel: string
+  turma: string
+  meta: string
+  estuda: string
 }
 
 /**
@@ -334,39 +492,76 @@ export interface CadastroNaLista {
  * A BUSCA fica fora daqui de proposito: `abrirCentral` faz o I/O, isto faz a
  * conta. E o que permite testar as regras de filtro sem rede.
  *
- * SO ALUNO ATIVO. O professor tem cadastro em `pessoas` e apareceria como uma
- * linha sem progresso — que nao e um aluno parado, e um professor. Desativado
- * sai porque as regras ja negam a leitura do estado dele: ficaria como "nunca
- * sincronizou", que seria mentira.
+ * SO ALUNO ATIVO. O professor e o admin tem cadastro em `pessoas` e apareceriam
+ * como linha sem progresso — que nao e um aluno parado. Desativado sai porque as
+ * regras ja negam a leitura do estado dele: ficaria como "nunca sincronizou",
+ * que seria mentira.
+ *
+ * O CONVIDADO ENTRA (ADR-017, decisao 4), e essa e a mudanca que faz a turma real
+ * aparecer inteira: quem foi convidado e nunca entrou e um aluno da turma sem
+ * nenhuma medida, e nao uma pessoa inexistente. Ele vale no denominador e nao na
+ * media — ver `mediaDaTurma`.
  */
 export function linhasDaAcademia({
   cadastros,
+  convites = [],
   estados,
-  curriculoDaMeta,
+  curriculoPorId,
   agora,
 }: {
   cadastros: readonly CadastroNaLista[]
+  /**
+   * Convites pendentes. Opcional porque a aba do professor no celular ainda nao
+   * os busca — e uma lista vazia produz exatamente o comportamento anterior.
+   */
+  convites?: readonly ConviteNaLista[]
   estados: ReadonlyMap<string, EstadoPersistido>
   /**
-   * O curriculo de cada meta. `null` para meta sem curriculo.
+   * O curriculo de um id de curriculo. `null` quando nao existe lista para ele.
    *
-   * FUNCAO, E NAO UM CURRICULO SO: alunos da mesma turma podem ter metas
-   * diferentes, entao a lista resolve um curriculo POR LINHA. Um curriculo unico
-   * obrigaria a escolher uma prova para todo mundo — exatamente o que a decisao
-   * 3 do ADR-016 recusou.
+   * FUNCAO, E NAO UM CURRICULO SO: alunos da mesma turma estudam curriculos
+   * diferentes, entao a lista resolve um POR LINHA. Um curriculo unico obrigaria
+   * a escolher uma prova para todo mundo — o que a decisao 3 do ADR-016 recusou.
+   *
+   * RECEBE `estuda` E NAO `meta` (ADR-017, decisao 6). O parametro se chamava
+   * `curriculoDaMeta`, e o nome escondia o erro: chamado com a minha meta
+   * (`3grau`) ele devolvia `null`, e eu aparecia sem progresso com 81 itens em
+   * estudo.
    */
-  curriculoDaMeta: (meta: string) => Curriculo | null
+  curriculoPorId: (estuda: string) => Curriculo | null
   agora: Date
 }): LinhaDaCentral[] {
-  return cadastros
+  const dosCadastros = cadastros
     .filter((p) => p.papel === 'aluno' && p.ativo)
     .map((p) => {
       const e = estados.get(p.uid)
-      const base = { uid: p.uid, nome: p.nome, turma: p.turma, meta: p.meta }
+      const base = {
+        uid: p.uid,
+        nome: p.nome,
+        turma: p.turma,
+        meta: p.meta,
+        estuda: p.estuda,
+        demo: p.demo ?? false,
+        temParticulares: p.temParticulares ?? false,
+      }
       // Ausente do mapa = nunca sincronizou. NAO e zero, e nao sabemos.
       if (!e) return linhaSemDados(base)
-      return linhaDoAluno({ ...base, estado: e, curriculo: curriculoDaMeta(p.meta), agora })
+      return linhaDoAluno({ ...base, estado: e, curriculo: curriculoPorId(p.estuda), agora })
     })
+
+  const dosConvites = convites
+    .filter((c) => c.papel === 'aluno')
+    .map((c) =>
+      linhaConvidada({
+        email: c.email,
+        nome: c.nome,
+        turma: c.turma,
+        meta: c.meta,
+        estuda: c.estuda,
+      }),
+    )
+
+  return [...dosCadastros, ...dosConvites]
 }
 
 // ---------------------------------------------------------------------------
@@ -402,8 +597,14 @@ export interface MediaDaTurma {
  */
 export function mediaDaTurma(linhas: readonly LinhaDaCentral[]): MediaDaTurma {
   const fora: Record<MotivoSemProgresso, number> = {
+    // Convidado que nunca entrou. FICA NO DENOMINADOR e fora da media: a turma
+    // tem quatro alunos e um estudando, e os dois numeros sao a informacao. Se
+    // ele fosse zero, a media ficaria presa e SALTARIA no dia do primeiro login
+    // — e o professor atribuiria o salto ao ensino dele. Se ele nao existisse na
+    // lista, a turma pareceria ter um aluno.
+    convidado: 0,
     'sem-dados': 0,
-    'meta-sem-curriculo': 0,
+    'sem-curriculo': 0,
     // Medido por atestado: fora da media de cartoes por DESENHO, e nao por
     // falta. Contar junto com "sem curriculo" faria a tela dizer que falta algo.
     'medido-por-atestado': 0,
@@ -470,7 +671,7 @@ function mediaDe(
  * na mesma varredura: "o que eu dou na proxima aula" e "quem esta me esperando".
  *
  * Os tres tecnicos sao MEDIA DA TURMA. No nivel do aluno eles diagnosticam; no
- * da turma eles sao pauta — se a RG1A esta com 30% em passagens e 70% em
+ * da turma eles sao pauta — se a RGI esta com 30% em passagens e 70% em
  * raspagens, isso e o tema da semana, e nao um problema individual.
  *
  * Os cartoes tecnicos seguem os grupos que EXISTEM (`gruposComItens`): um cartao

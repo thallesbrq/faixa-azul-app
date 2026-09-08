@@ -19,10 +19,23 @@ rules_version = '2';
 // Assim a disputa aluno-professor deixa de ser problema de merge e passa a ser
 // impossivel por construcao.
 //
+// TRES PAPEIS DESDE O ADR-017, e a linha entre os dois de cima e "o que nao se
+// desfaz": o ADMIN administra o que se desfaz (cadastro, convite, turma, grade),
+// o PROFESSOR assina o que nao se desfaz (validacao, competencia, graduacao —
+// as tres colecoes append-only). O admin e o desenvolvedor, e ele tem cadastro
+// de aluno nesta mesma academia: sem essa separacao ele assinaria a propria
+// graduacao, e o log append-only viraria decoracao.
+//
+// `get` E `list` SAO REGRAS DIFERENTES, e confundi-los custou um bug que ficou
+// no ar: numa consulta de colecao o curinga do caminho nao esta ligado a
+// documento nenhum, entao toda regra que chama `get(.../$(uid))` ERRA em `list`
+// — e erro em regra e negacao. `listarPessoas()`, a primeira leitura da Central,
+// era recusada para o professor. Ver o comentario em `pessoas`.
+//
 // SOBRE O LOG DO EMULADOR: ele reporta `evaluation error` em algumas negacoes,
 // alem de `false`. Duas causas reais foram encontradas e corrigidas (ordem da
 // guarda de autenticacao, e `.data` sem guarda de nulo). Restaram entradas que
-// eu NAO consegui atribuir — nenhuma delas muda resultado: as 67 assercoes
+// eu NAO consegui atribuir — nenhuma delas muda resultado: as 93 assercoes
 // cobrem cada caminho de permitir e negar, e todas passam. Fica registrado como
 // observacao aberta, e nao como coisa entendida.
 //
@@ -83,6 +96,26 @@ service cloud.firestore {
       return eu != null && eu.data.ativo == true;
     }
 
+    /**
+     * DOIS NIVEIS DE PODER, E A LINHA ENTRE ELES E "O QUE NAO SE DESFAZ".
+     *
+     *   o admin administra o que se desfaz; o professor assina o que nao se desfaz.
+     *
+     * `souProfessor()` e a autoridade de TATAME: `validacoes`, `competencias` e
+     * `graduacoes` — exatamente as tres colecoes com `update, delete: if false`
+     * mais abaixo. `souGestor()` e a autoridade ADMINISTRATIVA: cadastro,
+     * convite, turma, meta, grade.
+     *
+     * O MOTIVO E CONCRETO E E SOBRE O DESENVOLVEDOR (ADR-017, decisao 1). Ele e
+     * faixa branca 3 graus e escreve este app. Como `professor`, poderia atestar
+     * as competencias do proprio cadastro de aluno e conceder a si mesmo o 1o
+     * grau. O log append-only do ADR-010 existe para que evidencia de graduacao
+     * nao seja reescrevivel — e alguem que assina a propria graduacao faz o log
+     * virar decoracao. `admin` e o papel que ve tudo e NAO PODE SE GRADUAR.
+     *
+     * O QUE FECHA A PORTA DE VOLTA e a regra de `papel` em `pessoas`: sem ela o
+     * admin se promoveria a professor e assinaria, e esta divisao seria teatro.
+     */
     function souProfessor() {
       return autenticado() && euProfessor();
     }
@@ -92,11 +125,44 @@ service cloud.firestore {
       return eu != null && eu.data.papel == 'professor' && eu.data.ativo == true;
     }
 
+    /** Professor OU admin: quem administra a academia. */
+    function souGestor() {
+      return autenticado() && euGestor();
+    }
+
+    function euGestor() {
+      let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
+      return eu != null
+        && (eu.data.papel == 'professor' || eu.data.papel == 'admin')
+        && eu.data.ativo == true;
+    }
+
     // O professor so alcanca quem esta na MESMA academia. Hoje existe uma so,
     // entao a comparacao e sempre verdadeira — e esta escrita de proposito:
     // quando aparecer a segunda academia, o isolamento ja esta aqui, e nao
     // dependera de alguem lembrar de acrescentar.
     function mesmaAcademiaQue(uid) {
+      return autenticado() && euGestorDaAcademiaDe(uid);
+    }
+
+    function euGestorDaAcademiaDe(uid) {
+      let eu = get(/databases/$(database)/documents/pessoas/$(request.auth.uid));
+      let ele = get(/databases/$(database)/documents/pessoas/$(uid));
+      return eu != null && ele != null
+        && (eu.data.papel == 'professor' || eu.data.papel == 'admin')
+        && eu.data.ativo == true
+        && eu.data.academiaId == ele.data.academiaId;
+    }
+
+    /**
+     * O PROFESSOR — e so ele — da academia desta pessoa.
+     *
+     * Existe separada de `mesmaAcademiaQue` porque as tres colecoes append-only
+     * exigem autoridade de tatame, e nao de administracao. Se as duas fossem a
+     * mesma funcao, acrescentar `admin` a ela teria aberto `competencias` e
+     * `graduacoes` de uma vez, sem nenhuma linha falando de graduacao.
+     */
+    function professorDaAcademiaDe(uid) {
       return autenticado() && euProfessorDaAcademiaDe(uid);
     }
 
@@ -137,26 +203,60 @@ service cloud.firestore {
     match /convites/{email} {
       // O convidado le o proprio convite (para saber que existe); o professor
       // le todos os da academia dele.
-      allow read: if souProfessor()
+      allow read: if souGestor()
         || (autenticado() && request.auth.token.email == email);
 
-      allow create, update: if souProfessor()
-        && request.resource.data.academiaId == minhaAcademia()
-        && request.resource.data.papel in ['aluno', 'professor'];
+      /**
+       * QUEM CONVIDA COM QUE PAPEL (ADR-017, decisao 2).
+       *
+       * O admin convida ALUNO. Convite de `professor` ou de `admin` so o
+       * professor cria — e essa e a mesma trava de `papel` em `pessoas` vista
+       * pela porta de entrada: sem ela, o admin se convidaria de novo como
+       * professor com um segundo e-mail, entraria, e assinaria a propria
+       * graduacao. A porta dos fundos anula a da frente.
+       */
+      allow create, update: if request.resource.data.academiaId == minhaAcademia()
+        && (
+          (souGestor() && request.resource.data.papel == 'aluno')
+          || (souProfessor() && request.resource.data.papel in ['aluno', 'professor', 'admin'])
+        );
 
       // CONVITE E DE USO UNICO: quem consome apaga o proprio. Sem isto, um
       // convite antigo ficaria valido para sempre — e se o professor
       // desativasse alguem apagando o cadastro, a pessoa se recadastraria com o
       // convite velho. O professor tambem pode apagar (cancelar convite).
-      allow delete: if souProfessor()
+      allow delete: if souGestor()
         || (autenticado() && request.auth.token.email == email);
     }
 
     // ------------------------------------------------------------- pessoas
 
     match /pessoas/{uid} {
-      // Cada um le o proprio cadastro; o professor le os da academia dele.
-      allow read: if souEu(uid) || mesmaAcademiaQue(uid);
+      /**
+       * `get` E `list` SEPARADOS, E ISSO CONSERTA UM BUG QUE ESTAVA NO AR.
+       *
+       * Era uma linha so: `allow read: if souEu(uid) || mesmaAcademiaQue(uid)`.
+       * Funciona para `get`, e NAO FUNCIONA PARA `list`: numa consulta de
+       * colecao o curinga `{uid}` nao esta ligado a documento nenhum, entao
+       * `souEu(null)` da falso e `mesmaAcademiaQue(null)` monta
+       * `get(pessoas/null)` — a regra ERRA, e erro em regra e negacao.
+       *
+       * O EFEITO: `listarPessoas()` — a PRIMEIRA coisa que a Central faz, e o
+       * que a aba do professor no celular tambem faz — era recusada. Para o
+       * professor tambem, e nao so para o papel novo.
+       *
+       * Descoberto ao escrever `admin: ve tudo`, e confirmado como pre-existente
+       * rodando a mesma sonda contra a versao anterior deste arquivo: mesma
+       * negacao, mesmo erro, outra linha. Nenhuma das 67 assercoes anteriores
+       * LISTAVA `pessoas` — todas pediam documento por documento. A colecao mais
+       * importante da Central estava sem o teste do seu caminho mais usado.
+       *
+       * `souGestor()` serve para `list` porque nao depende do curinga: ela le
+       * so o cadastro de QUEM PEDE. Um aluno continua sem listar — ele nao tem
+       * nada a fazer com a lista da academia.
+       */
+      allow get: if souEu(uid) || mesmaAcademiaQue(uid);
+      allow list: if souGestor();
 
       // Duas formas de nascer um cadastro, e nenhuma delas e aberta:
       //
@@ -167,9 +267,13 @@ service cloud.firestore {
       // o cliente mandou. Sem isso, quem tem convite de aluno se cadastraria
       // como professor e veria a turma toda.
       allow create: if (
-          souProfessor()
-          && request.resource.data.academiaId == minhaAcademia()
-          && request.resource.data.papel in ['aluno', 'professor']
+          request.resource.data.academiaId == minhaAcademia()
+          && (
+            // Mesma divisao dos convites: o admin cria aluno; papel com poder so
+            // o professor cria.
+            (souGestor() && request.resource.data.papel == 'aluno')
+            || (souProfessor() && request.resource.data.papel in ['aluno', 'professor', 'admin'])
+          )
         ) || (
           souEu(uid)
           // E-mail nao verificado nao vale: com link magico ele sempre vem
@@ -236,12 +340,49 @@ service cloud.firestore {
        * que a guarda de autenticacao tinha (ver `souAtivo`): a decisao precisa
        * estar escrita, nao ser consequencia de a lista estar em dia.
        */
+      /**
+       * TRES NIVEIS, E O CAMPO `papel` E A LINHA QUE FECHA A PORTA DOS FUNDOS.
+       *
+       * - o ALUNO muda o proprio nome, e nada mais
+       * - o ADMIN muda tudo MENOS `papel` — de ninguem, inclusive o dele
+       * - o PROFESSOR muda tudo
+       *
+       * SEM A EXCECAO DO `papel`, A DIVISAO ADMIN/PROFESSOR SERIA TEATRO
+       * (ADR-017, decisao 2): bastaria o admin gravar `papel: 'professor'` no
+       * proprio cadastro para passar a assinar competencia e graduacao. A regra
+       * que impede o desenvolvedor de se graduar nao e a de `competencias` — e
+       * esta linha.
+       *
+       * `hasOnly` NO CAMINHO DO ALUNO, LISTA NEGATIVA NO DO ADMIN, e a assimetria
+       * e deliberada. Para o aluno, campo novo deve nascer PROTEGIDO: e o que fez
+       * `meta` (ADR-016) e `estuda` (ADR-017) ficarem fora do alcance dele sem
+       * nenhuma regra nova. Para o admin o padrao certo e o oposto — campo novo
+       * deve nascer ADMINISTRAVEL, porque a razao de o papel existir e ele poder
+       * administrar; o que precisa ser enumerado e a excecao, e a excecao e uma.
+       *
+       * O RISCO DA LISTA NEGATIVA e alguem acrescentar um segundo campo tao
+       * perigoso quanto `papel` e esquecer de po-lo aqui. Fica escrito: se um
+       * campo novo decidir PODER (e nao dado), ele entra nesta lista.
+       */
       allow update: if (
           souEu(uid)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome'])
-        ) || mesmaAcademiaQue(uid);
+        ) || (
+          professorDaAcademiaDe(uid)
+        ) || (
+          mesmaAcademiaQue(uid)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['papel'])
+        );
 
-      // Apagar e do professor (a saida do aluno passa pela central).
+      /**
+       * APAGAR CONTINUA SENDO DOS DOIS, e eu quase restringi ao professor por
+       * simetria com o `papel`. Seria errado: apagar cadastro e o que atende um
+       * pedido de exclusao de dados, e esse pedido e trabalho ADMINISTRATIVO.
+       * Um admin que nao consegue apagar nao consegue honrar a LGPD, e a
+       * simetria bonita teria custado uma obrigacao legal.
+       *
+       * A linha do ADR-017 e sobre ASSINAR evidencia, e nao sobre destruir dado.
+       */
       allow delete: if mesmaAcademiaQue(uid);
     }
 
@@ -283,7 +424,10 @@ service cloud.firestore {
 
     match /validacoes/{id} {
       allow read: if souEu(resource.data.alunoUid) || mesmaAcademiaQue(resource.data.alunoUid);
-      allow create: if mesmaAcademiaQue(request.resource.data.alunoUid);
+      // SO O PROFESSOR (ADR-017, decisao 1): dizer que o texto de uma tecnica
+      // esta certo e autoridade de tatame. O admin escreveu o texto — deixa-lo
+      // validar seria ele conferindo o proprio trabalho.
+      allow create: if professorDaAcademiaDe(request.resource.data.alunoUid);
       allow update, delete: if false;
     }
 
@@ -308,9 +452,12 @@ service cloud.firestore {
     match /competencias/{alunoUid}/registros/{id} {
       allow read: if souEu(alunoUid) || mesmaAcademiaQue(alunoUid);
 
-      // O professor da academia atesta. O aluno NAO: atestar a si mesmo seria
-      // o aluno se graduando sozinho — mesma regra de `validacoes`.
-      allow create: if mesmaAcademiaQue(alunoUid)
+      // O PROFESSOR da academia atesta — nem o aluno, nem o admin. Atestar a si
+      // mesmo seria o aluno se graduando sozinho; e o admin tem cadastro de
+      // aluno nesta mesma academia (ADR-017, decisao 5), entao `mesmaAcademiaQue`
+      // aqui seria exatamente a porta pela qual o desenvolvedor assinaria a
+      // propria competencia.
+      allow create: if professorDaAcademiaDe(alunoUid)
         // Texto obrigatorio TAMBEM na regra, e nao so no cliente: o cliente e
         // codigo que vai para o navegador de qualquer pessoa. Atestacao sem
         // justificativa nao e rastreavel, e a fronteira e aqui.
@@ -336,7 +483,10 @@ service cloud.firestore {
     match /graduacoes/{alunoUid}/registros/{id} {
       allow read: if souEu(alunoUid) || mesmaAcademiaQue(alunoUid);
 
-      allow create: if mesmaAcademiaQue(alunoUid)
+      // SO O PROFESSOR. Conceder graduacao e o ato mais irreversivel do
+      // sistema, e o unico papel com autoridade para ele e o de quem esta no
+      // tatame. Ver ADR-017, decisao 1.
+      allow create: if professorDaAcademiaDe(alunoUid)
         && request.resource.data.texto is string
         && request.resource.data.texto.size() > 0
         && request.resource.data.professorUid == request.auth.uid

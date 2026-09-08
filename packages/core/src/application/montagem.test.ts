@@ -120,17 +120,29 @@ describe('tamanhosSugeridos', () => {
 describe('montarEstado', () => {
   it('comeca com tudo no bolsao e nenhuma aula preenchida', () => {
     const e = montarEstado({ itens: ATIVOS, atribuicao: new Map() })
-    expect(e.total).toBe(56)
-    expect(e.naoAtribuidos).toBe(56)
+    // 81 desde o ADR-017, decisao 7 (era 56, com Secoes 1 a 3 desativadas).
+    expect(e.total).toBe(81)
+    expect(e.naoAtribuidos).toBe(81)
     expect(e.atribuidos).toBe(0)
     expect(e.aulas).toHaveLength(10)
     expect(e.aulas.every((a) => a.itens.length === 0)).toBe(true)
     expect(e.completo).toBe(false)
   })
 
-  it('o bolsao vem agrupado pelas guardas do curriculo, na ordem do exame', () => {
+  it('o bolsao vem agrupado pelos blocos do curriculo, na ordem do exame', () => {
+    /**
+     * ESTE TESTE PEGOU UM DEFEITO SILENCIOSO, e vale registrar qual.
+     *
+     * Ao religar os 25 itens das Secoes 1 a 3 (ADR-017, decisao 7), suas posicoes
+     * (Base & Movimentacao, Quedas, Defesa Pessoal) nao existiam em
+     * `BLOCO_POR_PREFIXO`, entao `blocoDaPosicao` devolvia `null` — e
+     * `montagem.ts` faz `if (!g) continue`. Resultado: os 25 sumiam do bolsao, o
+     * professor via "faltam 25 itens" e nao tinha onde clicar. Sem erro nenhum.
+     */
     const e = montarEstado({ itens: ATIVOS, atribuicao: new Map() })
     expect(e.bolsao.map((g) => g.guarda)).toEqual([
+      'fundamentos',
+      'quedas',
       'fechada',
       'meia',
       'gancho',
@@ -140,8 +152,12 @@ describe('montarEstado', () => {
       'aberta',
       'complexo',
       'saidas',
+      'defesa-pessoal',
     ])
-    expect(e.bolsao.reduce((n, g) => n + g.itens.length, 0)).toBe(56)
+    // O BOLSAO PRECISA SOMAR O TOTAL: se um item nao cabe em nenhum bloco, ele
+    // desaparece da tela de escolha sem nenhum aviso.
+    expect(e.bolsao.reduce((n, g) => n + g.itens.length, 0)).toBe(e.total)
+    expect(e.bolsao.reduce((n, g) => n + g.itens.length, 0)).toBe(81)
   })
 
   it('bolsao + aulas somam sempre o total — nao ha item perdido nem duplicado', () => {
@@ -152,14 +168,14 @@ describe('montarEstado', () => {
     })
     const e = montarEstado({ itens: ATIVOS, atribuicao: a })
     expect(e.atribuidos).toBe(20)
-    expect(e.naoAtribuidos).toBe(36)
+    expect(e.naoAtribuidos).toBe(61)
     expect(e.atribuidos + e.naoAtribuidos).toBe(e.total)
   })
 
   it('o bolsao encolhe conforme itens sao atribuidos', () => {
     const a = atribuir(new Map(), ATIVOS[0].id, 1)
     const e = montarEstado({ itens: ATIVOS, atribuicao: a })
-    expect(e.bolsao.reduce((n, g) => n + g.itens.length, 0)).toBe(55)
+    expect(e.bolsao.reduce((n, g) => n + g.itens.length, 0)).toBe(80)
     expect(e.aulas[0].itens.map((i) => i.id)).toEqual([ATIVOS[0].id])
   })
 
@@ -178,7 +194,7 @@ describe('montarEstado', () => {
   it('acusa faltas enquanto sobrar item no bolsao', () => {
     const e = montarEstado({ itens: ATIVOS, atribuicao: atribuir(new Map(), ATIVOS[0].id, 1) })
     const falta = e.problemas.find((p) => p.tipo === 'faltam')
-    expect(falta).toEqual({ tipo: 'faltam', quantos: 55 })
+    expect(falta).toEqual({ tipo: 'faltam', quantos: 80 })
   })
 
   it('acusa aula vazia', () => {
@@ -225,7 +241,7 @@ describe('montarEstado', () => {
     const e = montarEstado({ itens: ATIVOS, atribuicao: new Map([[1, ['fantasma']]]) })
     expect(e.problemas).toContainEqual({ tipo: 'item-inexistente', itemId: 'fantasma' })
     expect(e.aulas[0].itens).toEqual([])
-    expect(e.naoAtribuidos).toBe(56)
+    expect(e.naoAtribuidos).toBe(81)
   })
 
   it('nao conta item inativo', () => {

@@ -29,9 +29,24 @@
  * Manter a funcao seria pior que remove-la: um nome que afirma decidir algo, e
  * que nao decide mais nada, e a forma mais eficiente de alguem confiar nele.
  */
+/**
+ * RGI SUBSTITUI RG1A E RG1B (ADR-017, decisao 8).
+ *
+ * "Rilion Gracie Iniciante", pedido do professor: a concorrencia usa
+ * terminologia parecida com RG1A/RG1B. Uma turma de iniciantes, e nao duas —
+ * as duas nunca existiram na pratica, foram suposicao minha sobre horarios.
+ *
+ * A RENOMEACAO E GRATUITA HOJE, e isso e fato verificado e nao esperanca:
+ * nenhum cadastro existente esta em RG1A ou RG1B. Por isso nao ha migracao aqui.
+ * Em uma semana de turma real nao seria — e ai `nomeDaTurma` devolvendo o id
+ * desconhecido seria a unica coisa impedindo o professor de ver "RG1A" como
+ * dado perdido.
+ *
+ * RG2 FICA COM O NOME ANTIGO ate ele nomear o intermediario. Renomear agora
+ * para adivinhar o nome dele criaria a segunda migracao em duas semanas.
+ */
 export const TURMAS = [
-  { id: 'RG1A', nome: 'RG1A', descricao: 'Iniciantes' },
-  { id: 'RG1B', nome: 'RG1B', descricao: 'Iniciantes' },
+  { id: 'RGI', nome: 'RGI', descricao: 'Iniciantes — faixa branca' },
   { id: 'RG2', nome: 'RG2', descricao: 'Intermediário / avançado' },
 ] as const
 

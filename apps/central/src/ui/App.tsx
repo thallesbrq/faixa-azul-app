@@ -12,10 +12,10 @@
  */
 
 import { useMemo, useState } from 'react'
-import { curriculoDaMeta, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
+import { curriculoPorId, CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
 import { MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
-import { medidaDoProgresso, metaSeguinte } from '@faixa-azul/core/domain/metas'
-import { nomeDaTurma, TURMAS } from '@faixa-azul/core/domain/turmas'
+import { metaSeguinte } from '@faixa-azul/core/domain/metas'
+import { nomeDaTurma, SEM_TURMA, TURMAS } from '@faixa-azul/core/domain/turmas'
 import { ROTULO_GRUPO } from '@faixa-azul/core/domain/taxonomia'
 import {
   cartoesDaTurma,
@@ -36,6 +36,7 @@ import { Tabela } from './components/Tabela'
 import { Aluno } from './components/Aluno'
 import { MontarGrade } from './MontarGrade'
 import { FolhaDoAtestado } from './FolhaDoAtestado'
+import { Convidar } from './components/Convidar'
 import { horaCurta } from './formato'
 
 /**
@@ -89,7 +90,7 @@ function Central({
   const { estado, recarregar } = useLinhas({
     app: sessao.app,
     dados: sessao.dados,
-    curriculoDaMeta,
+    curriculoPorId,
   })
 
   const grupos = useMemo(() => gruposComItens(CURRICULO_DAS_COLUNAS), [])
@@ -116,6 +117,37 @@ function Central({
     () => cartoesDaTurma(daSelecao, grupos, (g) => ROTULO_GRUPO[g]),
     [daSelecao, grupos],
   )
+
+  /**
+   * A META PADRAO DE UM CONVIDADO SAI DA PROPRIA TURMA, e nao de uma constante.
+   *
+   * A meta mais comum entre quem ja esta na turma e o melhor palpite disponivel,
+   * e ele e sempre corrigivel na pagina do aluno. Cravar `'1grau'` aqui daria a
+   * resposta certa para a RGI e a errada para toda turma futura — e o erro seria
+   * silencioso, porque a meta so aparece depois que a pessoa entra.
+   *
+   * Turma vazia cai em `SEM_META`: sem ninguem para observar, adivinhar seria
+   * escolher a prova de alguem no escuro.
+   */
+  const metaPadrao = useMemo(() => {
+    const contagem = new Map<string, number>()
+    for (const l of daSelecao) {
+      if (l.meta === '') continue
+      contagem.set(l.meta, (contagem.get(l.meta) ?? 0) + 1)
+    }
+    let melhor = ''
+    let quantos = 0
+    for (const [m, n] of contagem) {
+      if (n > quantos) {
+        melhor = m
+        quantos = n
+      }
+    }
+    return melhor
+  }, [daSelecao])
+
+  /** Nomes que ja existem na turma — cadastro OU convite pendente. */
+  const nomesNaTurma = useMemo(() => daSelecao.map((l) => l.nome), [daSelecao])
 
   /**
    * A pagina de um aluno le do MESMO carregamento da tabela, e nao faz leitura
@@ -171,15 +203,21 @@ function Central({
               itens={CURRICULO_DAS_COLUNAS.itens}
             />
           }
-          curriculo={curriculoDaMeta(linha.meta) ?? CURRICULO_DAS_COLUNAS}
+          curriculo={curriculoPorId(linha.estuda) ?? CURRICULO_DAS_COLUNAS}
           atestado={
-            // So quando a meta e medida por atestado E ha curriculo para atestar.
-            medidaDoProgresso(linha.meta) === 'atestado' && curriculoDaMeta(linha.meta) !== null ? (
+            /**
+             * SO QUANDO O CURRICULO E MEDIDO POR ATESTADO, e a pergunta mudou de
+             * dono: era `medidaDoProgresso(linha.meta)`, e com `meta` e `estuda`
+             * separados (ADR-017, decisao 6) a meta nao decide mais a medida. A
+             * folha aparece para quem ESTUDA o 1o grau — nao para quem o
+             * persegue estudando o curriculo de azul.
+             */
+            curriculoPorId(linha.estuda)?.medida === 'atestado' ? (
               <FolhaDoAtestado
                 app={sessao.app}
                 alunoUid={linha.uid}
                 professorUid={sessao.sessao.uid}
-                curriculo={curriculoDaMeta(linha.meta) as Curriculo}
+                curriculo={curriculoPorId(linha.estuda) as Curriculo}
                 modulos={MODULOS_1GRAU}
                 meta={linha.meta}
                 // `null` porque o app ainda nao conta presenca (fatia 3).
@@ -197,8 +235,21 @@ function Central({
           aoVoltar={() => irPara({ tela: 'turmas' })}
           aoTrocarMeta={async (meta) => {
             await sessao.dados.atualizarMeta(linha.uid, meta)
-            // Reler e obrigatorio: a meta troca a MEDIDA do progresso, entao a
-            // tela inteira passa a falar de outra coisa.
+            // Reler porque a meta troca o que a tela AFIRMA sobre a prova. Ela
+            // nao troca mais a medida do progresso — isso passou para `estuda`
+            // (ADR-017, decisao 6).
+            await recarregar()
+          }}
+          aoTrocarEstuda={async (estuda) => {
+            await sessao.dados.atualizarEstuda(linha.uid, estuda)
+            // ESTE E O QUE TROCA A MEDIDA: reler nao e otimizacao, e a unica
+            // forma de a tela deixar de falar de cartoes e passar a falar de
+            // atestado (ou o contrario) sem mostrar o numero antigo com o rotulo
+            // novo por um instante.
+            await recarregar()
+          }}
+          aoTrocarParticulares={async (tem) => {
+            await sessao.dados.atualizarParticulares(linha.uid, tem)
             await recarregar()
           }}
           aoTrocarTurma={async (turma) => {
@@ -306,6 +357,26 @@ function Central({
             aoEscolher={(uid) => irPara({ tela: 'aluno', uid })}
           />
         </section>
+
+        <Convidar
+          turma={turma ?? SEM_TURMA}
+          meta={metaPadrao}
+          jaConvidados={nomesNaTurma}
+          aoConvidar={async (entrada) => {
+            await sessao.dados.convidar({
+              ...entrada,
+              papel: 'aluno',
+              // O curriculo nasce igual a meta; o professor troca na pagina do
+              // aluno quando divergirem (ADR-017, decisao 6).
+              estuda: entrada.meta,
+            })
+            await recarregar()
+          }}
+          aoCancelar={async (email) => {
+            await sessao.dados.cancelarConvite(email)
+            await recarregar()
+          }}
+        />
       </main>
     </>
   )

@@ -7,6 +7,9 @@
  * tecnica, onde a correcao do professor e registrada.
  */
 
+import type { Papel } from '@faixa-azul/core/domain/papeis'
+import { podeVerAcademia } from '@faixa-azul/core/domain/papeis'
+
 export type Tela = 'aulas' | 'hoje' | 'curriculo' | 'simulado' | 'progresso' | 'perfil' | 'torre'
 
 /**
@@ -43,8 +46,19 @@ const ABAS_DO_PROFESSOR: { id: Tela; rotulo: string; icone: string }[] = [
   { id: 'perfil', rotulo: 'Perfil', icone: '👤' },
 ]
 
-export function abasDoPapel(papel: 'aluno' | 'professor') {
-  return papel === 'professor' ? ABAS_DO_PROFESSOR : ABAS_DO_ALUNO
+/**
+ * O ADMIN VE AS ABAS DO PROFESSOR, e nao um terceiro conjunto.
+ *
+ * A diferenca entre os dois papeis nao esta em O QUE se ve — os dois veem a
+ * academia inteira — e sim em o que se pode ASSINAR (ADR-017, decisao 1). Um
+ * terceiro conjunto de abas sugeriria uma tela que nao existe.
+ *
+ * `podeVerAcademia` em vez de `!== 'aluno'`: a pergunta que decide as abas e
+ * exatamente essa, e escreve-la assim faz um papel futuro cair no lado certo
+ * sem ninguem lembrar deste arquivo.
+ */
+export function abasDoPapel(papel: Papel) {
+  return podeVerAcademia(papel) ? ABAS_DO_PROFESSOR : ABAS_DO_ALUNO
 }
 
 export function Navegacao({
@@ -54,7 +68,7 @@ export function Navegacao({
 }: {
   atual: Tela
   aoTrocar: (t: Tela) => void
-  papel: 'aluno' | 'professor'
+  papel: Papel
 }) {
   return (
     <nav className="navegacao" aria-label="Navegação principal">

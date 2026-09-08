@@ -512,6 +512,56 @@
   color: var(--cor-texto-suave);
 }
 
+/* Convidado e demo ficam ao lado do nome, e nao numa coluna: sao qualificacoes
+   da PESSOA, e uma coluna com uma marca em duas linhas de vinte gastaria
+   largura de tabela para dizer "nao" dezoito vezes. */
+.etiqueta--espera,
+.etiqueta--demo {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.etiqueta--espera {
+  background: var(--amarelo-suave);
+  border-color: var(--amarelo-atencao);
+  color: var(--amarelo-atencao);
+}
+
+.etiqueta--demo {
+  background: var(--laranja-suave);
+  border-color: var(--laranja-texto);
+  color: var(--laranja-texto);
+}
+
+/* Quem nao tem pagina para abrir nao finge ser clicavel. Sem isto o cursor
+   viraria mao sobre a linha do convidado e o clique nao faria nada — que se le
+   como app quebrado, e nao como "essa pessoa ainda nao entrou". */
+.linha-inerte {
+  cursor: default;
+  color: var(--cor-texto-suave);
+}
+
+.nome-inerte {
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+/* Formulario de convite: nome, e-mail e botao numa linha no desktop, empilhados
+   quando nao cabem. `end` alinha o botao com a base dos campos, e nao com o
+   topo do rotulo. */
+.convite-campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.convite-campos .campo {
+  flex: 1 1 220px;
+  margin: 0;
+}
+
 /* Situacao com COR E PALAVRA, nao so cor: quem nao distingue verde de vermelho
    (RNF-04) precisa do texto, e o texto ainda e mais rapido de ler que a legenda. */
 .situacao {

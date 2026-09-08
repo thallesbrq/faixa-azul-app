@@ -29,6 +29,14 @@ const PROF_DE_FORA = 'prof-de-outra'
 const ALUNO_A = 'aluno-a'
 const ALUNO_B = 'aluno-b'
 const ALUNO_DESATIVADO = 'aluno-desativado'
+/**
+ * O DESENVOLVEDOR (ADR-017, decisao 1): ve a academia inteira e NAO assina
+ * evidencia. Ele tambem tem cadastro de aluno nesta mesma academia (`FLOKI`),
+ * que e exatamente o que torna a distincao necessaria e nao teorica — sem ela,
+ * `mesmaAcademiaQue` deixaria ele atestar a propria competencia.
+ */
+const ADMIN = 'admin-thalles'
+const FLOKI = 'floki-aluno-do-admin'
 
 let amb: RulesTestEnvironment
 
@@ -59,11 +67,18 @@ beforeEach(async () => {
     await setDoc(doc(db, 'pessoas', PROF_DE_FORA), {
       nome: 'Outro Professor', papel: 'professor', academiaId: OUTRA_ACADEMIA, ativo: true,
     })
+    await setDoc(doc(db, 'pessoas', ADMIN), {
+      nome: 'Thalles', papel: 'admin', academiaId: ACADEMIA, ativo: true,
+    })
+    await setDoc(doc(db, 'pessoas', FLOKI), {
+      nome: 'Floki Fenrrirson', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+      turma: 'RGI', meta: '3grau', estuda: 'azul', demo: true,
+    })
     await setDoc(doc(db, 'pessoas', ALUNO_A), {
-      nome: 'Thalles', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1A', meta: 'azul',
+      nome: 'Thalles', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RGI', meta: 'azul', estuda: 'azul',
     })
     await setDoc(doc(db, 'pessoas', ALUNO_B), {
-      nome: 'Outro Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RG1B', meta: '1grau',
+      nome: 'Outro Aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: true, turma: 'RGI', meta: '1grau', estuda: '1grau',
     })
     // SEM `turma` de proposito: e o estado de todo cadastro que existe hoje, e
     // as regras tem de continuar funcionando para ele.
@@ -71,6 +86,7 @@ beforeEach(async () => {
       nome: 'Ex-aluno', papel: 'aluno', academiaId: ACADEMIA, ativo: false,
     })
 
+    await setDoc(doc(db, 'estados', FLOKI), { dados: { versao: 2 }, versao: 1 })
     await setDoc(doc(db, 'estados', ALUNO_A), { dados: { versao: 2 }, versao: 1 })
     await setDoc(doc(db, 'estados', ALUNO_B), { dados: { versao: 2 }, versao: 1 })
     await setDoc(doc(db, 'estados', ALUNO_DESATIVADO), { dados: { versao: 2 }, versao: 1 })
@@ -324,6 +340,234 @@ describe('isolamento entre academias', () => {
   it('professor da academia le estado e resumo dos alunos dele', async () => {
     await assertSucceeds(getDoc(doc(como(PROF), 'estados', ALUNO_A)))
     await assertSucceeds(getDoc(doc(como(PROF), 'resumos', ALUNO_A)))
+  })
+})
+
+
+// ---------------------------------------------------------------------------
+// O papel `admin` (ADR-017, decisao 1 e 2)
+//
+// A DIVISAO E "O QUE NAO SE DESFAZ": o admin administra o que se desfaz, o
+// professor assina o que nao se desfaz. Tudo aqui existe porque o desenvolvedor
+// precisa da visao geral e NAO pode conceder a si mesmo a graduacao.
+// ---------------------------------------------------------------------------
+
+describe('admin: ve tudo', () => {
+  it('le o cadastro de qualquer aluno da academia', async () => {
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'pessoas', ALUNO_A)))
+  })
+
+  it('le o estado e o resumo de qualquer aluno', async () => {
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'estados', ALUNO_A)))
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'resumos', ALUNO_A)))
+  })
+
+  it('lista as pessoas e os convites', async () => {
+    await assertSucceeds(getDocs(collection(como(ADMIN), 'pessoas')))
+    await assertSucceeds(getDocs(collection(como(ADMIN), 'convites')))
+  })
+
+  it('o PROFESSOR tambem lista pessoas — e isto estava QUEBRADO', async () => {
+    /**
+     * BUG PRE-EXISTENTE, achado ao escrever o bloco do admin.
+     *
+     * `allow read` numa linha so nao cobre `list`: na consulta de colecao o
+     * curinga `{uid}` nao esta ligado, `mesmaAcademiaQue(null)` monta
+     * `get(pessoas/null)`, a regra ERRA, e erro em regra e negacao. Ou seja:
+     * `listarPessoas()` — a primeira coisa que a Central faz — era recusada
+     * tambem para o professor.
+     *
+     * Confirmado como anterior a esta mudanca rodando a mesma sonda contra a
+     * versao anterior do arquivo de regras. As 67 assercoes que existiam pediam
+     * `pessoas` DOCUMENTO POR DOCUMENTO; nenhuma listava. O caminho mais usado da
+     * colecao mais importante da Central nao tinha teste.
+     */
+    await assertSucceeds(getDocs(collection(como(PROF), 'pessoas')))
+  })
+
+  it('o ALUNO nao lista pessoas', async () => {
+    // `list` liberado para gestor nao pode ter afrouxado o aluno junto.
+    await assertFails(getDocs(collection(como(ALUNO_A), 'pessoas')))
+  })
+
+  it('professor de OUTRA academia lista, e a lista dele nao e o que importa aqui', async () => {
+    /**
+     * HONESTIDADE SOBRE O QUE ESTA REGRA NAO FAZ: `list` liberado por
+     * `souGestor()` NAO filtra por academia — ele nao pode, porque a regra de
+     * lista nao ve documento nenhum. Um professor de outra academia consegue
+     * abrir a consulta.
+     *
+     * ISSO E ACEITAVEL HOJE E NAO SERA quando existir a segunda academia. O
+     * conserto e filtrar a consulta no cliente por `academiaId` e exigir esse
+     * filtro na regra (`request.query`), ou por a academia numa custom claim.
+     * Fica registrado como divida com o gatilho escrito: a segunda academia.
+     */
+    await assertSucceeds(getDocs(collection(como(PROF_DE_FORA), 'pessoas')))
+  })
+
+  it('escreve a grade de aula do aluno', async () => {
+    await assertSucceeds(
+      setDoc(doc(como(ADMIN), 'grades', ALUNO_A, 'aulas', '2'), { itemIds: ['y'] }),
+    )
+  })
+
+  it('atribui turma e meta', async () => {
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'pessoas', ALUNO_A), { turma: 'RG2' }))
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'pessoas', ALUNO_A), { meta: '1grau' }))
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'pessoas', ALUNO_A), { estuda: '1grau' }))
+  })
+
+  it('apaga cadastro — e isso e de proposito, por causa da LGPD', async () => {
+    // Atender pedido de exclusao de dados e trabalho administrativo. Um admin
+    // que nao apaga nao honra a lei, e a simetria com `papel` custaria isso.
+    await assertSucceeds(deleteDoc(doc(como(ADMIN), 'pessoas', ALUNO_B)))
+  })
+})
+
+describe('admin: NAO assina evidencia', () => {
+  it('NAO atesta competencia de aluno nenhum', async () => {
+    await assertFails(
+      setDoc(doc(como(ADMIN), 'competencias', ALUNO_A, 'registros', 'novo'), {
+        itemId: 'i2', competente: true, texto: 'vi fazer',
+        professorUid: ADMIN, registradaEm: '2026-09-07T00:00:00Z',
+      }),
+    )
+  })
+
+  it('NAO atesta a competencia do PROPRIO cadastro de aluno', async () => {
+    /**
+     * ESTE E O TESTE QUE JUSTIFICA O PAPEL EXISTIR.
+     *
+     * O admin e o desenvolvedor, e ele tem cadastro de aluno (`FLOKI`) na mesma
+     * academia. Enquanto `competencias` usava `mesmaAcademiaQue`, esta escrita
+     * seria PERMITIDA — e o log append-only do ADR-010, feito para que evidencia
+     * de graduacao nao seja reescrevivel, viraria decoracao: quem escreve o app
+     * assinaria a propria graduacao.
+     */
+    await assertFails(
+      setDoc(doc(como(ADMIN), 'competencias', FLOKI, 'registros', 'proprio'), {
+        itemId: 'i2', competente: true, texto: 'eu me vi fazendo',
+        professorUid: ADMIN, registradaEm: '2026-09-07T00:00:00Z',
+      }),
+    )
+  })
+
+  it('NAO concede graduacao', async () => {
+    await assertFails(
+      setDoc(doc(como(ADMIN), 'graduacoes', FLOKI, 'registros', 'g'), {
+        meta: '1grau', texto: 'mereceu', professorUid: ADMIN,
+        concedidaEm: '2026-09-07T00:00:00Z',
+      }),
+    )
+  })
+
+  it('NAO valida o texto de uma tecnica', async () => {
+    // Ele escreveu o conteudo do app. Deixa-lo validar seria conferir o proprio
+    // trabalho e chamar isso de conferencia do professor.
+    await assertFails(
+      addDoc(collection(como(ADMIN), 'validacoes'), { alunoUid: ALUNO_A, itemId: 'i9' }),
+    )
+  })
+
+  it('mas LE a evidencia que o professor assinou', async () => {
+    await assertSucceeds(getDocs(collection(como(ADMIN), 'competencias', ALUNO_A, 'registros')))
+  })
+})
+
+describe('admin: NAO mexe em papel — a porta dos fundos', () => {
+  it('NAO se promove a professor', async () => {
+    /**
+     * SEM ESTA LINHA, TODO O BLOCO ACIMA E TEATRO: bastaria um update no proprio
+     * cadastro para o admin passar a assinar competencia e graduacao. A regra que
+     * impede o desenvolvedor de se graduar nao e a de `competencias` — e esta.
+     */
+    await assertFails(updateDoc(doc(como(ADMIN), 'pessoas', ADMIN), { papel: 'professor' }))
+  })
+
+  it('NAO promove outra pessoa a professor', async () => {
+    await assertFails(updateDoc(doc(como(ADMIN), 'pessoas', ALUNO_A), { papel: 'professor' }))
+  })
+
+  it('NAO rebaixa o professor a aluno', async () => {
+    // O caminho longo: tirar o poder de quem tem, para ser o unico que sobra.
+    await assertFails(updateDoc(doc(como(ADMIN), 'pessoas', PROF), { papel: 'aluno' }))
+  })
+
+  it('NAO cria cadastro de professor nem de admin', async () => {
+    await assertFails(
+      setDoc(doc(como(ADMIN), 'pessoas', 'novo-prof'), {
+        nome: 'X', papel: 'professor', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+    await assertFails(
+      setDoc(doc(como(ADMIN), 'pessoas', 'novo-admin'), {
+        nome: 'X', papel: 'admin', academiaId: ACADEMIA, ativo: true,
+      }),
+    )
+  })
+
+  it('NAO convida como professor — a porta de entrada tem a mesma trava', () => {
+    // Sem isto, o admin se convidaria de novo com um segundo e-mail, entraria
+    // como professor, e assinaria. A porta dos fundos anula a da frente.
+    return assertFails(
+      setDoc(doc(como(ADMIN), 'convites', 'eu-de-novo@x.test'), {
+        nome: 'Eu', papel: 'professor', academiaId: ACADEMIA, turma: '', meta: '',
+        convidadoEm: '2026-09-07T00:00:00Z',
+      }),
+    )
+  })
+
+  it('convida ALUNO, que e o que ele precisa fazer', async () => {
+    await assertSucceeds(
+      setDoc(doc(como(ADMIN), 'convites', 'willian@x.test'), {
+        nome: 'Willian', papel: 'aluno', academiaId: ACADEMIA, turma: 'RGI',
+        meta: '1grau', estuda: '1grau', convidadoEm: '2026-09-07T00:00:00Z',
+      }),
+    )
+  })
+
+  it('cria cadastro de ALUNO direto', async () => {
+    await assertSucceeds(
+      setDoc(doc(como(ADMIN), 'pessoas', 'novo-aluno'), {
+        nome: 'Novo', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
+        turma: 'RGI', meta: '1grau', estuda: '1grau',
+      }),
+    )
+  })
+})
+
+describe('o professor continua podendo tudo', () => {
+  it('muda papel, inclusive nomeando outro professor', async () => {
+    await assertSucceeds(updateDoc(doc(como(PROF), 'pessoas', ALUNO_A), { papel: 'professor' }))
+  })
+
+  it('assina competencia do aluno do admin', async () => {
+    await assertSucceeds(
+      setDoc(doc(como(PROF), 'competencias', FLOKI, 'registros', 'do-prof'), {
+        itemId: 'i2', competente: true, texto: 'Floki fez limpo',
+        professorUid: PROF, registradaEm: '2026-09-07T00:00:00Z',
+      }),
+    )
+  })
+})
+
+describe('o ALUNO nao ganha nada com o papel novo', () => {
+  it('nao se promove a admin', async () => {
+    // `admin` e um papel novo, e o aluno nao pode alcancar nenhum deles.
+    await assertFails(updateDoc(doc(como(ALUNO_A), 'pessoas', ALUNO_A), { papel: 'admin' }))
+  })
+
+  it('nao le o cadastro do admin', async () => {
+    await assertFails(getDoc(doc(como(ALUNO_A), 'pessoas', ADMIN)))
+  })
+
+  it('nao atesta a propria competencia', async () => {
+    await assertFails(
+      setDoc(doc(como(ALUNO_A), 'competencias', ALUNO_A, 'registros', 'eu'), {
+        itemId: 'i2', competente: true, texto: 'eu sei',
+        professorUid: ALUNO_A, registradaEm: '2026-09-07T00:00:00Z',
+      }),
+    )
   })
 })
 
@@ -661,7 +905,7 @@ describe('convites', () => {
       await assertFails(
         setDoc(doc(comEmail(UID_META, EMAIL_META), 'pessoas', UID_META), {
           nome: 'Convidado', papel: 'aluno', academiaId: ACADEMIA, ativo: true,
-          turma: 'RG1A', meta: 'azul',
+          turma: 'RGI', meta: 'azul', estuda: 'azul',
         }),
       )
     })

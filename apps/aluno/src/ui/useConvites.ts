@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import type { Origem } from '@faixa-azul/core/domain/procedencia'
+import type { Papel } from '@faixa-azul/core/domain/papeis'
 import type { Convite, Dados } from '@faixa-azul/core/nuvem/pessoas'
 
 export function useConvites(obterDados: () => Promise<Dados>, souProfessor: boolean) {
@@ -31,7 +31,14 @@ export function useConvites(obterDados: () => Promise<Dados>, souProfessor: bool
   }, [recarregar])
 
   const convidar = useCallback(
-    async (entrada: { email: string; nome: string; papel: Origem; turma: string; meta: string }) => {
+    async (entrada: {
+      email: string
+      nome: string
+      papel: Papel
+      turma: string
+      meta: string
+      estuda: string
+    }) => {
       const d = await obterDados()
       await d.convidar(entrada)
       await recarregar()

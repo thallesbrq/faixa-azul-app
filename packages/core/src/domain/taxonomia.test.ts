@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ORDEM_GUARDA,
-  ROTULO_GUARDA,
+  ORDEM_BLOCO,
+  ROTULO_BLOCO,
   ROTULO_PAPEL,
-  guardaDaPosicao,
+  blocoDaPosicao,
   papelDoKind,
   subPosicao,
 } from './taxonomia'
-import type { Guarda } from './taxonomia'
+import type { BlocoDoCurriculo } from './taxonomia'
 import { ITENS } from '../seed'
 import type { TechniqueKind } from './types'
 
@@ -48,12 +48,18 @@ describe('papelDoKind', () => {
   })
 })
 
-describe('guardaDaPosicao', () => {
-  it('sao exatamente as guardas do curriculo, nem uma mais nem uma menos', () => {
+describe('blocoDaPosicao', () => {
+  it('sao exatamente os blocos do curriculo, nem um mais nem um menos', () => {
     // Correcao do aluno: eu havia inventado familias tecnicas (agrupando Aranha
     // com Laco, Dela Riva com Gancho). O curriculo do exame ja tem a sua
     // classificacao, e e ela que a academia fala.
-    expect(ORDEM_GUARDA).toEqual([
+    //
+    // FUNDAMENTOS, QUEDAS E DEFESA PESSOAL entraram com o ADR-017, decisao 7, na
+    // ordem do documento da prova (Secoes 1 a 5) — que e tambem a ordem segura:
+    // ukemi antes de queda, queda antes de guarda.
+    expect(ORDEM_BLOCO).toEqual([
+      'fundamentos',
+      'quedas',
       'fechada',
       'meia',
       'gancho',
@@ -63,11 +69,12 @@ describe('guardaDaPosicao', () => {
       'aberta',
       'complexo',
       'saidas',
+      'defesa-pessoal',
     ])
   })
 
   it('classifica cada posicao na sua propria guarda', () => {
-    const esperado: [string, Guarda][] = [
+    const esperado: [string, BlocoDoCurriculo][] = [
       ['Guarda Fechada', 'fechada'],
       ['Meia Guarda (Tradicional e Escudo)', 'meia'],
       ['Guarda Gancho (Butterfly)', 'gancho'],
@@ -83,41 +90,41 @@ describe('guardaDaPosicao', () => {
       ['Defesas de Finalização', 'saidas'],
     ]
     for (const [posicao, guarda] of esperado) {
-      expect(guardaDaPosicao(posicao), posicao).toBe(guarda)
+      expect(blocoDaPosicao(posicao), posicao).toBe(guarda)
     }
   })
 
   it('Aranha e Laço NAO sao agrupadas — sao guardas distintas no curriculo', () => {
     // Era exatamente o erro da versao anterior.
-    expect(guardaDaPosicao('Guarda Aranha')).not.toBe(guardaDaPosicao('Guarda Laço (Lasso Guard)'))
+    expect(blocoDaPosicao('Guarda Aranha')).not.toBe(blocoDaPosicao('Guarda Laço (Lasso Guard)'))
   })
 
   it('Dela Riva e Gancho NAO sao agrupadas', () => {
-    expect(guardaDaPosicao('Guarda Dela Riva')).not.toBe(guardaDaPosicao('Guarda Gancho (Butterfly)'))
+    expect(blocoDaPosicao('Guarda Dela Riva')).not.toBe(blocoDaPosicao('Guarda Gancho (Butterfly)'))
   })
 
   it('devolve null para posicao fora do curriculo, em vez de inventar', () => {
-    expect(guardaDaPosicao('Guarda Que Nao Existe')).toBeNull()
+    expect(blocoDaPosicao('BlocoDoCurriculo Que Nao Existe')).toBeNull()
   })
 
   it('TODA posicao ativa esta classificada', () => {
     // Rede de seguranca: um item novo no seed com posicao nova apareceria sem
     // rotulo no documento do professor, e ninguem notaria.
-    const sem = ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === null)
+    const sem = ATIVOS.filter((i) => blocoDaPosicao(i.posicao) === null)
     expect(sem.map((i) => i.posicao)).toEqual([])
   })
 
   it('toda guarda usada tem rotulo legivel', () => {
     for (const i of ATIVOS) {
-      const g = guardaDaPosicao(i.posicao)!
-      expect(ROTULO_GUARDA[g], `guarda "${g}" sem rotulo`).toBeTruthy()
+      const g = blocoDaPosicao(i.posicao)!
+      expect(ROTULO_BLOCO[g], `guarda "${g}" sem rotulo`).toBeTruthy()
     }
   })
 
-  it('as 9 guardas cobrem os 56 itens do curriculo do app', () => {
-    const conta = new Map<Guarda, number>()
+  it('os 12 blocos cobrem os 81 itens do curriculo do app', () => {
+    const conta = new Map<BlocoDoCurriculo, number>()
     for (const i of ATIVOS) {
-      const g = guardaDaPosicao(i.posicao)!
+      const g = blocoDaPosicao(i.posicao)!
       conta.set(g, (conta.get(g) ?? 0) + 1)
     }
     // Contagem conferida item a item contra o documento da banca.
@@ -133,7 +140,11 @@ describe('guardaDaPosicao', () => {
     expect(conta.get('complexo')).toBe(8)
     // Montada 2 + Costas 1 + 100 kilos 2 + Norte-sul 1 + Armlock 1 + Triangulo 1.
     expect(conta.get('saidas')).toBe(8)
-    expect([...conta.values()].reduce((a, b) => a + b, 0)).toBe(56)
+    // Os tres que voltaram com o ADR-017, decisao 7.
+    expect(conta.get('fundamentos')).toBe(9)
+    expect(conta.get('quedas')).toBe(5)
+    expect(conta.get('defesa-pessoal')).toBe(11)
+    expect([...conta.values()].reduce((a, b) => a + b, 0)).toBe(81)
   })
 })
 
@@ -142,14 +153,14 @@ describe('subPosicao', () => {
     // O dado ja estava no campo `categoria` desde a importacao — nao precisou
     // inventar nada, precisou olhar. Nenhuma foi apagada ao reduzir o escopo.
     const subs = new Set(
-      ITENS.filter((i) => guardaDaPosicao(i.posicao) === 'complexo').map((i) => subPosicao(i)),
+      ITENS.filter((i) => blocoDaPosicao(i.posicao) === 'complexo').map((i) => subPosicao(i)),
     )
     expect(subs).toEqual(new Set(['Guarda One Leg', 'Guarda 50-50', 'Guarda X', 'Berimbolo']))
   })
 
   it('cada sub-posicao do Complexo tem raspagem e passagem', () => {
     const porSub = new Map<string, Set<string>>()
-    for (const i of ATIVOS.filter((x) => guardaDaPosicao(x.posicao) === 'complexo')) {
+    for (const i of ATIVOS.filter((x) => blocoDaPosicao(x.posicao) === 'complexo')) {
       const s = subPosicao(i)!
       if (!porSub.has(s)) porSub.set(s, new Set())
       porSub.get(s)!.add(i.kind)
@@ -175,10 +186,10 @@ describe('guarda e papel sao dimensoes independentes', () => {
   it('TODA guarda do curriculo mistura atacar e passar', () => {
     // O motivo de as duas dimensoes existirem: o nome da guarda, sozinho, nao
     // diz de que lado da luta o aluno esta.
-    const guardas: Guarda[] = ['fechada', 'meia', 'gancho', 'aranha', 'dela-riva', 'laco', 'aberta', 'complexo']
+    const guardas: BlocoDoCurriculo[] = ['fechada', 'meia', 'gancho', 'aranha', 'dela-riva', 'laco', 'aberta', 'complexo']
     for (const g of guardas) {
       const papeis = new Set(
-        ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === g).map((i) => papelDoKind(i.kind)),
+        ATIVOS.filter((i) => blocoDaPosicao(i.posicao) === g).map((i) => papelDoKind(i.kind)),
       )
       expect(papeis.has('atacando'), `guarda "${g}" sem item de ataque`).toBe(true)
       expect(papeis.has('passando'), `guarda "${g}" sem item de passagem`).toBe(true)
@@ -187,7 +198,7 @@ describe('guarda e papel sao dimensoes independentes', () => {
 
   it('nas Saidas o aluno esta sempre defendendo', () => {
     const papeis = new Set(
-      ATIVOS.filter((i) => guardaDaPosicao(i.posicao) === 'saidas').map((i) => papelDoKind(i.kind)),
+      ATIVOS.filter((i) => blocoDaPosicao(i.posicao) === 'saidas').map((i) => papelDoKind(i.kind)),
     )
     expect([...papeis]).toEqual(['defendendo'])
   })

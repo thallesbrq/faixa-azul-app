@@ -45,21 +45,21 @@ export interface Meta {
    * numeros diferentes que por acaso falam de aulas.
    */
   aulasExigidas: number | null
-  /**
-   * COMO o progresso desta meta e medido — e as duas formas nao sao escolha de
-   * estilo, sao consequencia do que existe.
-   *
-   * `cartoes`: dominio de cartoes de recuperacao, como o app sempre mediu.
-   *   Exige passo a passo, porque sem `passos` o gerador so produz o cartao de
-   *   classificacao (medido, nao suposto: ver o cabecalho de seed/primeiro-grau).
-   *
-   * `atestado`: quantas competências o PROFESSOR confirmou. E a medida do 1o
-   *   grau porque a lista dele nao vem com passo a passo — e porque, para quem
-   *   busca o grau, o numero que importa e o julgamento do professor, nao quantos
-   *   cartoes o aluno acertou. Ver ADR-016, decisao 9.
-   */
-  medidaDoProgresso: 'cartoes' | 'atestado'
 }
+
+/**
+ * AS 45 AULAS DO 2o, 3o E 4o GRAU (ADR-017, decisao 9).
+ *
+ * Sao 35 aulas para o 1o grau e 45 para cada um dos seguintes — 80 no total ate
+ * o 4o grau, que e o tamanho do planner.
+ *
+ * DUAS AUSENCIAS DIFERENTES CONVIVEM AQUI, e nao colapsam numa: `aulasExigidas`
+ * e conhecido (45) e `temCurriculo` continua `false`, porque as LISTAS DE ITENS
+ * do 2o, 3o e 4o nao chegaram. Saber quantas aulas nao e saber o que se cobra
+ * nelas. O app mostra o numero de aulas e um `—` no progresso, cada um pelo que
+ * e — em vez de esconder as duas coisas atras da mesma lacuna.
+ */
+const AULAS_POR_GRAU_SEGUINTE = 45
 
 export const METAS: readonly Meta[] = [
   {
@@ -68,31 +68,27 @@ export const METAS: readonly Meta[] = [
     descricao: '35 aulas e competência mínima em 29 itens',
     temCurriculo: true,
     aulasExigidas: 35,
-    medidaDoProgresso: 'atestado',
   },
   {
     id: '2grau',
     nome: '2º grau',
-    descricao: 'lista ainda não recebida',
+    descricao: '45 aulas — lista de itens ainda não recebida',
     temCurriculo: false,
-    aulasExigidas: null,
-    medidaDoProgresso: 'atestado',
+    aulasExigidas: AULAS_POR_GRAU_SEGUINTE,
   },
   {
     id: '3grau',
     nome: '3º grau',
-    descricao: 'lista ainda não recebida',
+    descricao: '45 aulas — lista de itens ainda não recebida',
     temCurriculo: false,
-    aulasExigidas: null,
-    medidaDoProgresso: 'atestado',
+    aulasExigidas: AULAS_POR_GRAU_SEGUINTE,
   },
   {
     id: '4grau',
     nome: '4º grau',
-    descricao: 'lista ainda não recebida',
+    descricao: '45 aulas — lista de itens ainda não recebida',
     temCurriculo: false,
-    aulasExigidas: null,
-    medidaDoProgresso: 'atestado',
+    aulasExigidas: AULAS_POR_GRAU_SEGUINTE,
   },
   {
     id: 'azul',
@@ -100,7 +96,6 @@ export const METAS: readonly Meta[] = [
     descricao: 'exame de graduação — 81 itens do currículo da banca',
     temCurriculo: true,
     aulasExigidas: null,
-    medidaDoProgresso: 'cartoes',
   },
 ]
 
@@ -128,15 +123,19 @@ export function metaTemCurriculo(id: string): boolean {
 }
 
 /**
- * Como o progresso desta meta e medido.
+ * `medidaDoProgresso` SAIU DAQUI (ADR-017, decisao 6).
  *
- * Meta desconhecida responde `atestado`, e a escolha e conservadora: medir por
- * cartoes um curriculo que talvez nao tenha passo a passo produziria zeros
- * eternos com aparencia de desempenho.
+ * Ela dizia como medir o progresso de uma META. Passou a ser propriedade do
+ * CURRICULO (`Curriculo.medida`), e a mudanca nao e arrumacao: a medida depende
+ * de o curriculo ter passo a passo — sem `passos` o gerador so produz o cartao
+ * de classificacao, e medir por cartoes daria zero eterno. Isso e fato do
+ * curriculo, nao da prova.
+ *
+ * A separacao ficou visivel quando `meta` e `estuda` deixaram de ser o mesmo
+ * campo: eu persigo o 3o grau e estudo o curriculo de azul. Com a medida presa a
+ * meta, eu seria medido por atestado (medida do 3o grau) sobre um curriculo de
+ * cartoes — a medida de uma prova aplicada ao conteudo de outra.
  */
-export function medidaDoProgresso(id: string): 'cartoes' | 'atestado' {
-  return metaPorId(id)?.medidaDoProgresso ?? 'atestado'
-}
 
 /** Aulas exigidas pela graduacao, ou `null` quando a meta nao exige contagem. */
 export function aulasExigidas(id: string): number | null {

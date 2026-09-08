@@ -88,25 +88,44 @@ describe('foco declarado nas Secoes 4 e 5', () => {
     expect(ITENS).toHaveLength(81)
   })
 
-  it('deixa ativos somente guardas e saidas', () => {
-    expect(new Set(ativos.map((i) => i.moduloId))).toEqual(new Set(['mod-guardas', 'mod-saidas']))
+  it('o curriculo inteiro esta ativo — os cinco modulos tecnicos', () => {
+    // ADR-017, decisao 7: ficava so em guardas e saidas (56 de 81), recorte que
+    // servia a POC e que escondia justamente o que uma turma de faixa branca
+    // treina. `mod-teoria` fica fora porque nao tem item tecnico.
+    expect(new Set(ativos.map((i) => i.moduloId))).toEqual(
+      new Set(['mod-fundamentos', 'mod-defesa-pessoal', 'mod-quedas', 'mod-guardas', 'mod-saidas']),
+    )
   })
 
-  it('sao 56 itens ativos: 48 de guardas + 8 de saidas', () => {
-    // Decisao do aluno: o curriculo do app mantem os 56, e a escolha de treinar
-    // uma ou as quatro alternativas do Complexo Moderno e feita na montagem das
-    // aulas, com o professor. O documento da banca cobra 50 (uma raspagem e uma
-    // passagem de UMA das quatro alternativas) — treinar as quatro e preparo a
-    // mais, nao erro.
-    expect(ativos).toHaveLength(56)
+  it('sao 81 itens ativos, e os 25 que voltaram sao os das Secoes 1 a 3', () => {
+    // ESTE TESTE AFIRMAVA 56 E ERA O QUE MANTINHA O RECORTE VIVO. Fica o
+    // registro: `MODULOS_ATIVOS` sobrescreve `ativo` na exportacao, entao
+    // procurar `ativo: false` no seed nao acha o corte.
+    expect(ativos).toHaveLength(81)
     expect(ativos.filter((i) => i.moduloId === 'mod-guardas')).toHaveLength(48)
     expect(ativos.filter((i) => i.moduloId === 'mod-saidas')).toHaveLength(8)
+    expect(ativos.filter((i) => i.moduloId === 'mod-fundamentos')).toHaveLength(9)
+    expect(ativos.filter((i) => i.moduloId === 'mod-quedas')).toHaveLength(5)
+    expect(ativos.filter((i) => i.moduloId === 'mod-defesa-pessoal')).toHaveLength(11)
   })
 
-  it('56 em 10 aulas nao divide exato — o arranjo equilibrado e 6x6 + 4x5', () => {
-    // A aritmetica que a tela de montagem precisa deixar visivel.
-    expect(ativos.length % 10).toBe(6)
-    expect(6 * 6 + 4 * 5).toBe(ativos.length)
+  it('os 11 de defesa pessoal continuam SEM passo a passo (ADR-012)', () => {
+    /**
+     * RELIGAR NAO E ENSINAR. Defesa de soco, de chute, de puxao de cabelo e de
+     * enforcamento no chao sao o conteudo em que descricao textual imprecisa tem
+     * a pior consequencia — o aluno treina sozinho um movimento errado contra um
+     * golpe real. O ADR-012 os manteve como item de curriculo sem `passos`, e a
+     * decisao 7 do ADR-017 nao o revoga.
+     *
+     * Se alguem redigir passo a passo para eles achando que completa uma lacuna,
+     * este teste falha antes de o app comecar a ensinar por texto.
+     */
+    const porItem = new Map(CONTEUDOS.map((c) => [c.itemId, c]))
+    const defesa = ativos.filter((i) => i.moduloId === 'mod-defesa-pessoal')
+    expect(defesa).toHaveLength(11)
+    for (const item of defesa) {
+      expect(porItem.get(item.id)?.passos ?? []).toEqual([])
+    }
   })
 
   it('TODO item tem kind — o tipo exige, e o seed precisa sustentar', () => {
@@ -125,10 +144,21 @@ describe('foco declarado nas Secoes 4 e 5', () => {
     expect(doComplexo).toHaveLength(8)
   })
 
-  it('todo item ativo tem passo a passo', () => {
-    // Os 11 sem instrucao textual eram todos de defesa pessoal, agora inativa.
+  it('os UNICOS itens ativos sem passo a passo sao os 11 de defesa pessoal', () => {
+    /**
+     * ANTES ESTE TESTE DIZIA "todo item ativo tem passo a passo", e era verdade
+     * so porque defesa pessoal estava inativa. Religar o curriculo (ADR-017,
+     * decisao 7) o tornou falso, e o consertar seria facil de duas formas
+     * erradas: redigir passo a passo para defesa de soco, ou afrouxar para
+     * "alguns itens podem nao ter".
+     *
+     * A forma certa e nomear exatamente quem pode faltar e por que — ADR-012: o
+     * app nao ensina defesa contra golpes por texto. Se um item de guarda
+     * aparecer aqui, e lacuna de conteudo e o teste falha.
+     */
     const semPassos = ativos.filter((i) => (conteudoPorItem.get(i.id)?.passos.length ?? 0) === 0)
-    expect(semPassos.map((i) => i.id)).toEqual([])
+    expect(new Set(semPassos.map((i) => i.moduloId))).toEqual(new Set(['mod-defesa-pessoal']))
+    expect(semPassos).toHaveLength(11)
   })
 })
 
@@ -209,14 +239,41 @@ describe('baralho gerado a partir do seed real', () => {
     expect(proibidos.map((c) => c.id)).toEqual([])
   })
 
-  it('nao gera cartao nenhum para modulo desativado (foco nas Secoes 4 e 5)', () => {
+  it('nao gera cartao nenhum para item inativo — hoje nao ha nenhum', () => {
+    // A garantia continua valendo e o conjunto ficou vazio: `MODULOS_ATIVOS`
+    // religou os cinco modulos tecnicos. O teste fica porque a regra e o que
+    // importa, e nao a contagem de hoje — desativar um modulo de novo passa a
+    // ser uma linha, e a garantia ja esta escrita.
     const inativos = new Set(ITENS.filter((i) => !i.ativo).map((i) => i.id))
     const vazados = baralho.filter((c) => c.itemId && inativos.has(c.itemId))
     expect(vazados.map((c) => c.id)).toEqual([])
+  })
 
-    // O cartao de reconhecimento de defesa pessoal tambem desaparece: o modulo
-    // esta desativado, e gerar cartao dele contradiria o foco declarado.
-    expect(baralho.some((c) => c.id === 'reconhecimento--mod-defesa-pessoal')).toBe(false)
+  it('defesa pessoal tem UM cartao de reconhecimento, e ZERO cartao por item', () => {
+    /**
+     * ADR-012 na pratica, e o numero que eu tinha errado.
+     *
+     * Eu supus que religar os 11 itens (ADR-017, decisao 7) fizesse cada um
+     * gerar um cartao de reconhecimento. Nao gera NENHUM: sem `passos` nao ha
+     * `explicacao` nem `sequencia`, e `defesa_pessoal` nao esta em
+     * `KINDS_CLASSIFICAVEIS`. O unico cartao do modulo e o de reconhecimento, e
+     * ele cobre os 11 de uma vez — sem `itemId`.
+     *
+     * A CONSEQUENCIA MEDIDA: item sem cartao pontua 0 em `progressoPorItem`, e
+     * os 11 travariam o azul em 70/81 = 86,4% para sempre. Foi o que levou
+     * `medivelPorCartoes` a existir.
+     */
+    const daDefesa = new Set(
+      ITENS.filter((i) => i.moduloId === 'mod-defesa-pessoal').map((i) => i.id),
+    )
+    expect(baralho.filter((c) => c.itemId && daDefesa.has(c.itemId))).toEqual([])
+
+    // O cartao do modulo existe, e e de reconhecimento: sabe O QUE a prova
+    // cobre, sem ensinar execucao.
+    const reconhecimento = baralho.find((c) => c.id === 'reconhecimento--mod-defesa-pessoal')
+    expect(reconhecimento).toBeDefined()
+    expect(reconhecimento?.resposta).toHaveLength(11)
+    expect(reconhecimento?.itemId).toBeUndefined()
   })
 
   it('cobre os 5 tipos de cartao decididos no planejamento', () => {

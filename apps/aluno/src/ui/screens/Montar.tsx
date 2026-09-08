@@ -28,7 +28,7 @@ import {
 import type { Atribuicao, Problema } from '@faixa-azul/core/application/montagem'
 import { gerarPlano } from '@faixa-azul/core/application/aulas'
 import { progressoPorItem } from '@faixa-azul/core/application/progresso'
-import { ROTULO_GUARDA, papelDoKind, subPosicao } from '@faixa-azul/core/domain/taxonomia'
+import { ROTULO_BLOCO, papelDoKind, subPosicao } from '@faixa-azul/core/domain/taxonomia'
 import type { Card, Dificuldade, ReviewState, TechniqueItem } from '@faixa-azul/core/domain/types'
 import type { AlteracaoItem } from '@faixa-azul/core/persistence/repositorio'
 
@@ -420,7 +420,7 @@ export function Montar({
           <ul className="mt-espaco">
             {espacamento.map((e) => (
               <li key={e.guarda} className={e.concentrada ? 'mt-esp mt-esp--alerta' : 'mt-esp'}>
-                <span>{ROTULO_GUARDA[e.guarda]}</span>
+                <span>{ROTULO_BLOCO[e.guarda]}</span>
                 <span className="mt-esp-aulas">
                   {e.concentrada ? (
                     <>só na aula {e.aulas[0]}</>
@@ -487,7 +487,7 @@ export function Montar({
             {estado.bolsao.map((grupo) => (
               <div key={grupo.guarda} className="mt-grupo">
                 <h4 className="mt-grupo-titulo">
-                  {ROTULO_GUARDA[grupo.guarda]}
+                  {ROTULO_BLOCO[grupo.guarda]}
                   <small>{grupo.itens.length}</small>
                 </h4>
                 <ul className="mt-lista">

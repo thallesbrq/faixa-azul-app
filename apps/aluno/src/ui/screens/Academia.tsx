@@ -122,7 +122,7 @@ export function Academia({ estado, aoRecarregar }: AcademiaProps) {
                 topo da turma; aqui a lista mistura turmas, entao a explicacao
                 tem de vir na propria linha.
               */}
-              {l.motivo === 'meta-sem-curriculo' && (
+              {l.motivo === 'sem-curriculo' && (
                 <div className="aluno-nota">meta sem currículo ainda</div>
               )}
               {l.motivo === 'medido-por-atestado' && (

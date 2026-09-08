@@ -65,10 +65,30 @@ export function papelDoKind(kind: TechniqueKind): Papel {
 }
 
 // ---------------------------------------------------------------------------
-// Guarda: as do curriculo, nem uma mais nem uma menos
+// Bloco do curriculo: as guardas, as saidas, e os modulos que nao sao guarda
 // ---------------------------------------------------------------------------
 
-export type Guarda =
+/**
+ * O BLOCO PELO QUAL O BOLSAO DA MONTAGEM AGRUPA. Chamava-se `Guarda`.
+ *
+ * O NOME JA ERA FALSO ANTES DE EU MEXER: `'saidas'` esta nesta lista desde o
+ * inicio, e saida da montada nao e guarda. O tipo sempre foi "bloco do
+ * curriculo" usando o nome do caso mais comum.
+ *
+ * O RENOME NAO FOI ESTETICA — foi um teste falhando. Ao religar os 25 itens das
+ * Secoes 1 a 3 (ADR-017, decisao 7), `TODA posicao ativa esta classificada`
+ * quebrou: Base & Movimentacao, Quedas e Defesa Pessoal nao tinham prefixo aqui,
+ * entao `blocoDaPosicao` devolvia `null` para eles. E o efeito NAO seria um erro
+ * visivel: `montagem.ts` faz `if (!g) continue` ao montar o bolsao, entao os 25
+ * itens sumiriam da lista de escolha do professor — e `problemas` diria
+ * "faltam 25 itens" sem oferecer onde clicar. Silencioso, e exatamente o tipo de
+ * defeito que este teste existe para pegar.
+ *
+ * Manter o nome `Guarda` e acrescentar 'quedas' faria o proximo leitor confiar
+ * num nome que mente. Ver `taxonomia`: inventar classificacao onde ja existe uma
+ * e o erro que este arquivo registra.
+ */
+export type BlocoDoCurriculo =
   | 'fechada'
   | 'meia'
   | 'gancho'
@@ -78,9 +98,13 @@ export type Guarda =
   | 'aberta'
   | 'complexo'
   | 'saidas'
+  /** Nao sao guarda. Voltaram ao curriculo ativo com o ADR-017, decisao 7. */
+  | 'fundamentos'
+  | 'quedas'
+  | 'defesa-pessoal'
 
 /** Rotulo curto, para caber na linha de um documento denso. */
-export const ROTULO_GUARDA: Record<Guarda, string> = {
+export const ROTULO_BLOCO: Record<BlocoDoCurriculo, string> = {
   fechada: 'Guarda Fechada',
   meia: 'Meia Guarda',
   gancho: 'Guarda Gancho',
@@ -90,10 +114,22 @@ export const ROTULO_GUARDA: Record<Guarda, string> = {
   aberta: 'Guarda Aberta',
   complexo: 'Complexo Moderno',
   saidas: 'Saídas',
+  fundamentos: 'Base & Movimentação',
+  quedas: 'Quedas',
+  'defesa-pessoal': 'Defesa Pessoal',
 }
 
-/** Ordem do curriculo do exame, para legendas e agrupamentos. */
-export const ORDEM_GUARDA: Guarda[] = [
+/**
+ * Ordem do curriculo do exame, para legendas e agrupamentos.
+ *
+ * FUNDAMENTOS E QUEDAS VEM PRIMEIRO, e a ordem e a do documento da prova
+ * (Secoes 1 a 5) — que por acaso e tambem a ordem segura: ukemi antes de queda,
+ * queda antes de guarda. Defesa Pessoal fica no fim porque e o unico bloco sem
+ * passo a passo, e no bolsao ele e escolha de aula presencial.
+ */
+export const ORDEM_BLOCO: BlocoDoCurriculo[] = [
+  'fundamentos',
+  'quedas',
   'fechada',
   'meia',
   'gancho',
@@ -103,16 +139,22 @@ export const ORDEM_GUARDA: Guarda[] = [
   'aberta',
   'complexo',
   'saidas',
+  'defesa-pessoal',
 ]
 
 /**
- * Posicao -> guarda do curriculo.
+ * Posicao -> bloco do curriculo.
  *
  * Comparacao por prefixo porque os rotulos importados carregam parenteses
  * longos ("Guarda Laço (Lasso Guard)"). A ordem importa: "Guarda Gancho" tem de
  * ser testado antes de qualquer prefixo mais curto que o contenha.
+ *
+ * A TABELA NAO PODE SER EXAUSTIVA — a entrada e `string`, e nenhum
+ * `Record<...>` a obriga a cobrir tudo, ao contrario de `ROTULO_BLOCO`. Quem
+ * garante a cobertura e o teste `TODA posicao ativa esta classificada`, sobre o
+ * seed real. Foi ele que pegou a ausencia destes tres.
  */
-const GUARDA_POR_PREFIXO: [string, Guarda][] = [
+const BLOCO_POR_PREFIXO: [string, BlocoDoCurriculo][] = [
   ['Guarda Fechada', 'fechada'],
   ['Meia Guarda', 'meia'],
   ['Guarda Gancho', 'gancho'],
@@ -123,12 +165,17 @@ const GUARDA_POR_PREFIXO: [string, Guarda][] = [
   ['Complexo Moderno', 'complexo'],
   ['Saída', 'saidas'],
   ['Defesas de Finalização', 'saidas'],
+  ['Base & Movimentação', 'fundamentos'],
+  ['Quedas', 'quedas'],
+  // Antes de nada mais que comece com "Defesa": 'Defesas de Finalização' esta
+  // acima e e outro bloco. Prefixo mais especifico primeiro.
+  ['Defesa Pessoal', 'defesa-pessoal'],
 ]
 
 /** `null` quando a posicao nao esta no curriculo mapeado. */
-export function guardaDaPosicao(posicao: string): Guarda | null {
-  for (const [prefixo, guarda] of GUARDA_POR_PREFIXO) {
-    if (posicao.startsWith(prefixo)) return guarda
+export function blocoDaPosicao(posicao: string): BlocoDoCurriculo | null {
+  for (const [prefixo, bloco] of BLOCO_POR_PREFIXO) {
+    if (posicao.startsWith(prefixo)) return bloco
   }
   return null
 }
@@ -145,7 +192,7 @@ export function guardaDaPosicao(posicao: string): Guarda | null {
  * da guarda ja e a informacao completa.
  */
 export function subPosicao(item: Pick<TechniqueItem, 'posicao' | 'categoria'>): string | null {
-  const guarda = guardaDaPosicao(item.posicao)
+  const guarda = blocoDaPosicao(item.posicao)
   if (guarda === 'complexo') return item.categoria
   if (guarda === 'saidas') return item.posicao
   return null

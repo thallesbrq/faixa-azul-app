@@ -17,7 +17,7 @@
 import { useMemo } from 'react'
 import { montarEstado, TOTAL_DE_AULAS } from '@faixa-azul/core/application/montagem'
 import type { Atribuicao, Problema } from '@faixa-azul/core/application/montagem'
-import { ROTULO_GUARDA } from '@faixa-azul/core/domain/taxonomia'
+import { ROTULO_BLOCO } from '@faixa-azul/core/domain/taxonomia'
 import type { TechniqueItem } from '@faixa-azul/core/domain/types'
 import type { FaseDaGrade } from '../useGrade'
 
@@ -186,7 +186,7 @@ export function Aulas({
             montagem.bolsao.map((g) => (
               <div className="grupo-bolsao" key={g.guarda}>
                 <h4 className="rotulo-guarda">
-                  {ROTULO_GUARDA[g.guarda]} <span>{g.itens.length}</span>
+                  {ROTULO_BLOCO[g.guarda]} <span>{g.itens.length}</span>
                 </h4>
                 <ul className="itens-do-bolsao">
                   {g.itens.map((i) => (

@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react'
-import type { Origem } from '@faixa-azul/core/domain/procedencia'
+import type { Papel } from '@faixa-azul/core/domain/papeis'
 import type { Convite } from '@faixa-azul/core/nuvem/pessoas'
 import { nomeDaTurma, SEM_TURMA, TURMAS } from '@faixa-azul/core/domain/turmas'
 import { METAS, nomeDaMeta, SEM_META } from '@faixa-azul/core/domain/metas'
@@ -23,9 +23,10 @@ export interface ConvidarProps {
   aoConvidar: (entrada: {
     email: string
     nome: string
-    papel: Origem
+    papel: Papel
     turma: string
     meta: string
+    estuda: string
   }) => Promise<void>
   aoCancelar: (email: string) => Promise<void>
 }
@@ -33,7 +34,7 @@ export interface ConvidarProps {
 export function Convidar({ convites, carregando, aoConvidar, aoCancelar }: ConvidarProps) {
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
-  const [papel, setPapel] = useState<Origem>('aluno')
+  const [papel, setPapel] = useState<Papel>('aluno')
   const [turma, setTurma] = useState<string>(TURMAS[0].id)
   const [meta, setMeta] = useState<string>(METAS[0].id)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -58,6 +59,17 @@ export function Convidar({ convites, carregando, aoConvidar, aoCancelar }: Convi
    * Professor nao tem meta: ele nao esta perseguindo graduacao no app.
    */
   const metaEfetiva = papel === 'professor' ? SEM_META : meta
+  /**
+   * O CURRICULO NASCE IGUAL A META, e o professor pode trocar depois.
+   *
+   * `estuda` e `meta` sao campos diferentes (ADR-017, decisao 6), mas no convite
+   * eles coincidem em todo caso normal: quem entra buscando o 1o grau estuda o
+   * currículo do 1o grau. A divergencia (perseguir o 3o grau estudando azul) e
+   * excecao, e o lugar certo de resolve-la e a pagina do aluno na central, com a
+   * pessoa na frente — nao um quinto campo neste formulario, que o professor
+   * teria de preencher toda vez para o caso de um aluno em dez.
+   */
+  const estudaEfetivo = metaEfetiva
   const valido =
     nome.trim() !== '' &&
     pareceEmail(email) &&
@@ -67,7 +79,14 @@ export function Convidar({ convites, carregando, aoConvidar, aoCancelar }: Convi
     setEnviando(true)
     setAviso(null)
     try {
-      await aoConvidar({ email, nome, papel, turma: turmaEfetiva, meta: metaEfetiva })
+      await aoConvidar({
+        email,
+        nome,
+        papel,
+        turma: turmaEfetiva,
+        meta: metaEfetiva,
+        estuda: estudaEfetivo,
+      })
       const onde = turmaEfetiva === SEM_TURMA ? '' : ` na ${nomeDaTurma(turmaEfetiva)}`
       const rumo = metaEfetiva === SEM_META ? '' : `, buscando o ${nomeDaMeta(metaEfetiva)}`
       setAviso(

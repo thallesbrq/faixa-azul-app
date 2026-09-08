@@ -71,10 +71,14 @@ export function Rosca({ media, titulo }: { media: MediaDaTurma; titulo: string }
 
       <p className="rosca-apoio">
         {media.progresso === null ? (
-          media.fora['meta-sem-curriculo'] > 0 && media.fora['sem-dados'] === 0 ? (
+          media.fora['sem-curriculo'] > 0 && media.fora['sem-dados'] === 0 ? (
             'Sem currículo desta meta ainda'
           ) : media.total === 0 ? (
             'Nenhum aluno nesta turma'
+          ) : media.fora.convidado === media.total ? (
+            // Turma inteira convidada e ninguem entrou: e o estado de uma turma
+            // no dia em que ela e criada, e nao um problema.
+            'Todos convidados, ninguém entrou ainda'
           ) : (
             'Ninguém sincronizou ainda'
           )
@@ -94,9 +98,18 @@ export function Rosca({ media, titulo }: { media: MediaDaTurma; titulo: string }
           {media.fora['sem-dados'] === 1 ? 'aluno nunca sincronizou' : 'alunos nunca sincronizaram'}
         </p>
       )}
-      {media.fora['meta-sem-curriculo'] > 0 && media.progresso !== null && (
+      {media.fora['sem-curriculo'] > 0 && media.progresso !== null && (
         <p className="rosca-nota">
-          {media.fora['meta-sem-curriculo']} em meta sem currículo próprio
+          {media.fora['sem-curriculo']} sem currículo próprio
+        </p>
+      )}
+      {/* O CONVIDADO CONTA NO TOTAL e nao na media (ADR-017, decisao 4). Esta
+          linha e o que impede o denominador de parecer erro: "media de 1 aluno
+          de 4" sem explicacao faria o professor procurar tres alunos perdidos. */}
+      {media.fora.convidado > 0 && (
+        <p className="rosca-nota">
+          {media.fora.convidado}{' '}
+          {media.fora.convidado === 1 ? 'convidado sem entrar' : 'convidados sem entrar'}
         </p>
       )}
     </div>

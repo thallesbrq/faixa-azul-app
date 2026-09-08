@@ -13,10 +13,15 @@
 
 import { useRef, useState } from 'react'
 import type { Origem } from '@faixa-azul/core/domain/procedencia'
+import type { Papel } from '@faixa-azul/core/domain/papeis'
+import { nomeDoPapel } from '@faixa-azul/core/domain/papeis'
 
 export interface PerfilProps {
   nome: string
-  papel: Origem
+  /** O papel EFETIVO: da nuvem quando ha cadastro, local quando nao. */
+  papel: Papel
+  /** O papel gravado NESTE aparelho. Sempre `aluno` ou `professor`. */
+  papelLocal: Origem
   id: string
   aoDefinir: (nome: string, papel: Origem) => void
   aoExportar: () => void
@@ -35,12 +40,13 @@ export interface PerfilProps {
    * interruptor local nao decide nada — e a tela precisa dizer isso, senao a
    * pessoa aperta e nao acontece nada.
    */
-  papelDaNuvem: Origem | null
+  papelDaNuvem: Papel | null
 }
 
 export function Perfil({
   nome,
   papel,
+  papelLocal,
   id,
   aoDefinir,
   aoExportar,
@@ -56,7 +62,17 @@ export function Perfil({
   const entrada = useRef<HTMLInputElement>(null)
 
   function salvar() {
-    aoDefinir(rascunho.trim(), papel)
+    /**
+     * O INTERRUPTOR LOCAL SO CONHECE `aluno` E `professor` (o tipo `Origem`), e
+     * o papel EFETIVO pode ser `admin` — que vem da nuvem. Salvar o nome nao
+     * pode reescrever o papel local para algo que o interruptor nao representa,
+     * entao `admin` preserva o que ja estava gravado no aparelho.
+     *
+     * Nao ha perda: com cadastro na nuvem o papel local nao decide nada (e o
+     * interruptor fica desligado logo abaixo). Ele existe para quem usa o app
+     * sem conta.
+     */
+    aoDefinir(rascunho.trim(), papel === 'admin' ? papelLocal : papel)
     setSalvo(true)
     window.setTimeout(() => setSalvo(false), 2500)
   }
@@ -117,7 +133,7 @@ export function Perfil({
         {papelDaNuvem !== null && (
           <p className="instrucao">
             Definido pela sua conta:{' '}
-            <strong>{papelDaNuvem === 'professor' ? 'professor' : 'aluno'}</strong>. Enquanto você
+            <strong>{nomeDoPapel(papelDaNuvem).toLowerCase()}</strong>. Enquanto você
             estiver logado, é a conta que decide — o botão abaixo só vale sem conta.
           </p>
         )}

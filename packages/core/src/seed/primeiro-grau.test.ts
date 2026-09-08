@@ -71,11 +71,35 @@ describe('curriculo do 1o grau', () => {
     for (const i of ITENS_1GRAU) expect(ORDEM_GRUPO).toContain(grupoDoKind(i.kind))
   })
 
-  it('a ambiguidade do tripe fica MARCADA no proprio item', () => {
-    // Escolher entre "tripe da fechada" e "tripe de outra guarda" por conta
-    // propria seria inventar curriculo. A pergunta viaja com o dado.
+  it('a ambiguidade do tripe foi RESPONDIDA, e a resposta viaja com o dado', () => {
+    /**
+     * Este teste exigia 'CONFIRMAR' enquanto a pergunta estava aberta — o dado
+     * carregava a duvida em vez de um palpite. O professor respondeu: e o tripe
+     * DA guarda fechada.
+     *
+     * A assercao troca de lado em vez de sair: quem conhecer a versao classica
+     * (guarda aberta, pe no quadril) vai estranhar o item, e o `sourceReference`
+     * precisa dizer que a duvida foi levantada e respondida — senao o proximo
+     * leitor reabre a mesma pergunta.
+     */
     const tripe = ITENS_1GRAU.find((i) => i.id === 'g1-gf--raspagem-tripe')
-    expect(tripe?.sourceReference).toContain('CONFIRMAR')
+    expect(tripe?.posicao).toBe('Guarda Fechada')
+    expect(tripe?.sourceReference).not.toContain('CONFIRMAR')
+    expect(tripe?.sourceReference).toContain('confirmado pelo professor')
+  })
+
+  it('a fonte diz que o curriculo veio EM LOCO, e nao de um documento', () => {
+    // Muda o peso da lista: nao e transcricao de PDF nem minha interpretacao de
+    // material da banca — e o que o professor ensina, ditado por ele.
+    for (const i of ITENS_1GRAU) {
+      expect(i.sourceReference).toContain('em loco')
+    }
+  })
+
+  it('mas NADA esta validado: ele ditou os nomes, nao conferiu a redacao', () => {
+    // Duas coisas diferentes. Confundi-las faria o app afirmar uma validacao
+    // que nao houve.
+    expect(ITENS_1GRAU.every((i) => i.validationStatus === 'aguardando_validacao')).toBe(true)
   })
 
   it('as tres finalizacoes repetidas sao itens SEPARADOS por posicao', () => {

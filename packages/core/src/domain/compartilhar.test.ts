@@ -64,7 +64,9 @@ describe('ida e volta', () => {
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.atribuidos).toBe(atribuidos)
-    expect(r.atribuidos).toBe(56)
+    // 81 desde o ADR-017, decisao 7. O numero e o do curriculo ativo, e o teste
+    // usa `ATIVOS` — o que importa aqui e a ida e volta ser fiel, nao a contagem.
+    expect(r.atribuidos).toBe(ATIVOS.length)
 
     // Mesmos itens nas mesmas aulas.
     for (const [aula, ids] of original) {
@@ -90,7 +92,7 @@ describe('ida e volta', () => {
     expect(new Set(r.atribuicao.get(3))).toEqual(new Set([ATIVOS[0].id, ATIVOS[5].id]))
   })
 
-  it('o codigo dos 56 itens cabe num link de mensagem', () => {
+  it('o codigo dos 81 itens cabe num link de mensagem', () => {
     const { codigo } = codificarMontagem(ATIVOS, arranjoCompleto())
     // 2 caracteres por item preservam a ORDEM dentro da aula; o dobro do
     // tamanho da primeira versao, e ainda curto para WhatsApp.

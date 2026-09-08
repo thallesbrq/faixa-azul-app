@@ -24,7 +24,8 @@
  * competencias o professor atestou (ADR-016, decisao 9). Se o passo a passo
  * chegar depois, os cartoes aparecem sozinhos e nada aqui muda.
  *
- * UMA AMBIGUIDADE FICA MARCADA E NAO RESOLVIDA — ver `g1-gf--raspagem-tripe`.
+ * A AMBIGUIDADE DO TRIPE FOI RESOLVIDA pelo professor: e da guarda fechada. Ver
+ * `g1-gf--raspagem-tripe`, onde a pergunta e a resposta ficam registradas.
  *
  * `safetyLevel` e ESTIMATIVA conservadora: quedas alto (projecao), finalizacoes
  * medio (alavanca e estrangulamento), o resto baixo. Cabe ao professor corrigir.
@@ -32,7 +33,18 @@
 
 import type { Modulo, TechniqueItem } from '../domain/types'
 
-const FONTE = 'Lista do 1º grau enviada pelo professor em 07/09/2026'
+/**
+ * A PROCEDENCIA DOS 29 ITENS, e o detalhe importa: o professor passou o
+ * curriculo das 35 primeiras aulas EM LOCO, presencialmente, e nao por
+ * documento. Isso muda o peso da lista — ela nao e transcricao de um PDF do
+ * exame nem interpretacao minha de um material da banca; e o que ele ensina,
+ * ditado por ele.
+ *
+ * Por isso `validationStatus` continua `aguardando_validacao` para todos: ele
+ * ditou os NOMES, e nao conferiu como estao escritos aqui. Sao duas coisas
+ * diferentes, e confundi-las faria o app afirmar validacao que nao houve.
+ */
+const FONTE = 'Currículo das 35 aulas do 1º grau, passado em loco pelo Prof. João Eduardo'
 
 /** Base comum: nada bilateral por padrao (ADR-006 revisado), nada validado. */
 const PADRAO = {
@@ -144,15 +156,19 @@ export const ITENS_1GRAU: TechniqueItem[] = [
     kind: 'raspagem',
     safetyLevel: 'baixo',
     /**
-     * PERGUNTA ABERTA AO PROFESSOR, e nao um palpite escrito como fato.
+     * PERGUNTA RESPONDIDA, e fica registrada com a resposta em vez de apagada.
      *
      * A lista diz "Guarda fechada: 3 raspagens (tesoura, pendulo, tripe)". O
      * tripe e classicamente da guarda ABERTA/aranha, com o pe no quadril — da
-     * fechada e incomum. Duas leituras possiveis: ou "guarda fechada" e o
-     * cabecalho da secao e o tripe vem de outra guarda, ou ele ensina uma versao
-     * da fechada. Escolher por conta propria seria inventar curriculo.
+     * fechada e incomum, e havia duas leituras: ou "guarda fechada" era o
+     * cabecalho da secao e o tripe vinha de outra guarda, ou ele ensina uma
+     * versao da fechada.
+     *
+     * E A SEGUNDA: o professor confirmou que e o tripe DA GUARDA FECHADA. Fica
+     * escrito porque quem conhecer a versao classica vai estranhar este item, e
+     * a duvida ja foi levantada e respondida uma vez.
      */
-    sourceReference: `${FONTE} — CONFIRMAR: tripé da guarda fechada ou de outra guarda?`,
+    sourceReference: `${FONTE} — tripé DA guarda fechada, confirmado pelo professor`,
   },
   {
     ...PADRAO,

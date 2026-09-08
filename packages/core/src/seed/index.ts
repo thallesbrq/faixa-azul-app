@@ -14,17 +14,32 @@ import { CARTOES_TEORIA } from './teoria'
 import { MODULOS } from './modulos'
 
 /**
- * FOCO DECLARADO: Secoes 4 e 5 (guardas e saidas).
+ * O CURRICULO INTEIRO ESTA ATIVO (ADR-017, decisao 7).
  *
- * As Secoes 1-3 (Fundamentos, Defesa Pessoal, Quedas) ficam DESATIVADAS, nao
- * apagadas: o conteudo permanece no seed e volta trocando este conjunto. O
- * motivo e que o trabalho atual e escolher e validar as posicoes das Secoes 4 e
- * 5 com o professor — as demais entram depois, se entrarem.
+ * Ficava so em Secoes 4 e 5 (guardas e saidas) — 56 dos 81 itens. O recorte
+ * fazia sentido enquanto o escopo era uma POC: o trabalho era escolher e validar
+ * aquelas posicoes com o professor. Com uma turma real de faixas brancas, o
+ * recorte passou a esconder justamente o que elas treinam — Fundamentos (9),
+ * Quedas (5) e Defesa Pessoal (11).
  *
- * `ativo: false` ja e respeitado pelo gerador de cartoes e pela fila do dia,
- * entao nada mais precisa saber desta decisao.
+ * ONDE ESTAVA O CORTE, PARA NINGUEM PROCURAR NO LUGAR ERRADO: os 81 itens em
+ * `curriculo.ts` sempre tiveram `ativo: true`. Quem desativava era ESTE
+ * conjunto, sobrescrevendo o campo na exportacao logo abaixo. Procurar
+ * `ativo: false` no seed nao acha nada.
+ *
+ * DEFESA PESSOAL VOLTA SEM PASSO A PASSO, e o ADR-012 continua valendo: os 11
+ * itens sao curriculo com aviso de supervisao, e os cartoes deles ficam
+ * restritos a reconhecimento. O professor da esse conteudo na aula 00
+ * presencial. Dar em loco nao e fornecer o protocolo escrito, que segue sendo a
+ * condicao de revisao daquele ADR.
  */
-const MODULOS_ATIVOS = new Set(['mod-guardas', 'mod-saidas'])
+const MODULOS_ATIVOS = new Set([
+  'mod-fundamentos',
+  'mod-defesa-pessoal',
+  'mod-quedas',
+  'mod-guardas',
+  'mod-saidas',
+])
 
 /**
  * COMPLEXO MODERNO: as quatro alternativas ficam ATIVAS.

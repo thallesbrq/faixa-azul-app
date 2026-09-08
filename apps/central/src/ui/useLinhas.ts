@@ -13,10 +13,14 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Dados } from '@faixa-azul/core/nuvem/pessoas'
+import type { Convite, Dados } from '@faixa-azul/core/nuvem/pessoas'
 import { abrirCentral } from '@faixa-azul/core/nuvem/central'
 import type { DadosDaCentral } from '@faixa-azul/core/nuvem/central'
-import { linhasDaAcademia, linhaSemDados } from '@faixa-azul/core/application/central'
+import {
+  linhaConvidada,
+  linhasDaAcademia,
+  linhaSemDados,
+} from '@faixa-azul/core/application/central'
 import type { Curriculo, LinhaDaCentral } from '@faixa-azul/core/application/central'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import type { FirebaseApp } from 'firebase/app'
@@ -37,12 +41,20 @@ export interface EstadoDasLinhas {
   falhas: { uid: string; motivo: string }[]
   lidoEm: Date | null
   mensagem: string | null
+  /**
+   * Convites pendentes, guardados para a tela de convidar nao reler.
+   *
+   * A MESMA LEITURA SERVE AS DUAS COISAS: eles viram linha de aluno na tabela
+   * (ADR-017, decisao 4) e lista no formulario de convite. Duas leituras
+   * separadas divergiriam entre si dentro da mesma tela.
+   */
+  convites: Convite[]
 }
 
 export function useLinhas({
   app,
   dados,
-  curriculoDaMeta,
+  curriculoPorId,
 }: {
   app: FirebaseApp
   dados: Dados
@@ -50,7 +62,7 @@ export function useLinhas({
    * O curriculo de cada meta. FUNCAO e nao um curriculo so: alunos da mesma
    * turma podem perseguir graduacoes diferentes (ADR-016, decisao 3).
    */
-  curriculoDaMeta: (meta: string) => Curriculo | null
+  curriculoPorId: (estuda: string) => Curriculo | null
 }) {
   const [estado, setEstado] = useState<EstadoDasLinhas>({
     fase: 'carregando-pessoas',
@@ -59,13 +71,24 @@ export function useLinhas({
     falhas: [],
     lidoEm: null,
     mensagem: null,
+    convites: [],
   })
   const central = useRef<DadosDaCentral | null>(null)
 
   const carregar = useCallback(async () => {
     setEstado((a) => ({ ...a, fase: 'carregando-pessoas', mensagem: null }))
     try {
-      const pessoas = await dados.listarPessoas()
+      const [pessoas, convites] = await Promise.all([
+        dados.listarPessoas(),
+        /**
+         * CONVITE QUE FALHA NAO DERRUBA A TABELA. Ele e informacao a mais — a
+         * turma com quem ja entrou continua legivel sem ele. Se a leitura de
+         * `pessoas` falhar, isso SIM e erro de tela, porque nao ha nada a
+         * mostrar; e por isso que so este lado tem `catch`.
+         */
+        dados.listarConvites().catch(() => [] as Convite[]),
+      ])
+      const convitesDeAluno = convites.filter((c) => c.papel === 'aluno')
       // So aluno: o professor tem cadastro em `pessoas` e apareceria como uma
       // linha sem progresso, que nao e um aluno parado — e um professor.
       const alunos = pessoas.filter((p) => p.papel === 'aluno' && p.ativo)
@@ -74,9 +97,28 @@ export function useLinhas({
       setEstado((a) => ({
         ...a,
         fase: 'carregando-estados',
-        linhas: alunos.map((p) =>
-          linhaSemDados({ uid: p.uid, nome: p.nome, turma: p.turma, meta: p.meta }),
-        ),
+        linhas: [
+          ...alunos.map((p) =>
+            linhaSemDados({
+              uid: p.uid,
+              nome: p.nome,
+              turma: p.turma,
+              meta: p.meta,
+              estuda: p.estuda,
+              demo: p.demo,
+            }),
+          ),
+          ...convitesDeAluno.map((c) =>
+            linhaConvidada({
+              email: c.email,
+              nome: c.nome,
+              turma: c.turma,
+              meta: c.meta,
+              estuda: c.estuda,
+            }),
+          ),
+        ],
+        convites,
       }))
 
       if (!central.current) central.current = await abrirCentral(app)
@@ -85,9 +127,23 @@ export function useLinhas({
       const agora = new Date()
       // A montagem e do core: a aba do professor no celular usa a MESMA funcao,
       // para as duas telas nao discordarem sobre a mesma academia.
-      const linhas = linhasDaAcademia({ cadastros: alunos, estados: porUid, curriculoDaMeta, agora })
+      const linhas = linhasDaAcademia({
+        cadastros: alunos,
+        convites: convitesDeAluno,
+        estados: porUid,
+        curriculoPorId,
+        agora,
+      })
 
-      setEstado({ fase: 'pronto', linhas, estados: porUid, falhas, lidoEm: agora, mensagem: null })
+      setEstado({
+        fase: 'pronto',
+        linhas,
+        estados: porUid,
+        falhas,
+        lidoEm: agora,
+        mensagem: null,
+        convites,
+      })
     } catch (e) {
       setEstado((a) => ({
         ...a,
@@ -95,7 +151,7 @@ export function useLinhas({
         mensagem: (e as Error)?.message ?? 'Não foi possível carregar os alunos.',
       }))
     }
-  }, [app, dados, curriculoDaMeta])
+  }, [app, dados, curriculoPorId])
 
   useEffect(() => {
     void carregar()

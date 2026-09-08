@@ -215,16 +215,103 @@ describe('prontidao', () => {
   })
 
   it('lida com lista vazia sem dividir por zero', () => {
-    expect(prontidao([])).toEqual({ dominio: 0, validado: 0, dominadoSemValidacao: 0 })
+    expect(prontidao([])).toEqual({
+      dominio: 0,
+      validado: 0,
+      dominadoSemValidacao: 0,
+      medidos: 0,
+      semCartoes: 0,
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Item sem cartao nao entra na media (ADR-017, decisao 7)
+// ---------------------------------------------------------------------------
+
+describe('medivelPorCartoes', () => {
+  /**
+   * O DEFEITO QUE ESTE BLOCO MEDE, e que eu quase deixei passar.
+   *
+   * Religar os 81 itens trouxe de volta 11 de defesa pessoal que NAO GERAM
+   * CARTAO NENHUM (sem `passos` por decisao de seguranca do ADR-012, e fora de
+   * `KINDS_CLASSIFICAVEIS`). `progressoPorItem` da a eles `pontuacao: 0`.
+   *
+   * Na media, isso travava o azul em 70/81 = 86,4% PARA SEMPRE: quem dominasse
+   * tudo o que o app ensina veria 86%, e a diferenca entre "faltam 14%" e "esses
+   * 14% nao existem no app" nao aparecia em lugar nenhum.
+   *
+   * Eu tinha raciocinado o contrario — que a etiqueta "pior nivel entre os
+   * cartoes" fazia um item sem cartao chegar a dominado. Nao faz: `pior` comeca
+   * em `nao_iniciado` quando a lista esta vazia.
+   */
+  const dominado = () =>
+    estado({ cardId: 'c1', repeticoes: 4, acertosConsecutivos: ACERTOS_PARA_DOMINIO })
+
+  it('dominar TODOS os itens que tem cartao da 100%, e nao 50%', () => {
+    const itens = [item({ id: 'com-cartao' }), item({ id: 'sem-cartao', kind: 'defesa_pessoal' })]
+    const p = progressoPorItem(itens, [cartao('c1', 'com-cartao')], [dominado()], AGORA)
+    const r = prontidao(p)
+
+    expect(r.dominio).toBe(1)
+    // E o denominador sai declarado, do mesmo jeito que em `mediaDaTurma`:
+    expect(r.medidos).toBe(1)
+    expect(r.semCartoes).toBe(1)
+  })
+
+  it('curriculo em que NADA tem cartao devolve zero com semCartoes cheio', () => {
+    // Nao e "o aluno esta em zero": e "nao ha o que medir aqui". A tela usa
+    // `medidos === 0` para mostrar `—`.
+    const p = progressoPorItem([item({ id: 'x', kind: 'defesa_pessoal' })], [], [], AGORA)
+    const r = prontidao(p)
+    expect(r.medidos).toBe(0)
+    expect(r.semCartoes).toBe(1)
+  })
+
+  it('VALIDACAO continua sobre o curriculo inteiro — denominador diferente', () => {
+    /**
+     * De proposito: `validado` conta o que o PROFESSOR confirmou, e ele confirma
+     * o TEXTO do item. Um item sem passo a passo tambem tem texto para conferir —
+     * nome, aviso de supervisao, o que a prova cobre. Usar o mesmo denominador
+     * dos cartoes faria "o professor validou 100%" com metade do curriculo sem
+     * ninguem ter olhado.
+     */
+    const itens = [
+      item({ id: 'a', validationStatus: 'validado_pelo_professor' }),
+      item({ id: 'b', kind: 'defesa_pessoal', validationStatus: 'aguardando_validacao' }),
+    ]
+    const r = prontidao(progressoPorItem(itens, [cartao('c1', 'a')], [], AGORA))
+    expect(r.medidos).toBe(1)
+    expect(r.validado).toBe(0.5)
+  })
+
+  it('grupo sem item mensuravel devolve medidos 0, e nao pontuacao falsa', () => {
+    const itens = [
+      item({ id: 'a', kind: 'raspagem' }),
+      item({ id: 'b', kind: 'defesa_pessoal' }),
+    ]
+    const grupos = progressoPorGrupoTecnico(
+      progressoPorItem(itens, [cartao('c1', 'a')], [dominado()], AGORA),
+    )
+    const raspagens = grupos.find((g) => g.chave === 'raspagens')
+    const defesa = grupos.find((g) => g.chave === 'defesa-pessoal')
+
+    expect(raspagens?.pontuacao).toBe(1)
+    expect(raspagens?.medidos).toBe(1)
+
+    // O grupo EXISTE (o item esta no curriculo) e nao e medivel. `total` diz que
+    // ha 1 item; `medidos: 0` diz que nenhum e alcancado por cartao.
+    expect(defesa?.total).toBe(1)
+    expect(defesa?.medidos).toBe(0)
   })
 })
 
 describe('gruposMaisFracos', () => {
   it('devolve os piores primeiro', () => {
     const grupos = [
-      { chave: 'bom', rotulo: 'bom', total: 1, porNivel: {} as never, pontuacao: 0.9, validados: 0 },
-      { chave: 'ruim', rotulo: 'ruim', total: 1, porNivel: {} as never, pontuacao: 0.1, validados: 0 },
-      { chave: 'medio', rotulo: 'medio', total: 1, porNivel: {} as never, pontuacao: 0.5, validados: 0 },
+      { chave: 'bom', rotulo: 'bom', total: 1, porNivel: {} as never, pontuacao: 0.9, medidos: 1, validados: 0 },
+      { chave: 'ruim', rotulo: 'ruim', total: 1, porNivel: {} as never, pontuacao: 0.1, medidos: 1, validados: 0 },
+      { chave: 'medio', rotulo: 'medio', total: 1, porNivel: {} as never, pontuacao: 0.5, medidos: 1, validados: 0 },
     ]
     expect(gruposMaisFracos(grupos, 2).map((g) => g.chave)).toEqual(['ruim', 'medio'])
   })

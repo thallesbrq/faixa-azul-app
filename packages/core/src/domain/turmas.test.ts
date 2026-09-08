@@ -8,8 +8,22 @@ import {
 } from './turmas'
 
 describe('turmas', () => {
-  it('tem as tres turmas da academia', () => {
-    expect(TURMAS.map((t) => t.id)).toEqual(['RG1A', 'RG1B', 'RG2'])
+  it('tem as duas turmas da academia', () => {
+    // RGI substituiu RG1A e RG1B (ADR-017, decisao 8): uma turma de iniciantes.
+    expect(TURMAS.map((t) => t.id)).toEqual(['RGI', 'RG2'])
+  })
+
+  it('RG1A e RG1B nao voltam como turma oferecida', () => {
+    // Elas nunca tiveram cadastro, entao a renomeacao nao migrou nada. Este
+    // teste existe para nao voltarem por copia de um exemplo antigo.
+    expect(turmaPorId('RG1A')).toBeNull()
+    expect(turmaPorId('RG1B')).toBeNull()
+  })
+
+  it('mas um cadastro em RG1A ainda mostra RG1A, e nao desaparece', () => {
+    // Se algum cadastro tiver o valor antigo, esconde-lo faria o professor ver
+    // uma pessoa a menos na academia — que e o pior desfecho possivel.
+    expect(nomeDaTurma('RG1A')).toBe('RG1A')
   })
 
   it('turma NAO decide mais o curriculo — quem decide e a meta', () => {
@@ -31,7 +45,7 @@ describe('turmas', () => {
   })
 
   it('turmaPorId devolve null para o que nao existe', () => {
-    expect(turmaPorId('RG1A')?.descricao).toBe('Iniciantes')
+    expect(turmaPorId('RGI')?.descricao).toBe('Iniciantes — faixa branca')
     expect(turmaPorId('nada')).toBeNull()
     expect(turmaPorId(SEM_TURMA)).toBeNull()
   })

@@ -18,4 +18,23 @@ export interface Curriculo {
   conteudos: TechniqueContent[]
   requisitos: RequisitoProva[]
   cartoesTeoria: Card[]
+  /**
+   * COMO se mede progresso NESTE curriculo — e as duas formas nao sao escolha de
+   * estilo, sao consequencia do que existe dentro dele.
+   *
+   * `cartoes`: dominio de cartoes de recuperacao, como o app sempre mediu. Exige
+   *   passo a passo, porque sem `passos` o gerador so produz o cartao de
+   *   classificacao.
+   *
+   * `atestado`: quantas competencias o PROFESSOR confirmou. E a medida do 1o
+   *   grau porque a lista dele nao vem com passo a passo — e porque, para quem
+   *   busca o grau, o numero que importa e o julgamento do professor.
+   *
+   * MORAVA EM `Meta` E MUDOU DE DONO (ADR-017, decisao 6). A meta e a prova; o
+   * curriculo e o conteudo. Quando os dois viraram campos separados no cadastro
+   * (`meta` e `estuda`), a medida presa a meta passou a errar no meu proprio
+   * caso: persigo o 3o grau (medida de atestado) e estudo o curriculo de azul
+   * (medida de cartoes) — a medida de uma prova aplicada ao conteudo de outra.
+   */
+  medida: 'cartoes' | 'atestado'
 }

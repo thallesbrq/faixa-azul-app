@@ -63,11 +63,16 @@ export function Tabela({
   }
 
   const explicacao = (l: LinhaDaCentral): string | null => {
+    // CONVIDADO E SEM-DADOS SAO FRASES DIFERENTES DE PROPOSITO: uma cobra o
+    // convite, a outra cobra o aluno. Dizer "nunca sincronizou" para quem nem
+    // tem conta poria a culpa na pessoa errada.
+    if (l.motivo === 'convidado')
+      return 'Convidado, ainda não entrou. O link vale até ele criar a conta.'
     if (l.motivo === 'sem-dados') return 'Este aluno ainda não sincronizou nenhuma vez.'
-    if (l.motivo === 'meta-sem-curriculo')
-      return 'A meta deste aluno ainda não tem currículo — a lista não chegou.'
+    if (l.motivo === 'sem-curriculo')
+      return 'O currículo que este aluno estuda ainda não tem lista de itens.'
     if (l.motivo === 'medido-por-atestado')
-      return 'Meta medida pelo seu atestado, e não por cartões. Ver a aba do 1º grau.'
+      return 'Currículo medido pelo seu atestado, e não por cartões. Ver a aba do 1º grau.'
     return null
   }
 
@@ -95,11 +100,39 @@ export function Tabela({
         </thead>
         <tbody>
           {linhas.map((l) => (
-            <tr key={l.uid} onClick={() => aoEscolher(l.uid)} className="linha-clicavel">
+            <tr
+              key={l.uid}
+              onClick={l.motivo === 'convidado' ? undefined : () => aoEscolher(l.uid)}
+              className={l.motivo === 'convidado' ? 'linha-inerte' : 'linha-clicavel'}
+            >
               <td>
-                <button className="link-aluno" onClick={() => aoEscolher(l.uid)}>
-                  {l.nome}
-                </button>
+                {/* CONVIDADO NAO E CLICAVEL: nao ha pagina para abrir — nao
+                    existe estado, grade nem atestado de quem nunca entrou, e o
+                    clique levaria a uma tela vazia que parece defeito. */}
+                {l.motivo === 'convidado' ? (
+                  <span className="nome-inerte">{l.nome}</span>
+                ) : (
+                  <button className="link-aluno" onClick={() => aoEscolher(l.uid)}>
+                    {l.nome}
+                  </button>
+                )}
+                {l.motivo === 'convidado' && (
+                  <span className="etiqueta etiqueta--espera" title={l.uid}>
+                    convidado
+                  </span>
+                )}
+                {/* A ETIQUETA DE DEMONSTRACAO EXISTE PARA O PROFESSOR NAO SER
+                    ENGANADO: sem ela ele veria em RGI um aluno que nunca
+                    conheceu, com progresso, sem saber que e o desenvolvedor
+                    (ADR-017, decisao 5). */}
+                {l.demo && (
+                  <span
+                    className="etiqueta etiqueta--demo"
+                    title="Dado semeado para teste, não treinado no tatame"
+                  >
+                    demo
+                  </span>
+                )}
               </td>
               {mostrarTurma && (
                 <td>

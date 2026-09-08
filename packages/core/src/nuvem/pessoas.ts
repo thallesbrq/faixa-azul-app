@@ -17,7 +17,8 @@
  */
 
 import type { FirebaseApp } from 'firebase/app'
-import type { Origem } from '../domain/procedencia'
+import type { Papel } from '../domain/papeis'
+import { papelDe } from '../domain/papeis'
 import { SEM_TURMA } from '../domain/turmas'
 import { SEM_META } from '../domain/metas'
 import { FalhaDaNuvem } from './cliente'
@@ -25,7 +26,15 @@ import { FalhaDaNuvem } from './cliente'
 export interface Cadastro {
   uid: string
   nome: string
-  papel: Origem
+  /**
+   * `Papel`, E NAO `Origem` (ADR-017, decisao 1).
+   *
+   * Eram o mesmo tipo porque tinham os mesmos dois valores. `Origem` e carregada
+   * pelo MERGE — `maisRecente` desempata por `alteradoPor` em ordem alfabetica —
+   * e acrescentar `'admin'` a ela mudaria quem ganha um merge empatado dentro de
+   * codigo que nao fala de papel nenhum. Ver domain/papeis.
+   */
+  papel: Papel
   academiaId: string
   ativo: boolean
   /**
@@ -52,17 +61,59 @@ export interface Cadastro {
    * prova errada. Ver domain/metas.
    */
   meta: string
+  /**
+   * O CURRICULO que ele treina no app: 'azul', '1grau', ou '' quando nao ha.
+   *
+   * SEPARADO DE `meta` (ADR-017, decisao 6). Meta e a PROVA, `estuda` e o
+   * CONTEUDO, e no meu proprio caso eles divergem: persigo o 3o grau e treino o
+   * curriculo de azul inteiro (guarda fechada e meia guarda incluidas). Com um
+   * campo so, um dos dois seria mentira.
+   *
+   * Cadastro anterior a este campo cai em `meta` — ver `comoCadastro`.
+   */
+  estuda: string
+  /**
+   * Contratou aulas particulares?
+   *
+   * FEATURE QUE LIGA E DESLIGA POR ALUNO, e nao um numero: o pacote de 10 aulas
+   * (`TOTAL_DE_AULAS`) e coisa contratada, e a maioria da turma nao contratou.
+   * Mostrar "0 de 10 particulares" para quem nunca contratou seria inventar uma
+   * divida que nao existe.
+   *
+   * NAO CONFUNDIR com as aulas da TURMA, que sao o contador do gate do 1o grau.
+   */
+  temParticulares: boolean
+  /**
+   * Cadastro de DEMONSTRACAO: estado semeado, nao treinado no tatame.
+   *
+   * Existe para o Prof. Joao nao ver em RGI um aluno que ele nunca conheceu, com
+   * progresso, sem saber que sou eu (ADR-017, decisao 5). Desligavel — quando eu
+   * comecar a treinar de verdade como Floki, o campo vira mentira ao contrario.
+   */
+  demo: boolean
 }
 
 export interface Convite {
   email: string
   nome: string
-  papel: Origem
+  papel: Papel
   academiaId: string
   /** Turma em que a pessoa NASCE. As regras exigem que o cadastro coincida. */
   turma: string
   /** Meta em que a pessoa NASCE. As regras tambem exigem que coincida. */
   meta: string
+  /**
+   * Curriculo em que a pessoa NASCE.
+   *
+   * NAO E COMPARADO PELAS REGRAS, ao contrario de turma e meta — e a diferenca e
+   * deliberada. `meta` decide contra que prova o aluno e avaliado, entao
+   * deixa-la escolhida pelo cliente seria o aluno escolhendo o proprio exame.
+   * `estuda` decide o que ele TREINA, e trocar isso nao muda avaliacao nenhuma:
+   * e o equivalente a escolher qual apostila abrir. Uma regra a mais para
+   * proteger isso seria mais uma comparacao com `get(..., '')` para manter, sem
+   * nada protegido.
+   */
+  estuda: string
   convidadoEm: string
 }
 
@@ -79,9 +130,10 @@ export interface Dados {
   convidar(entrada: {
     email: string
     nome: string
-    papel: Origem
+    papel: Papel
     turma: string
     meta: string
+    estuda: string
   }): Promise<void>
   listarConvites(): Promise<Convite[]>
   cancelarConvite(email: string): Promise<void>
@@ -99,6 +151,15 @@ export interface Dados {
    * PERMISSAO fez o campo novo nascer protegido sem uma linha de regra nova.
    */
   atualizarMeta(uid: string, meta: string): Promise<void>
+  /**
+   * Troca o CURRICULO que a pessoa estuda. So o gestor, pelo mesmo
+   * `hasOnly(['nome'])` que ja protegia turma e meta — a lista de PERMISSAO fez
+   * o campo novo nascer protegido sem uma linha de regra nova. Terceira vez que
+   * isso se paga (turma, meta, agora `estuda`).
+   */
+  atualizarEstuda(uid: string, estuda: string): Promise<void>
+  /** Liga ou desliga as aulas particulares de alguem. */
+  atualizarParticulares(uid: string, tem: boolean): Promise<void>
 }
 
 /** Normaliza o e-mail: ele e o ID do documento, e caixa diferente viraria dois. */
@@ -113,7 +174,7 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
   const comoCadastro = (uid: string, d: Record<string, unknown>): Cadastro => ({
     uid,
     nome: typeof d.nome === 'string' ? d.nome : '',
-    papel: d.papel === 'professor' ? 'professor' : 'aluno',
+    papel: papelDe(d.papel),
     academiaId: typeof d.academiaId === 'string' ? d.academiaId : minhaAcademia,
     ativo: d.ativo === true,
     // Cadastro criado antes deste campo existir nao tem a chave. '' e o valor
@@ -121,6 +182,20 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
     turma: typeof d.turma === 'string' ? d.turma : SEM_TURMA,
     // Cadastro anterior a este campo nao tem a chave: '' e o que ele de fato e.
     meta: typeof d.meta === 'string' ? d.meta : SEM_META,
+    /**
+     * CADASTRO SEM `estuda` CAI NA `meta`, e nao em ''.
+     *
+     * Este e o unico default deste arquivo que ADIVINHA, e a razao e que a
+     * alternativa e pior: todos os cadastros que existem hoje nasceram quando um
+     * campo so fazia os dois papeis, e o valor que eles guardam em `meta` E o
+     * curriculo que a pessoa estuda. Cair em '' faria cada aluno existente
+     * aparecer sem progresso ate alguem reatribuir um por um — dado bom
+     * escondido por uma migracao de campo.
+     */
+    estuda: typeof d.estuda === 'string' ? d.estuda : (typeof d.meta === 'string' ? d.meta : SEM_META),
+    // Ausente = nao contratou. O default certo e o que a maioria da turma e.
+    temParticulares: d.temParticulares === true,
+    demo: d.demo === true,
   })
 
   return {
@@ -138,13 +213,21 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
       const cadastro: Cadastro = {
         uid,
         nome: typeof c.nome === 'string' && c.nome.trim() !== '' ? c.nome : '',
-        papel: c.papel === 'professor' ? 'professor' : 'aluno',
+        papel: papelDe(c.papel),
         academiaId: typeof c.academiaId === 'string' ? c.academiaId : minhaAcademia,
         ativo: true,
         // Convite antigo nao tem turma, e as regras comparam com `get('turma','')`
         // dos dois lados — entao '' aqui e o unico valor que elas aceitam.
         turma: typeof c.turma === 'string' ? c.turma : SEM_TURMA,
         meta: typeof c.meta === 'string' ? c.meta : SEM_META,
+        estuda:
+          typeof c.estuda === 'string'
+            ? c.estuda
+            : typeof c.meta === 'string'
+              ? c.meta
+              : SEM_META,
+        temParticulares: c.temParticulares === true,
+        demo: c.demo === true,
       }
 
       // Papel, academia, TURMA e META vem DO CONVITE. As regras recusam outra coisa.
@@ -154,6 +237,9 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
         academiaId: cadastro.academiaId,
         turma: cadastro.turma,
         meta: cadastro.meta,
+        estuda: cadastro.estuda,
+        temParticulares: cadastro.temParticulares,
+        demo: cadastro.demo,
         ativo: true,
         criadoEm: new Date().toISOString(),
       })
@@ -170,13 +256,14 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
       return cadastro
     },
 
-    async convidar({ email, nome, papel, turma, meta }) {
+    async convidar({ email, nome, papel, turma, meta, estuda }) {
       await fs.setDoc(fs.doc(db, 'convites', idDoEmail(email)), {
         nome: nome.trim(),
         papel,
         academiaId: minhaAcademia,
         turma,
         meta,
+        estuda,
         convidadoEm: new Date().toISOString(),
       })
     },
@@ -188,10 +275,16 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
         return {
           email: d.id,
           nome: typeof x.nome === 'string' ? x.nome : '',
-          papel: x.papel === 'professor' ? 'professor' : 'aluno',
+          papel: papelDe(x.papel),
           academiaId: typeof x.academiaId === 'string' ? x.academiaId : minhaAcademia,
           turma: typeof x.turma === 'string' ? x.turma : SEM_TURMA,
           meta: typeof x.meta === 'string' ? x.meta : SEM_META,
+          estuda:
+            typeof x.estuda === 'string'
+              ? x.estuda
+              : typeof x.meta === 'string'
+                ? x.meta
+                : SEM_META,
           convidadoEm: typeof x.convidadoEm === 'string' ? x.convidadoEm : '',
         } satisfies Convite
       })
@@ -216,6 +309,14 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
 
     async atualizarMeta(uid, meta) {
       await fs.updateDoc(fs.doc(db, 'pessoas', uid), { meta })
+    },
+
+    async atualizarEstuda(uid, estuda) {
+      await fs.updateDoc(fs.doc(db, 'pessoas', uid), { estuda })
+    },
+
+    async atualizarParticulares(uid, tem) {
+      await fs.updateDoc(fs.doc(db, 'pessoas', uid), { temParticulares: tem })
     },
   }
 }

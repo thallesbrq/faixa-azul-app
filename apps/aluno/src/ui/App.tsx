@@ -15,7 +15,7 @@ import { Perfil } from './screens/Perfil'
 import { Academia } from './screens/Academia'
 import { abasDoPapel } from './components/Navegacao'
 import { useAcademia } from './useAcademia'
-import { curriculoDaMeta } from '@faixa-azul/core/seed/curriculos'
+import { curriculoPorId } from '@faixa-azul/core/seed/curriculos'
 import { useSessao } from './useSessao'
 import { Entrar } from './components/Entrar'
 import { Convidar } from './components/Convidar'
@@ -59,7 +59,7 @@ export function App() {
   const academia = useAcademia({
     obterDados: sessao.obterDados,
     souProfessor: souProfessorNaNuvem,
-    curriculoDaMeta,
+    curriculoPorId,
   })
 
   /**
@@ -279,6 +279,7 @@ export function App() {
             <Perfil
               nome={app.estado.perfil.nome}
               papel={papel}
+              papelLocal={app.estado.perfil.papel}
               papelDaNuvem={naNuvemPapel}
               id={app.estado.perfil.id}
               aoDefinir={app.definirPerfil}

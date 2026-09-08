@@ -27,7 +27,7 @@ function item(id: string, moduloId: string, over: Partial<TechniqueItem> = {}): 
 }
 
 function curriculo(itens: TechniqueItem[]): Curriculo {
-  return { itens, conteudos: [], requisitos: [], cartoesTeoria: [] }
+  return { itens, conteudos: [], requisitos: [], cartoesTeoria: [], medida: 'atestado' }
 }
 
 const MODULOS: Modulo[] = [
@@ -184,7 +184,7 @@ describe('aulasFaltando', () => {
 describe('com o curriculo REAL do 1o grau', () => {
   it('sao as seis secoes do professor, na ordem dele', () => {
     const a = montarAtestado({
-      curriculo: { itens: ITENS_1GRAU, conteudos: [], requisitos: [], cartoesTeoria: [] },
+      curriculo: { itens: ITENS_1GRAU, conteudos: [], requisitos: [], cartoesTeoria: [], medida: 'atestado' },
       modulos: MODULOS_1GRAU,
       registros: [],
       meta: '1grau',
@@ -204,7 +204,7 @@ describe('com o curriculo REAL do 1o grau', () => {
 
   it('atestar tudo fecha as competencias, e as aulas seguem separadas', () => {
     const a = montarAtestado({
-      curriculo: { itens: ITENS_1GRAU, conteudos: [], requisitos: [], cartoesTeoria: [] },
+      curriculo: { itens: ITENS_1GRAU, conteudos: [], requisitos: [], cartoesTeoria: [], medida: 'atestado' },
       modulos: MODULOS_1GRAU,
       registros: ITENS_1GRAU.map((i) => reg(i.id, true)),
       meta: '1grau',

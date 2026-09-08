@@ -22,8 +22,8 @@
  */
 
 import type { TechniqueItem } from '../domain/types'
-import { ORDEM_GUARDA, guardaDaPosicao } from '../domain/taxonomia'
-import type { Guarda } from '../domain/taxonomia'
+import { ORDEM_BLOCO, blocoDaPosicao } from '../domain/taxonomia'
+import type { BlocoDoCurriculo } from '../domain/taxonomia'
 
 /** Aula -> ids dos itens nela, na ordem em que foram postos. */
 export type Atribuicao = ReadonlyMap<number, readonly string[]>
@@ -32,7 +32,7 @@ export type Atribuicao = ReadonlyMap<number, readonly string[]>
 export const TOTAL_DE_AULAS = 10
 
 export interface GrupoDoBolsao {
-  guarda: Guarda
+  guarda: BlocoDoCurriculo
   itens: TechniqueItem[]
 }
 
@@ -177,15 +177,15 @@ export function montarEstado({
   const naoAtribuidosItens = ativos.filter((i) => !aparicoes.has(i.id))
 
   // Bolsao agrupado pelas guardas do curriculo, na ordem do exame.
-  const porGuarda = new Map<Guarda, TechniqueItem[]>()
+  const porGuarda = new Map<BlocoDoCurriculo, TechniqueItem[]>()
   for (const item of naoAtribuidosItens) {
-    const g = guardaDaPosicao(item.posicao)
+    const g = blocoDaPosicao(item.posicao)
     if (!g) continue
     const lista = porGuarda.get(g)
     if (lista) lista.push(item)
     else porGuarda.set(g, [item])
   }
-  const bolsao: GrupoDoBolsao[] = ORDEM_GUARDA.flatMap((guarda) => {
+  const bolsao: GrupoDoBolsao[] = ORDEM_BLOCO.flatMap((guarda) => {
     const itensDaGuarda = porGuarda.get(guarda)
     return itensDaGuarda?.length ? [{ guarda, itens: itensDaGuarda }] : []
   })
@@ -215,7 +215,7 @@ export function montarEstado({
 // ---------------------------------------------------------------------------
 
 export interface EspacamentoDaGuarda {
-  guarda: Guarda
+  guarda: BlocoDoCurriculo
   /** Aulas em que a guarda aparece, em ordem. */
   aulas: number[]
   /**
@@ -237,17 +237,17 @@ export interface EspacamentoDaGuarda {
  * sabe.
  */
 export function espacamentoPorGuarda(aulas: AulaMontada[]): EspacamentoDaGuarda[] {
-  const porGuarda = new Map<Guarda, Set<number>>()
+  const porGuarda = new Map<BlocoDoCurriculo, Set<number>>()
   for (const aula of aulas) {
     for (const item of aula.itens) {
-      const g = guardaDaPosicao(item.posicao)
+      const g = blocoDaPosicao(item.posicao)
       if (!g) continue
       if (!porGuarda.has(g)) porGuarda.set(g, new Set())
       porGuarda.get(g)!.add(aula.numero)
     }
   }
 
-  return ORDEM_GUARDA.flatMap((guarda) => {
+  return ORDEM_BLOCO.flatMap((guarda) => {
     const conjunto = porGuarda.get(guarda)
     if (!conjunto?.size) return []
     const numeros = [...conjunto].sort((a, b) => a - b)

@@ -87,6 +87,34 @@ const PESO: Record<NivelDominio, number> = {
  * DERIVADO E NAO COPIADO: se `PESO` mudar, os limiares acompanham. Ha teste
  * amarrando os dois, para a derivacao nao virar coincidencia.
  */
+/**
+ * O item e alcancavel por CARTAO? — o denominador de toda media de dominio.
+ *
+ * ESTE FILTRO NASCEU DE UM DEFEITO MEDIDO, e nao de uma preocupacao teorica. Ao
+ * religar os 81 itens (ADR-017, decisao 7), os 11 de defesa pessoal voltaram ao
+ * curriculo — e eles nao geram cartao nenhum:
+ *
+ *   - sem `passos`, o gerador nao produz `explicacao` nem `sequencia` (ADR-012)
+ *   - `defesa_pessoal` nao esta em `KINDS_CLASSIFICAVEIS`, entao nem o cartao de
+ *     classificacao aparece
+ *   - o cartao de RECONHECIMENTO existe, mas e UM por modulo e nao tem `itemId`
+ *
+ * `progressoPorItem` da a um item sem cartao `pontuacao: 0`. Somados na media,
+ * os 11 travavam o azul em 70/81 = 86,4% PARA SEMPRE: o aluno que dominasse tudo
+ * o que o app tem para ensinar veria 86%, e a coluna "Defesa Pessoal" da central
+ * mostraria 0% eterno. Zero indistinguivel de "nao mensuravel" e exatamente o
+ * que o cabecalho de `application/central` alerta sobre coluna vazia.
+ *
+ * A saida e a mesma de `mediaDaTurma`: DECLARAR O DENOMINADOR em vez de fingir o
+ * numerador. Quem nao tem cartao sai da media e e contado em `semCartoes`.
+ *
+ * O cartao de reconhecimento continua no baralho e continua sendo estudado — ele
+ * so nao e atribuido a um item, porque cobre o modulo inteiro.
+ */
+export function medivelPorCartoes(p: ProgressoDeItem): boolean {
+  return p.totalCartoes > 0
+}
+
 export type FaixaDeCor = 'baixa' | 'media' | 'alta'
 
 export const LIMIAR_MEDIA = PESO.visto
@@ -170,6 +198,14 @@ export interface ProgressoDeGrupo {
   porNivel: Record<NivelDominio, number>
   /** 0 a 1, ponderado por nivel de dominio — nao por cartoes respondidos. */
   pontuacao: number
+  /**
+   * Quantos itens do grupo entraram em `pontuacao` — o denominador declarado.
+   *
+   * `medidos < total` quando ha item sem cartao (ver `medivelPorCartoes`), e
+   * `medidos === 0` significa "grupo nao mensuravel por cartao" — a tela deve
+   * mostrar `—`, e nao o zero que `pontuacao` carrega.
+   */
+  medidos: number
   /** Quantos itens do grupo o professor confirmou. */
   validados: number
 }
@@ -197,16 +233,22 @@ function agrupar(
     let soma = 0
     for (const p of itens) {
       porNivel[p.dominio] += 1
+      if (!medivelPorCartoes(p)) continue
       // Soma a pontuacao continua, nao o peso da etiqueta: senao um item com
       // 2 de 3 cartoes dominados contaria como zero.
       soma += p.pontuacao
     }
+    const medidos = itens.filter(medivelPorCartoes).length
     return {
       chave,
       rotulo: rotuloDe(itens[0]),
       total: itens.length,
       porNivel,
-      pontuacao: itens.length === 0 ? 0 : soma / itens.length,
+      // DIVIDE POR `medidos`, e nao por `total`: um grupo com 5 itens dos quais
+      // 2 nao tem cartao nenhum ficaria eternamente preso em 60% com o aluno
+      // dominando tudo o que ha para dominar.
+      pontuacao: medidos === 0 ? 0 : soma / medidos,
+      medidos,
       validados: itens.filter((p) => p.validado).length,
     }
   })
@@ -261,14 +303,36 @@ export function prontidao(progresso: ProgressoDeItem[]): {
   validado: number
   /** Itens que o aluno domina mas o professor ainda nao viu. */
   dominadoSemValidacao: number
+  /** Quantos itens entraram no `dominio` — o denominador declarado. */
+  medidos: number
+  /**
+   * Itens do curriculo que NENHUM cartao alcanca. Hoje sao os 11 de defesa
+   * pessoal. Ver `medivelPorCartoes`.
+   */
+  semCartoes: number
 } {
-  if (progresso.length === 0) return { dominio: 0, validado: 0, dominadoSemValidacao: 0 }
+  const vazio = {
+    dominio: 0,
+    validado: 0,
+    dominadoSemValidacao: 0,
+    medidos: 0,
+    semCartoes: progresso.length,
+  }
+  if (progresso.length === 0) return { ...vazio, semCartoes: 0 }
 
-  const soma = progresso.reduce((s, p) => s + p.pontuacao, 0)
+  const medivel = progresso.filter(medivelPorCartoes)
+  if (medivel.length === 0) return vazio
+
+  const soma = medivel.reduce((s, p) => s + p.pontuacao, 0)
   return {
-    dominio: soma / progresso.length,
+    dominio: soma / medivel.length,
+    // VALIDACAO E SOBRE TODO O CURRICULO, e nao so sobre o que tem cartao: o
+    // professor confirma o TEXTO do item, e um item sem passo a passo tambem
+    // tem texto para conferir. Denominadores diferentes de proposito.
     validado: progresso.filter((p) => p.validado).length / progresso.length,
     dominadoSemValidacao: progresso.filter((p) => p.dominio === 'dominado' && !p.validado).length,
+    medidos: medivel.length,
+    semCartoes: progresso.length - medivel.length,
   }
 }
 

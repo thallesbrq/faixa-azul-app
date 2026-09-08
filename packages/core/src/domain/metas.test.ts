@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   aulasExigidas,
-  medidaDoProgresso,
   METAS,
   metaPorId,
   metaSeguinte,
@@ -33,13 +32,30 @@ describe('metas', () => {
     expect(metaTemCurriculo(SEM_META)).toBe(false)
   })
 
-  it('35 aulas e exigencia do 1o grau; o azul nao conta aulas', () => {
+  it('35 aulas no 1o grau, 45 nos seguintes, e o azul nao conta aulas', () => {
     // O azul e a prova. Os 10 particulares sao pacote contratado, nao exigencia
     // de graduacao — dois numeros diferentes que por acaso falam de aulas.
     expect(aulasExigidas('1grau')).toBe(35)
+    expect(aulasExigidas('2grau')).toBe(45)
+    expect(aulasExigidas('3grau')).toBe(45)
+    expect(aulasExigidas('4grau')).toBe(45)
     expect(aulasExigidas('azul')).toBeNull()
-    expect(aulasExigidas('2grau')).toBeNull()
     expect(aulasExigidas('nao-existe')).toBeNull()
+  })
+
+  it('35 + 45 x 3 = 170 ate o 4o grau; o planner cobre 80 (1o + UM seguinte)', () => {
+    // Registro da aritmetica que ele confirmou: 35 no 1o grau e 45 depois, 80 no
+    // total do planner. Os 45 sao POR GRAU, entao o caminho inteiro ate o 4o
+    // grau soma 170 aulas — o planner nao cobre isso, e nao deve: ele cobre o
+    // grau atual e o seguinte.
+    expect(aulasExigidas('1grau')! + aulasExigidas('2grau')!).toBe(80)
+  })
+
+  it('saber quantas aulas NAO e saber o curriculo — as duas ausencias convivem', () => {
+    // O 2o grau tem numero de aulas conhecido (45) e lista de itens ausente.
+    // Colapsar as duas faria a tela esconder o que ela sabe.
+    expect(aulasExigidas('2grau')).toBe(45)
+    expect(metaTemCurriculo('2grau')).toBe(false)
   })
 
   it('sem meta tem rotulo proprio, e nao fica em branco', () => {
@@ -76,19 +92,3 @@ describe('metas', () => {
   })
 })
 
-describe('medidaDoProgresso', () => {
-  it('azul mede por CARTOES; o 1o grau por ATESTADO', () => {
-    // O 1o grau nao tem passo a passo, e sem `passos` o gerador de cartoes
-    // produz quase nada — 11 dos 29 itens ficariam com zero cartao. Entao a
-    // medida dele e quantas competencias o professor confirmou (ADR-016, dec. 9).
-    expect(medidaDoProgresso('azul')).toBe('cartoes')
-    expect(medidaDoProgresso('1grau')).toBe('atestado')
-  })
-
-  it('meta desconhecida mede por atestado — escolha conservadora', () => {
-    // Medir por cartoes um curriculo sem passo a passo produz zero eterno com
-    // aparencia de desempenho.
-    expect(medidaDoProgresso('roxa')).toBe('atestado')
-    expect(medidaDoProgresso(SEM_META)).toBe('atestado')
-  })
-})

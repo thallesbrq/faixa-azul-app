@@ -31,6 +31,7 @@ import {
   TURMAS,
 } from '@faixa-azul/core/domain/turmas'
 import { METAS, metaPorId, nomeDaMeta, ROTULO_SEM_META, SEM_META } from '@faixa-azul/core/domain/metas'
+import { curriculoPorId } from '@faixa-azul/core/seed/curriculos'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import { atividade, corDaFaixa, porcento } from '../formato'
 
@@ -97,6 +98,17 @@ export interface AlunoProps {
    */
   aoTrocarMeta: (meta: string) => Promise<void>
   /**
+   * Trocar o CURRICULO que ele estuda — campo diferente da meta (ADR-017,
+   * decisao 6).
+   *
+   * ESTE E O CONSEQUENTE DOS DOIS: `estuda` decide o denominador do progresso E
+   * a medida (cartoes ou atestado). Trocar a meta muda o rotulo da prova;
+   * trocar isto muda o numero.
+   */
+  aoTrocarEstuda: (estuda: string) => Promise<void>
+  /** Ligar ou desligar as aulas particulares deste aluno. */
+  aoTrocarParticulares: (tem: boolean) => Promise<void>
+  /**
    * A aba Aulas. Chega como no filho pronto e nao como dados: a montagem tem
    * estado proprio (`useGrade`), e ele so deve existir quando a aba esta aberta
    * — carregar a grade de um aluno que ninguem abriu seria leitura desperdicada.
@@ -116,6 +128,8 @@ export function Aluno({
   aoVoltar,
   aoTrocarTurma,
   aoTrocarMeta,
+  aoTrocarEstuda,
+  aoTrocarParticulares,
   aulas,
   atestado,
 }: AlunoProps) {
@@ -129,6 +143,9 @@ export function Aluno({
   const [trocando, setTrocando] = useState(false)
   const [avisoDaTurma, setAvisoDaTurma] = useState<string | null>(null)
   const [trocandoMeta, setTrocandoMeta] = useState(false)
+  const [trocandoEstuda, setTrocandoEstuda] = useState(false)
+  const [avisoDoEstuda, setAvisoDoEstuda] = useState<string | null>(null)
+  const [trocandoParticulares, setTrocandoParticulares] = useState(false)
   const [avisoDaMeta, setAvisoDaMeta] = useState<string | null>(null)
   const detalhe = useMemo(
     () => (estado ? detalheDoAluno({ estado, curriculo, agora }) : null),
@@ -225,13 +242,23 @@ export function Aluno({
                 setAvisoDaMeta(null)
                 try {
                   await aoTrocarMeta(nova)
+                  /**
+                   * O AVISO FALA SO DA PROVA, e nao mais da medida.
+                   *
+                   * Ele dizia "o progresso passa a vir dos cartoes dele" — o que
+                   * deixou de ser consequencia de trocar a meta: quem decide a
+                   * medida e o curriculo que a pessoa ESTUDA (ADR-017, decisao
+                   * 6). Trocar a meta de alguem que estuda azul nao muda nada no
+                   * progresso, e o aviso antigo afirmaria uma mudanca que nao
+                   * aconteceu.
+                   */
                   const m = metaPorId(nova)
                   setAvisoDaMeta(
                     m === null
-                      ? `Meta agora é ${nomeDaMeta(nova)} — sem currículo, o progresso aparece como —.`
-                      : m.medidaDoProgresso === 'cartoes'
-                        ? `Agora buscando ${m.nome} — o progresso passa a vir dos cartões dele.`
-                        : `Agora buscando ${m.nome} — o progresso passa a vir do que VOCÊ atesta, e não dos cartões.`,
+                      ? `Meta agora é ${nomeDaMeta(nova)} — meta desconhecida por este aparelho.`
+                      : m.aulasExigidas === null
+                        ? `Agora buscando ${m.nome}. ${m.descricao}.`
+                        : `Agora buscando ${m.nome} — ${m.aulasExigidas} aulas exigidas.`,
                   )
                 } catch (err) {
                   setAvisoDaMeta((err as Error)?.message ?? 'Não foi possível trocar a meta.')
@@ -254,8 +281,92 @@ export function Aluno({
               )}
             </select>
           </label>
+
+          {/*
+            ESTUDA AO LADO DE BUSCANDO, e a proximidade e o ponto: separados em
+            duas telas, ninguem enxergaria a divergencia que motivou o campo
+            existir — perseguir o 3o grau estudando o curriculo de azul.
+
+            O aviso diz a MEDIDA, que e o que este seletor de fato muda. Sair de
+            `azul` para `1grau` troca progresso por cartoes por progresso por
+            atestado, e o numero da tabela muda de natureza; sem anunciar, parece
+            que zerou. (Este aviso vivia no seletor de meta, onde havia deixado
+            de ser verdade.)
+          */}
+          <label className="troca-turma">
+            <span>Estuda</span>
+            <select
+              value={linha.estuda}
+              disabled={trocandoEstuda}
+              onChange={async (e) => {
+                const novo = e.target.value
+                setTrocandoEstuda(true)
+                setAvisoDoEstuda(null)
+                try {
+                  await aoTrocarEstuda(novo)
+                  const c = curriculoPorId(novo)
+                  setAvisoDoEstuda(
+                    c === null
+                      ? `Sem lista de itens para ${nomeDaMeta(novo)} — o progresso aparece como —.`
+                      : c.medida === 'cartoes'
+                        ? `Estudando ${nomeDaMeta(novo)}: ${c.itens.filter((i) => i.ativo).length} itens, progresso pelos cartões.`
+                        : `Estudando ${nomeDaMeta(novo)}: ${c.itens.length} itens, progresso pelo que VOCÊ atesta.`,
+                  )
+                } catch (err) {
+                  setAvisoDoEstuda((err as Error)?.message ?? 'Não foi possível trocar o currículo.')
+                } finally {
+                  setTrocandoEstuda(false)
+                }
+              }}
+            >
+              <option value={SEM_META}>Sem currículo</option>
+              {METAS.filter((m) => m.temCurriculo).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+              {/* Valor desconhecido continua no seletor pelo mesmo motivo dos
+                  outros dois: sem esta opcao, ABRIR a tela reatribuiria o aluno
+                  em silencio — defeito ja verificado no seletor de turma.
+                  Inclui as metas SEM curriculo, que ficam fora da lista acima. */}
+              {linha.estuda !== SEM_META && !METAS.some((m) => m.id === linha.estuda && m.temCurriculo) && (
+                <option value={linha.estuda}>{nomeDaMeta(linha.estuda)}</option>
+              )}
+            </select>
+          </label>
+
+          {/*
+            PARTICULARES E UM INTERRUPTOR, e nao um numero (ADR-017).
+            O pacote de 10 aulas e coisa CONTRATADA, e a maioria da turma nao
+            contratou — mostrar "0 de 10" para quem nunca contratou inventaria
+            uma divida que nao existe.
+          */}
+          <label className="troca-turma">
+            <span>Particulares</span>
+            <select
+              value={linha.temParticulares ? 'sim' : 'nao'}
+              disabled={trocandoParticulares}
+              onChange={async (e) => {
+                const tem = e.target.value === 'sim'
+                setTrocandoParticulares(true)
+                try {
+                  await aoTrocarParticulares(tem)
+                } finally {
+                  setTrocandoParticulares(false)
+                }
+              }}
+            >
+              <option value="nao">Não contratou</option>
+              <option value="sim">Contratou</option>
+            </select>
+          </label>
         </div>
 
+        {avisoDoEstuda && (
+          <p className="apoio" style={{ marginTop: 10, marginBottom: 0 }}>
+            {avisoDoEstuda}
+          </p>
+        )}
         {avisoDaTurma && (
           <p className="apoio" style={{ marginTop: 10, marginBottom: 0 }}>
             {avisoDaTurma}

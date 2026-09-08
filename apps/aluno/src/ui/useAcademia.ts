@@ -40,12 +40,12 @@ export interface EstadoDaAcademia {
 export function useAcademia({
   obterDados,
   souProfessor,
-  curriculoDaMeta,
+  curriculoPorId,
 }: {
   obterDados: () => Promise<Dados>
   souProfessor: boolean
   /** Um curriculo por meta: a turma nao decide a prova (ADR-016, decisao 3). */
-  curriculoDaMeta: (meta: string) => Curriculo | null
+  curriculoPorId: (estuda: string) => Curriculo | null
 }) {
   const [estado, setEstado] = useState<EstadoDaAcademia>({
     fase: 'ociosa',
@@ -75,7 +75,7 @@ export function useAcademia({
         linhas: linhasDaAcademia({
           cadastros: pessoas,
           estados: porUid,
-          curriculoDaMeta,
+          curriculoPorId,
           agora: new Date(),
         }),
         falhas: falhas.length,
@@ -89,7 +89,7 @@ export function useAcademia({
         mensagem: (e as Error)?.message ?? 'Não foi possível ler a academia agora.',
       }))
     }
-  }, [obterDados, souProfessor, curriculoDaMeta])
+  }, [obterDados, souProfessor, curriculoPorId])
 
   useEffect(() => {
     void carregar()
