@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { aulasFaltando, curriculoParaAtestar, montarAtestado } from './atestado'
+import { aptidaoAoGrau, aulasFaltando, curriculoParaAtestar, montarAtestado } from './atestado'
 import type { RegistroDeCompetencia } from '../domain/competencia'
 import type { Curriculo } from '../domain/curriculo'
 import type { Modulo, TechniqueItem } from '../domain/types'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '../seed/primeiro-grau'
+import { CURRICULO_1GRAU } from '../seed/curriculos'
 
 const AGORA = '2026-09-07T12:00:00.000Z'
 
@@ -110,18 +111,25 @@ describe('montarAtestado', () => {
       curriculo: c, modulos: MODULOS, registros: [reg('a', true), reg('b', true)],
       meta: '1grau', aulasCumpridas: null,
     })
-    expect(parcial.competenciasCompletas).toBe(false)
-    expect(cheio.competenciasCompletas).toBe(true)
+    expect(parcial.aptidao).toBe('faltam-competencias')
+    expect(cheio.aptidao).toBe('apto')
   })
 
-  it('curriculo VAZIO nao esta completo, e nao devolve NaN', () => {
-    // Sem esta guarda, "apto" sairia verdadeiro por nao haver exigencia — e o
-    // progresso seria NaN, que a tela mostraria como "NaN%".
+  it('curriculo VAZIO nao esta apto, e nao devolve NaN', () => {
+    /**
+     * Sem esta guarda, "apto" sairia verdadeiro por nao haver exigencia — e o
+     * progresso seria NaN, que a tela mostraria como "NaN%".
+     *
+     * `nao-se-aplica` E NAO `faltam-competencias`: nao falta competencia nenhuma,
+     * a pergunta e que nao cabe. A distincao existe porque a tela diz as duas de
+     * formas diferentes — uma lista o que falta, a outra nao mostra o selo.
+     */
     const a = montarAtestado({
       curriculo: curriculo([]), modulos: MODULOS, registros: [],
       meta: '1grau', aulasCumpridas: null,
     })
-    expect(a.competenciasCompletas).toBe(false)
+    expect(a.aptidao).toBe('nao-se-aplica')
+    expect(a.aptidao).not.toBe('apto')
     expect(a.progresso).toBe(0)
     expect(Number.isNaN(a.progresso)).toBe(false)
   })
@@ -150,7 +158,7 @@ describe('montarAtestado', () => {
       modulos: MODULOS, registros: [reg('a', true)],
       meta: '1grau', aulasCumpridas: null,
     })
-    expect(a.competenciasCompletas).toBe(true)
+    expect(a.aptidao).toBe('apto')
     expect(a.aulas).toEqual({ exigidas: 35, cumpridas: null })
   })
 
@@ -211,7 +219,7 @@ describe('com o curriculo REAL do 1o grau', () => {
       aulasCumpridas: null,
     })
     expect(a.atestados).toBe(29)
-    expect(a.competenciasCompletas).toBe(true)
+    expect(a.aptidao).toBe('apto')
     expect(a.progresso).toBe(1)
     // E o professor ainda tem de conferir as 35 aulas de cabeca.
     expect(aulasFaltando(a.aulas)).toBeNull()
@@ -273,5 +281,156 @@ describe('curriculoParaAtestar', () => {
     // registrar o que o professor viu.
     const e = curriculoParaAtestar({ meta: 'roxa', estuda: 'azul', curriculoPorId: porId })
     expect(e?.origem).toBe('estudo')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// APTO AO GRAU
+// ---------------------------------------------------------------------------
+/**
+ * O booleano passou a existir em 09/09/2026, por decisao do professor, depois de
+ * presenca ser descartada. Estes testes fixam as tres ressalvas que fazem a regra
+ * generalizar para o 2o, 3o e 4o grau sem reescrita — e que impedem a palavra
+ * "apto" de ser usada sobre uma afirmacao mais fraca.
+ */
+describe('aptidaoAoGrau', () => {
+  /** Um curriculo de atestado com N itens ativos e M desativados. */
+  const deAtestado = (quantos: number, inativos = 0) =>
+    curriculo([
+      ...Array.from({ length: quantos }, (_, i) => item(`i${i}`, 'm1')),
+      ...Array.from({ length: inativos }, (_, i) => item(`x${i}`, 'm1', { ativo: false })),
+    ])
+
+  it('todos atestados = APTO', () => {
+    expect(aptidaoAoGrau({ curriculo: deAtestado(29), competentes: 29 })).toBe('apto')
+  })
+
+  it('faltando um = FALTAM-COMPETENCIAS', () => {
+    expect(aptidaoAoGrau({ curriculo: deAtestado(29), competentes: 28 })).toBe(
+      'faltam-competencias',
+    )
+  })
+
+  it('zero atestados e um NUMERO, e nao ausencia — o primeiro dia de todo aluno', () => {
+    expect(aptidaoAoGrau({ curriculo: deAtestado(29), competentes: 0 })).toBe(
+      'faltam-competencias',
+    )
+  })
+
+  it('FALHA DE LEITURA nao e zero: `nao-lido`, e nunca "faltam 29"', () => {
+    /**
+     * A distincao que evita a tela dizer "faltam 29" a quem talvez tenha os 29.
+     * Mesma regra de `atestado-nao-lido` em `application/central`.
+     */
+    expect(aptidaoAoGrau({ curriculo: deAtestado(29), competentes: null })).toBe('nao-lido')
+  })
+
+  it('RESSALVA 1 — o denominador sai do CURRICULO, nunca do numero 29', () => {
+    /**
+     * O teste que protege a generalizacao. O 2o grau vai ter outra lista; um
+     * `=== 29` cravado em qualquer lugar quebraria em silencio, com todo aluno de
+     * 2o grau nascendo "apto" ou nunca ficando apto.
+     */
+    expect(aptidaoAoGrau({ curriculo: deAtestado(12), competentes: 12 })).toBe('apto')
+    expect(aptidaoAoGrau({ curriculo: deAtestado(45), competentes: 29 })).toBe(
+      'faltam-competencias',
+    )
+  })
+
+  it('ITEM INATIVO nao entra no denominador', () => {
+    // 29 ativos e 5 desativados: atestar os 29 basta. Contar os 34 deixaria o
+    // aluno preso por item que a folha nem mostra.
+    expect(aptidaoAoGrau({ curriculo: deAtestado(29, 5), competentes: 29 })).toBe('apto')
+  })
+
+  it('RESSALVA 2 e 3 — curriculo medido por CARTOES nunca e `apto`', () => {
+    /**
+     * A regra do professor: dominio de cartao != validado != funciona sob
+     * resistencia. "Apto" derivado de o app achar que o aluno lembra de 81 coisas
+     * seria a mesma palavra afirmando algo muito mais fraco que "o professor viu
+     * ele executar os 29".
+     *
+     * E troca de FAIXA nao e grau: a prova de azul tem banca, teoria escrita,
+     * juramento e pontuacao. O conceito util la e "apto a FAZER a prova", que e
+     * outra pergunta.
+     */
+    const azul: Curriculo = { ...deAtestado(81), medida: 'cartoes' }
+    expect(aptidaoAoGrau({ curriculo: azul, competentes: 81 })).toBe('nao-se-aplica')
+  })
+
+  it('sem curriculo e curriculo VAZIO caem em `nao-se-aplica`', () => {
+    // Vazio nao pode ser apto: seria aptidao por nao haver exigencia.
+    expect(aptidaoAoGrau({ curriculo: null, competentes: 0 })).toBe('nao-se-aplica')
+    expect(aptidaoAoGrau({ curriculo: deAtestado(0), competentes: 0 })).toBe('nao-se-aplica')
+  })
+
+  it('atestacoes A MAIS que o total nao quebram — continua apto', () => {
+    // Pode acontecer com item que saiu do curriculo: o `>=` e deliberado.
+    expect(aptidaoAoGrau({ curriculo: deAtestado(29), competentes: 31 })).toBe('apto')
+  })
+})
+
+describe('montarAtestado usa a mesma regra', () => {
+  it('a folha do 1o grau fica apta com os 29, e nao antes', () => {
+    /**
+     * Amarra a folha a `aptidaoAoGrau` com o curriculo REAL. Se alguem trocar o
+     * `aptidao` da folha por um calculo proprio, este teste continua passando —
+     * mas o de baixo, que compara os dois, nao.
+     */
+    const todos = CURRICULO_1GRAU.itens.map((i) =>
+      reg(i.id, true),
+    )
+    const cheia = montarAtestado({
+      curriculo: CURRICULO_1GRAU,
+      modulos: MODULOS_1GRAU,
+      registros: todos,
+      meta: '1grau',
+      aulasCumpridas: null,
+    })
+    expect(cheia.aptidao).toBe('apto')
+
+    const quaseCheia = montarAtestado({
+      curriculo: CURRICULO_1GRAU,
+      modulos: MODULOS_1GRAU,
+      registros: todos.slice(0, -1),
+      meta: '1grau',
+      aulasCumpridas: null,
+    })
+    expect(quaseCheia.aptidao).toBe('faltam-competencias')
+  })
+
+  it('a folha CONCORDA com `aptidaoAoGrau` chamada direto', () => {
+    // O teste que pega divergencia entre as duas telas: a folha nao pode ter uma
+    // regra propria.
+    const alguns = CURRICULO_1GRAU.itens.slice(0, 10).map((i) => reg(i.id, true))
+    const folha = montarAtestado({
+      curriculo: CURRICULO_1GRAU,
+      modulos: MODULOS_1GRAU,
+      registros: alguns,
+      meta: '1grau',
+      aulasCumpridas: null,
+    })
+    expect(folha.aptidao).toBe(
+      aptidaoAoGrau({ curriculo: CURRICULO_1GRAU, competentes: folha.atestados }),
+    )
+  })
+
+  it('APTO NAO DEPENDE DAS AULAS — "pode se destacar e ficar apto antes do tempo"', () => {
+    /**
+     * Palavras dele. Se as 35 aulas fossem condicao, o aluno que se destaca
+     * ficaria preso pelo calendario da turma — e depois de presenca ser
+     * descartada, `aulasCumpridas` por aluno nunca sera calculavel.
+     */
+    const todos = CURRICULO_1GRAU.itens.map((i) => reg(i.id, true))
+    for (const aulas of [null, 0, 12, 35, 90]) {
+      const f = montarAtestado({
+        curriculo: CURRICULO_1GRAU,
+        modulos: MODULOS_1GRAU,
+        registros: todos,
+        meta: '1grau',
+        aulasCumpridas: aulas,
+      })
+      expect(f.aptidao, `aulas=${aulas}`).toBe('apto')
+    }
   })
 })

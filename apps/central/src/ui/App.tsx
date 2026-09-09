@@ -380,8 +380,6 @@ export function Central({
                 turma={linha.turma}
                 origemDoCurriculo={curriculoDoAtestado.origem}
                 idDoCurriculo={curriculoDoAtestado.id}
-                // `null` porque o app ainda nao conta presenca (fatia 3).
-                aulasCumpridas={null}
                 aoConceder={async (metaConcedida) => {
                   const proxima = metaSeguinte(metaConcedida)
                   // `null` no fim da fila: o que vem depois do azul e outra

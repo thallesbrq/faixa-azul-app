@@ -11,6 +11,7 @@ import type { FirebaseApp } from 'firebase/app'
 import type { Curriculo } from '@faixa-azul/core/domain/curriculo'
 import type { Modulo } from '@faixa-azul/core/domain/types'
 import { useAtestado } from './useAtestado'
+import { useAulasDadas } from './useAulasDadas'
 import { Atestado } from './components/Atestado'
 
 export function FolhaDoAtestado({
@@ -23,7 +24,6 @@ export function FolhaDoAtestado({
   turma,
   origemDoCurriculo,
   idDoCurriculo,
-  aulasCumpridas,
   aoConceder,
 }: {
   app: FirebaseApp
@@ -48,11 +48,20 @@ export function FolhaDoAtestado({
   origemDoCurriculo: 'prova' | 'estudo'
   /** O id do curriculo em uso, para a folha nomear qual lista e. */
   idDoCurriculo: string
-  aulasCumpridas: number | null
   /** Chamado DEPOIS de gravar a graduacao, para a meta do aluno avancar. */
   aoConceder: (metaConcedida: string) => Promise<void>
 }) {
   const a = useAtestado({ app, alunoUid, professorUid })
+
+  /**
+   * AS AULAS DA TURMA SAO LIDAS AQUI, e nao recebidas como prop.
+   *
+   * Era `aulasCumpridas={null}` cravado no `App.tsx`, esperando presenca — que
+   * foi descartada em 09/09/2026. Ler dentro deste componente mantem a leitura
+   * do programa presa a tela que a usa: o `Central` nao le programa nenhum para
+   * mostrar a tabela de alunos.
+   */
+  const aulasDaTurma = useAulasDadas({ app, turma })
 
   return (
     <Atestado
@@ -64,7 +73,7 @@ export function FolhaDoAtestado({
       turma={turma}
       origemDoCurriculo={origemDoCurriculo}
       idDoCurriculo={idDoCurriculo}
-      aulasCumpridas={aulasCumpridas}
+      aulasCumpridas={aulasDaTurma}
       fase={a.fase}
       mensagem={a.mensagem}
       aoAtestar={(e) => void a.atestar(e)}

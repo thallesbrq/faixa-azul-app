@@ -6,15 +6,30 @@
  * foram escritos com as palavras dele. Reagrupar aqui criaria uma segunda
  * linguagem que ninguem na academia fala.
  *
- * ATESTAR PEDE O TEXTO, sempre. Nao e formalidade: `criarCompetencia` e as
- * regras do Firestore recusam registro sem justificativa, porque "atestei" sem
- * dizer o que viu nao ajuda ninguem seis meses depois — e e isso que transforma
- * a folha em evidencia em vez de um punhado de caixinhas marcadas.
+ * ATESTAR E UM CLIQUE, e o texto virou opcional. O registro nunca fica sem
+ * texto — `criarCompetencia` e as regras do Firestore continuam recusando — mas
+ * quem escreve por padrao e o APP, gravando a procedencia ("RGI · 08/09/2026").
+ * O campo obrigatorio produziu a palavra "ok" em cinco das seis primeiras
+ * atestacoes feitas em producao; ele nao produzia justificativa, produzia atrito.
+ * A nota do professor continua ali, atras de um link, para quando ele TIVER algo
+ * a dizer.
  *
- * DOIS REQUISITOS, MOSTRADOS SEPARADOS. As 29 competencias o sistema conta; as
- * 35 aulas nao — ainda. Fundir os dois num unico "apto" faria a tela afirmar
- * algo que ela nao sabe. Enquanto a contagem nao existir, o numero de aulas e
- * pedido ao professor NO ATO de conceder, e o registro guarda que veio dele.
+ * ---------------------------------------------------------------------------
+ * "APTO AO GRAU" PASSOU A SER AFIRMADO — 09/09/2026, decisao dele.
+ *
+ * Este cabecalho dizia o contrario: "fundir os dois num unico 'apto' faria a
+ * tela afirmar algo que ela nao sabe". O que mudou foi o que ela sabe:
+ *
+ *   - PRESENCA FOI DESCARTADA, e com ela a ideia de "aulas cumpridas por aluno".
+ *   - AS AULAS NAO SAO CONDICAO: "pode acontecer de um aluno se destacar e
+ *     conseguir estar apto ao grau antes do tempo" (palavras dele).
+ *
+ * Entao o selo verde e sobre as COMPETENCIAS, calculado por `aptidaoAoGrau` —
+ * uma funcao so, que a tabela da Central tambem usa, para as duas telas nao
+ * poderem discordar. E a contagem de aulas continua na folha, agora com um
+ * numero real, mas rotulada como sendo DA TURMA: o app sabe quantas aulas a RGI
+ * deu e nao sabe a quantas este aluno foi.
+ * ---------------------------------------------------------------------------
  */
 
 import { useState } from 'react'
@@ -26,6 +41,7 @@ import type { RegistroDeGraduacao } from '@faixa-azul/core/nuvem/competencias'
 import type { Curriculo } from '@faixa-azul/core/domain/curriculo'
 import type { Modulo } from '@faixa-azul/core/domain/types'
 import { nomeDaMeta } from '@faixa-azul/core/domain/metas'
+import { nomeDaTurma } from '@faixa-azul/core/domain/turmas'
 import type { FaseDoAtestado } from '../useAtestado'
 import { corDaFaixa, porcento } from '../formato'
 import { faixaDaPontuacao } from '@faixa-azul/core/application/progresso'
@@ -194,10 +210,34 @@ function Conceder({
   aoConceder: (e: { meta: string; texto: string; aulasConfirmadas: number | null }) => void
 }) {
   const [texto, setTexto] = useState('')
-  const [aulas, setAulas] = useState('')
+  /**
+   * `null` = O PROFESSOR AINDA NAO TOCOU no campo, e o valor mostrado vem da
+   * contagem da turma. Guardar `''` como inicial nao serviria: a contagem chega
+   * DEPOIS (leitura do programa), e um `useState(String(...))` capturaria o
+   * `null` do primeiro render e nunca mais atualizaria. Este padrao evita um
+   * `useEffect` de sincronizacao — e efeito que escreve estado a partir de prop
+   * e a familia exata de laco que fez esta tela piscar em producao.
+   */
+  const [tocado, setTocado] = useState<string | null>(null)
   const exigidas = folha.aulas.exigidas
+  const daTurma = folha.aulas.cumpridas
+  const aulas = tocado ?? (daTurma === null ? '' : String(daTurma))
+
   const numeroDeAulas = aulas.trim() === '' ? null : Number(aulas)
-  const aulasValidas =
+  /**
+   * Atende a regra das N aulas? Vira AVISO e nao mais bloqueio.
+   *
+   * ERA `disabled` NO BOTAO, e isso contradizia a regra dele: "pode acontecer de
+   * um aluno se destacar e conseguir estar apto ao grau antes do tempo, mas nao e
+   * regra, e algo esporadico". Com o bloqueio, conceder a esse aluno exigia
+   * digitar um numero de aulas que ele nao fez — ou seja, o campo forcava a
+   * mentira que ele existe para registrar. Pior ainda depois do selo "apto":
+   * a tela afirmava aptidao e travava a concessao na mesma vista.
+   *
+   * Agora o numero abaixo do exigido passa, com o aviso visivel, e fica gravado
+   * como veio — que e o registro honesto da excecao.
+   */
+  const atendeARegra =
     exigidas === null ||
     (numeroDeAulas !== null && Number.isFinite(numeroDeAulas) && numeroDeAulas >= exigidas)
 
@@ -209,8 +249,15 @@ function Conceder({
         {exigidas !== null && (
           <>
             {' '}
-            Falta confirmar as <strong>{exigidas} aulas</strong> — o app ainda não conta
-            presença, então esse número vem de você e fica registrado como tal.
+            A regra pede <strong>{exigidas} aulas</strong>.{' '}
+            {daTurma === null ? (
+              <>Não consegui ler o programa da turma — o número abaixo é seu.</>
+            ) : (
+              <>
+                O campo vem com as <strong>{daTurma}</strong> que a turma já deu; sem
+                presença, o app não sabe a quantas <em>ele</em> foi. Corrija se souber.
+              </>
+            )}
           </>
         )}
       </p>
@@ -223,7 +270,7 @@ function Conceder({
             inputMode="numeric"
             min={0}
             value={aulas}
-            onChange={(e) => setAulas(e.target.value)}
+            onChange={(e) => setTocado(e.target.value)}
             placeholder={String(exigidas)}
           />
         </label>
@@ -239,9 +286,14 @@ function Conceder({
         />
       </label>
 
+      {/* O TEXTO CONTINUA OBRIGATORIO AQUI, ao contrario da atestacao de um item.
+          Conceder graduacao acontece uma vez por grau e e o registro que alguem
+          vai ler anos depois; atestar um item acontece 29 vezes e foi onde o
+          campo obrigatorio produziu a palavra "ok". Frequencia diferente, atrito
+          com peso diferente. */}
       <button
         className="botao"
-        disabled={texto.trim() === '' || !aulasValidas || gravando}
+        disabled={texto.trim() === '' || gravando}
         onClick={() => aoConceder({ meta, texto: texto.trim(), aulasConfirmadas: numeroDeAulas })}
       >
         Conceder o {nomeDaMeta(meta)}
@@ -253,9 +305,13 @@ function Conceder({
         Ao conceder, o registro fica gravado com a data e o seu nome, e a meta dele avança
         para a próxima graduação.
       </p>
-      {exigidas !== null && !aulasValidas && aulas.trim() !== '' && (
+      {/* AVISO E NAO BLOQUEIO: o aluno que se destaca existe, e a excecao fica
+          registrada com o numero real em vez de forcada a um numero falso. */}
+      {exigidas !== null && !atendeARegra && (
         <p className="aviso" style={{ marginTop: 10, marginBottom: 0 }}>
-          A regra pede ao menos {exigidas} aulas.
+          {aulas.trim() === ''
+            ? `Sem número de aulas, o registro vai guardar que o sistema não contou.`
+            : `A regra pede ao menos ${exigidas} aulas, e você está concedendo com ${numeroDeAulas}. Pode conceder — fica gravado assim.`}
         </p>
       )}
     </section>
@@ -331,6 +387,22 @@ export function Atestado({
               {origemDoCurriculo === 'prova'
                 ? nomeDaMeta(meta)
                 : `Competências · ${nomeDaMeta(idDoCurriculo)}`}
+              {/*
+                O SELO "APTO AO GRAU" — decisao dele em 09/09/2026.
+
+                SO PARA CURRICULO DE PROVA (`origemDoCurriculo === 'prova'`), e
+                essa condicao e a segunda metade da guarda. `aptidao` ja recusa
+                curriculo de cartoes; aqui a recusa e outra: quando a lista da
+                meta nao chegou, a folha mostra o curriculo que ele TREINA, e
+                dizer "apto ao 3o grau" por ter completado o de azul afirmaria
+                aptidao a uma prova cuja lista ninguem tem. O aviso logo abaixo
+                diz exatamente isso; o selo nao pode contradize-lo.
+              */}
+              {folha.aptidao === 'apto' && origemDoCurriculo === 'prova' && (
+                <span className="selo-apto" title={`Todas as ${folha.total} competências do ${nomeDaMeta(meta)} estão atestadas`}>
+                  apto ao {nomeDaMeta(meta).toLowerCase()}
+                </span>
+              )}
             </h3>
             <p className="apoio" style={{ margin: '4px 0 0' }}>
               <strong style={{ color: corDaFaixa(faixaDaPontuacao(folha.progresso)) }}>
@@ -366,19 +438,36 @@ export function Atestado({
           </p>
         )}
 
-        {/* AS AULAS SAO REQUISITO SEPARADO, e a tela nao finge saber. `—` aqui
-            significa "o app nao conta isso ainda" — nao zero. */}
+        {/*
+          AS AULAS SAO REQUISITO SEPARADO, E O NUMERO E DA TURMA.
+
+          O rotulo diz "a turma já deu" e nao "cumpridas", e a diferenca nao e
+          estilo: sem presenca, o app sabe quantas aulas a RGI DEU e nao sabe a
+          quantas ESTE aluno foi. Chamar de "cumpridas" faria a folha afirmar
+          presenca — a mesma coisa que a matriz de acompanhamento ja avisa que
+          nao sabe.
+
+          E o numero nao condiciona o selo "apto": "pode acontecer de um aluno se
+          destacar e conseguir estar apto ao grau antes do tempo" (palavras dele).
+          Ele esta aqui como CONTEXTO — 29 de 29 atestadas com 3 aulas dadas
+          merece um segundo olhar, e sem esta linha a folha nao daria o sinal.
+        */}
         {folha.aulas.exigidas !== null && (
           <p className="apoio" style={{ marginTop: 12, marginBottom: 0 }}>
-            Aulas exigidas: <strong>{folha.aulas.exigidas}</strong> ·{' '}
-            {faltamAulas === null ? (
+            Aulas exigidas pelo {nomeDaMeta(meta)}: <strong>{folha.aulas.exigidas}</strong> ·{' '}
+            {folha.aulas.cumpridas === null ? (
               <>
-                cumpridas: <strong>—</strong> (o app ainda não conta presença; confira você)
+                a turma já deu: <strong>—</strong> (não consegui ler o programa da turma;
+                confira você)
               </>
             ) : (
               <>
-                cumpridas: <strong>{folha.aulas.cumpridas}</strong>
-                {faltamAulas > 0 ? ` · faltam ${faltamAulas}` : ' · requisito fechado'}
+                a <strong>{nomeDaTurma(turma)}</strong> já deu{' '}
+                <strong>{folha.aulas.cumpridas}</strong>
+                {faltamAulas !== null && faltamAulas > 0
+                  ? ` · faltam ${faltamAulas} à turma`
+                  : ' · a turma fechou as aulas'}
+                . Quantas <em>ele</em> assistiu, o app não sabe.
               </>
             )}
           </p>
@@ -402,7 +491,7 @@ export function Atestado({
         )}
       </section>
 
-      {folha.competenciasCompletas && !jaConcedida && (
+      {folha.aptidao === 'apto' && !jaConcedida && (
         <Conceder folha={folha} meta={meta} gravando={gravando} aoConceder={aoConceder} />
       )}
 

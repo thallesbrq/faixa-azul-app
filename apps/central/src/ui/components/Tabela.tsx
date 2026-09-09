@@ -20,6 +20,7 @@
 import type { GrupoTecnico } from '@faixa-azul/core/domain/taxonomia'
 import { ROTULO_GRUPO } from '@faixa-azul/core/domain/taxonomia'
 import { nomeDaTurma } from '@faixa-azul/core/domain/turmas'
+import { nomeDaMeta } from '@faixa-azul/core/domain/metas'
 import type { LinhaDaCentral } from '@faixa-azul/core/application/central'
 import { atividade, corDaFaixa, numero, porcento } from '../formato'
 import { faixaDaPontuacao } from '@faixa-azul/core/application/progresso'
@@ -133,6 +134,28 @@ export function Tabela({
                     title="Dado semeado para teste, não treinado no tatame"
                   >
                     demo
+                  </span>
+                )}
+                {/*
+                  APTO AO GRAU, JUNTO DO NOME — decisao dele em 09/09/2026.
+
+                  AQUI E NAO SO NA FOLHA porque a pergunta ao abrir a Central e
+                  "quem esta pronto?", e responde-la exigia abrir a folha de cada
+                  aluno e comparar de cabeca.
+
+                  A ETIQUETA SO APARECE EM `apto`. Os outros tres estados de
+                  `Aptidao` nao viram etiqueta nenhuma: `faltam-competencias` e o
+                  estado normal de todo aluno e encheria a tabela de ruido;
+                  `nao-se-aplica` e a maioria das linhas (quem estuda azul e
+                  medido por cartao); e `nao-lido` e falha de leitura, que a
+                  coluna Progresso ja mostra como `—` com o motivo.
+                */}
+                {l.aptidao === 'apto' && (
+                  <span
+                    className="etiqueta etiqueta--apto"
+                    title={`Todas as competências do ${nomeDaMeta(l.meta)} estão atestadas. As aulas são requisito separado — confira antes de conceder.`}
+                  >
+                    apto ao {nomeDaMeta(l.meta).toLowerCase()}
                   </span>
                 )}
               </td>

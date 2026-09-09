@@ -527,6 +527,35 @@
   color: var(--amarelo-atencao);
 }
 
+/* APTO AO GRAU. Verde e a unica cor forte da tabela, e e de proposito: esta
+   etiqueta aparece em zero linhas na maioria dos dias e e a que o professor
+   precisa achar sem procurar. */
+.etiqueta--apto {
+  margin-left: 8px;
+  vertical-align: middle;
+  background: var(--verde-suave);
+  border-color: var(--verde-sucesso);
+  color: var(--verde-sucesso);
+  font-weight: 700;
+}
+
+/* O selo na folha do atestado. Mesmo verde, tamanho de titulo — ali ele nao
+   compete com nada, e a folha e onde o professor decide conceder. */
+.selo-apto {
+  margin-left: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--verde-suave);
+  border: 1px solid var(--verde-sucesso);
+  color: var(--verde-sucesso);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .etiqueta--demo {
   background: var(--laranja-suave);
   border-color: var(--laranja-texto);

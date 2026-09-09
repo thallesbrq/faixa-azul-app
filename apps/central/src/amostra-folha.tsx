@@ -17,11 +17,40 @@ import { CURRICULO_1GRAU, modulosDoCurriculo } from '@faixa-azul/core/seed/curri
 import '@faixa-azul/core/tokens.css'
 import './ui/central.css'
 
+/** Um registro de atestacao, como o `useAtestado` devolveria. */
+const atestacao = (itemId: string, n: number): RegistroDeCompetencia => ({
+  id: `r-${itemId}-${n}`,
+  itemId,
+  competente: true,
+  texto: 'RGI · 08/09/2026',
+  origem: 'aula_regular',
+  professorUid: 'prof',
+  registradaEm: '2026-09-08T11:00:00.000Z',
+})
+
 function Amostra() {
   const [registros, setRegistros] = useState<RegistroDeCompetencia[]>([])
 
+  /**
+   * ATALHO PARA O ESTADO "APTO", e ele existe porque sem atalho a unica forma de
+   * conferir o selo verde e o bloco de conceder e clicar 29 vezes. Foi
+   * exatamente esse custo que deixou o defeito do campo obrigatorio escapar: a
+   * tela nao era aberta porque abrir era caro.
+   */
+  const atestarTudo = () =>
+    setRegistros(CURRICULO_1GRAU.itens.map((i, n) => atestacao(i.id, n)))
+
   return (
     <main className="painel">
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button className="botao botao--pequeno" onClick={atestarTudo}>
+          atestar os 29 (ver o estado “apto”)
+        </button>
+        <button className="botao botao--pequeno botao--secundario" onClick={() => setRegistros([])}>
+          limpar
+        </button>
+      </div>
+
       <Atestado
         curriculo={CURRICULO_1GRAU}
         modulos={modulosDoCurriculo('1grau')}
@@ -31,7 +60,9 @@ function Amostra() {
         turma="RGI"
         origemDoCurriculo="prova"
         idDoCurriculo="1grau"
-        aulasCumpridas={null}
+        /* 12 de 35: o caso que a linha das aulas existe para mostrar — apto pelas
+           competencias com a turma no meio do caminho. */
+        aulasCumpridas={12}
         fase="pronta"
         mensagem={null}
         aoAtestar={(e: { itemId: string; competente: boolean; texto: string; origem: OrigemDaCompetencia }) =>

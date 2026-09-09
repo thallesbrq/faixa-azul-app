@@ -44,6 +44,8 @@ import {
   prontidao,
 } from './progresso'
 import type { FaixaDeCor, ProgressoDeGrupo } from './progresso'
+import { aptidaoAoGrau } from './atestado'
+import type { Aptidao } from './atestado'
 import { resumoDoAluno } from './torre'
 import type { Situacao } from './torre'
 import { situacaoDoAluno } from './torre'
@@ -165,6 +167,17 @@ export interface LinhaDaCentral {
    * distinguir junta o que o aluno faz sozinho com o que o professor viu.
    */
   medidaUsada: 'cartoes' | 'atestado' | null
+  /**
+   * Apto ao grau que ele persegue, pela regra unica de `aptidaoAoGrau`.
+   *
+   * NA LINHA E NAO SO NA FOLHA porque a pergunta do professor ao abrir a Central
+   * e "quem esta pronto?", e responde-la hoje exige abrir a folha de cada aluno.
+   * Com quatro alunos ja e quatro cliques e uma comparacao de cabeca.
+   *
+   * `nao-se-aplica` na maioria das linhas, e isso e o certo: quem estuda azul e
+   * medido por cartoes, e "apto" nao e afirmacao que dominio de cartao sustenta.
+   */
+  aptidao: Aptidao
   motivo: MotivoSemProgresso | null
   /** Faixa de cor do progresso, ou `null` junto com ele. */
   faixa: FaixaDeCor | null
@@ -250,6 +263,7 @@ function linhaVazia(
     temParticulares: entrada.temParticulares ?? false,
     progresso: null,
     medidaUsada: null,
+    aptidao: 'nao-se-aplica',
     motivo,
     faixa: null,
     porGrupo: {},
@@ -373,6 +387,7 @@ export function linhaDoAluno({
       ...base,
       progresso: null,
       medidaUsada: null,
+      aptidao: 'nao-se-aplica',
       motivo: 'sem-curriculo',
       faixa: null,
       porGrupo: {},
@@ -406,6 +421,7 @@ export function linhaDoAluno({
       // numero, e ele precisa aparecer: e o primeiro dia de todo aluno novo.
       progresso: competentes === null || total === 0 ? null : competentes / total,
       medidaUsada: 'atestado',
+      aptidao: aptidaoAoGrau({ curriculo, competentes }),
       motivo: competentes === null || total === 0 ? 'atestado-nao-lido' : null,
       faixa: competentes === null || total === 0 ? null : faixaDaPontuacao(competentes / total),
       // POR GRUPO FICA VAZIO DE PROPOSITO. As colunas da tabela sao dominio de
@@ -430,6 +446,9 @@ export function linhaDoAluno({
     ...base,
     progresso: geral.dominio,
     medidaUsada: 'cartoes',
+    /* `nao-se-aplica` e nao um calculo: dominio de cartao nao sustenta a palavra
+       "apto". Ver as ressalvas em `aptidaoAoGrau`. */
+    aptidao: 'nao-se-aplica',
     motivo: null,
     faixa: faixaDaPontuacao(geral.dominio),
     porGrupo,
