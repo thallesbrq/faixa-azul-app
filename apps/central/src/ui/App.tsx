@@ -41,7 +41,9 @@ import { Planner } from './Planner'
 import { GradeDaTurma } from './GradeDaTurma'
 import { AcompanhamentoDaTurma } from './AcompanhamentoDaTurma'
 import { usePrograma } from './usePrograma'
-import { ITENS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
+import { ITENS_1GRAU, MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
+import { equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
+import { bolsaoEmSecoes } from '@faixa-azul/core/application/bolsao'
 import { horaCurta } from './formato'
 import {
   CONTADORES,
@@ -621,6 +623,26 @@ function Cabecalho({ quem, aoSair }: { quem?: string; aoSair?: () => void }) {
 const ITENS_CONHECIDOS = [...CURRICULO_AZUL.itens, ...ITENS_1GRAU]
 
 /**
+ * O BOLSAO EM SECOES, derivado UMA VEZ no modulo.
+ *
+ * MESMO MOTIVO DE `ITENS_CONHECIDOS` ACIMA, e aqui pesa mais: `bolsaoEmSecoes`
+ * agrupa 110 itens, monta dois mapas e copia 12 objetos para acrescentar alias.
+ * Fazer isso a cada tecla digitada na busca do bolsao seria trabalho jogado fora
+ * — e um array novo por render e a familia exata de instabilidade que fez esta
+ * tela piscar em producao.
+ *
+ * SO FAZ SENTIDO NO MODULO PORQUE O CURRICULO E FIXO. No dia em que a turma
+ * decidir o curriculo (o de roxa esta a caminho), isto vira `useMemo` com a
+ * turma na dependencia.
+ */
+const SECOES_DO_BOLSAO = bolsaoEmSecoes({
+  requisitos: ITENS_1GRAU,
+  modulosDosRequisitos: MODULOS_1GRAU,
+  catalogo: CURRICULO_AZUL.itens,
+  equivalentes: equivalentesDe,
+})
+
+/**
  * O planner de uma turma. Existe como componente para o `usePrograma` viver
  * dentro dele — ver o comentario da rota em `App`.
  */
@@ -636,8 +658,14 @@ function PlannerDaTurma({
   const programa = usePrograma({
     app,
     turma,
-    // O BOLSAO E O CURRICULO DE AZUL INTEIRO (81 itens), como pedido.
-    itensDoBolsao: CURRICULO_AZUL.itens,
+    /**
+     * O BOLSAO EM DUAS SECOES: os 29 requisitos do 1o grau e o catalogo de azul.
+     *
+     * ERA SO O CATALOGO DE AZUL, e isso bloqueava a necessidade numero um: "o
+     * planner serve para garantir que esses itens estao nas aulas da RGI", e os
+     * 29 nao estavam no bolsao — o professor nao conseguia programar nenhum.
+     */
+    secoesDoBolsao: SECOES_DO_BOLSAO,
     itensConhecidos: ITENS_CONHECIDOS,
     itensDo1Grau: ITENS_1GRAU,
   })

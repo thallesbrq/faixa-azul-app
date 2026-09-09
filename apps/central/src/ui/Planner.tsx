@@ -46,7 +46,6 @@ import {
   rotuloDaSemana,
   slotsDaSemana,
 } from '@faixa-azul/core/application/agenda'
-import { ROTULO_BLOCO } from '@faixa-azul/core/domain/taxonomia'
 import { useSemana } from './useSemana'
 import { GradeDeHorario } from './components/GradeDeHorario'
 import { nomeDaTurma } from '@faixa-azul/core/domain/turmas'
@@ -111,18 +110,29 @@ export function Planner({
   const bolsaoFiltrado = useMemo(() => {
     const t = buscaNoBolsao.trim().toLowerCase()
     if (t === '') return planner.bolsao
-    return planner.bolsao
-      .map((g) => ({
-        ...g,
-        itens: g.itens.filter(
-          (i) =>
-            i.nome.toLowerCase().includes(t) ||
-            i.slot.toLowerCase().includes(t) ||
-            i.posicao.toLowerCase().includes(t),
-        ),
-      }))
-      .filter((g) => g.itens.length > 0)
+    return planner.bolsao.map((secao) => ({
+      ...secao,
+      grupos: secao.grupos
+        .map((g) => ({
+          ...g,
+          itens: g.itens.filter(
+            (i) =>
+              i.nome.toLowerCase().includes(t) ||
+              i.slot.toLowerCase().includes(t) ||
+              i.posicao.toLowerCase().includes(t) ||
+              // OS ALIASES ENTRAM NA BUSCA, e sem eles a deduplicacao custaria um
+              // vocabulario: "Baiana" saiu do catalogo por ser o mesmo item que
+              // "Double leg", e sem esta linha a palavra sumiria do bolsao.
+              i.aliases.some((a) => a.toLowerCase().includes(t)),
+          ),
+        }))
+        .filter((g) => g.itens.length > 0),
+    }))
+    // A SECAO VAZIA FICA, com o cabecalho dizendo zero. Some-la faria "nada
+    // encontrado no 1o grau" parecer "o 1o grau nao existe neste bolsao".
   }, [planner.bolsao, buscaNoBolsao])
+
+  const nadaEncontrado = bolsaoFiltrado.every((s) => s.grupos.length === 0)
 
   /**
    * slot -> aula, para a modal de cada card saber o que ja esta ocupado.
@@ -186,7 +196,7 @@ export function Planner({
       <div className="planner-corpo">
         {/* --------------------------------------------------------- bolsao */}
         <aside className="planner-bolsao">
-          <h2>Currículo de azul</h2>
+          <h2>O que pôr na aula</h2>
           <p className="apoio">
             {/* O CATALOGO NAO ENCOLHE, e a tela precisa dizer isso: um professor
                 que conhece o `Montar` do app espera o item sair da lista quando
@@ -201,40 +211,82 @@ export function Planner({
             placeholder="Buscar técnica ou posição…"
             aria-label="Buscar no currículo"
           />
-          {bolsaoFiltrado.length === 0 && <p className="apoio">Nada encontrado.</p>}
-          {bolsaoFiltrado.map((g) => (
-            <section key={g.bloco} className="bolsao-grupo">
-              <h3>
-                {ROTULO_BLOCO[g.bloco]} <span>{g.itens.length}</span>
-              </h3>
-              <ul>
-                {g.itens.map((i) => (
-                  <li key={i.id}>
-                    <button
-                      className="chip-item"
-                      onClick={() => aoPorItem(selecionada, i.id)}
-                      disabled={aula === null || selecionada === AULA_EXPERIMENTAL}
-                      title={`${i.posicao} · ${i.slot}${i.nome ? ` — ${i.nome}` : ''}`}
-                    >
-                      {i.nome || i.slot}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          {nadaEncontrado && <p className="apoio">Nada encontrado.</p>}
 
-          {/* O QUE FICOU FORA DO PROGRAMA e a informacao mais util desta tela
-              para quem esta fechando um grau: e a lista do que o aluno nunca vai
-              ter visto. Uma contagem sem nomes seria um numero sem endereco. */}
-          {planner.itensForaDoPrograma.length > 0 && (
-            <section className="bolsao-grupo bolsao-grupo--fora">
-              <h3>
-                Fora do programa <span>{planner.itensForaDoPrograma.length}</span>
+          {/*
+            DUAS SECOES, E OS REQUISITOS VEM PRIMEIRO.
+
+            Antes o bolsao era so o catalogo de azul, e os 29 requisitos do 1o
+            grau nao estavam nele: o professor nao conseguia programar NENHUM
+            deles — so tirar os que a sugestao pos la. Isso bloqueava a
+            necessidade que a tela existe para atender: "garantir que esses itens
+            estao nas aulas da RGI".
+
+            A ORDEM IMPORTA: montando a aula 14, a primeira coisa que ele ve e o
+            que a prova cobra. No catalogo, a mesma informacao so aparecia depois,
+            na matriz de acompanhamento — quando ja nao havia o que fazer naquela
+            aula.
+          */}
+          {bolsaoFiltrado.map((secao) => (
+            <div key={secao.id} className="bolsao-secao">
+              <h3 className="bolsao-secao-titulo">
+                {secao.id === 'requisitos' ? (
+                  <>
+                    Exigido no 1º grau <span>{secao.total}</span>
+                  </>
+                ) : (
+                  <>
+                    Resto do currículo de azul <span>{secao.total}</span>
+                  </>
+                )}
               </h3>
-              <p className="apoio">Não aparecem em nenhuma aula das 80.</p>
-            </section>
-          )}
+
+              {/*
+                O QUE FALTA DESTA SECAO — a informacao mais util da tela para quem
+                esta fechando um grau: a lista do que o aluno nunca vai ter visto.
+
+                POR SECAO E NAO SOMADO, e o numero antigo era sobre a coisa
+                errada: "Fora do programa 57" contava os 81 de azul menos os
+                usados. Cinquenta e sete o que? A pergunta e "falta algum dos 29?",
+                e ela estava diluida no catalogo inteiro.
+              */}
+              {secao.fora.length > 0 && (
+                <p
+                  className={
+                    secao.id === 'requisitos' ? 'bolsao-falta bolsao-falta--forte' : 'bolsao-falta'
+                  }
+                  title={secao.fora.map((i) => i.nome || i.slot).join(', ')}
+                >
+                  {secao.fora.length} fora do programa
+                  {secao.id === 'requisitos' && ' — o aluno não vai ver'}
+                </p>
+              )}
+
+              {secao.grupos.map((g) => (
+                <section key={g.id} className="bolsao-grupo">
+                  <h4>
+                    {g.nome} <span>{g.itens.length}</span>
+                  </h4>
+                  <ul>
+                    {g.itens.map((i) => (
+                      <li key={i.id}>
+                        <button
+                          className="chip-item"
+                          onClick={() => aoPorItem(selecionada, i.id)}
+                          disabled={aula === null || selecionada === AULA_EXPERIMENTAL}
+                          title={`${i.posicao} · ${i.slot}${i.nome ? ` — ${i.nome}` : ''}${
+                            i.aliases.length > 0 ? ` (também: ${i.aliases.join(', ')})` : ''
+                          }`}
+                        >
+                          {i.nome || i.slot}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          ))}
         </aside>
 
         {/* ---------------------------------------------------------- aulas */}

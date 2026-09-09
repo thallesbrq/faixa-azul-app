@@ -33,11 +33,19 @@ import { usePrograma } from './ui/usePrograma'
 import type { Programas } from '@faixa-azul/core/nuvem/programas'
 import type { AulaDoPrograma } from '@faixa-azul/core/application/programa'
 import { CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
-import { ITENS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
+import { ITENS_1GRAU, MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
+import { equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
+import { bolsaoEmSecoes } from '@faixa-azul/core/application/bolsao'
 import '@faixa-azul/core/tokens.css'
 import './ui/central.css'
 
-const ITENS_DO_BOLSAO = CURRICULO_AZUL.itens
+/** As mesmas duas secoes que o `App` monta, para a amostra ver o bolsao real. */
+const SECOES_DO_BOLSAO = bolsaoEmSecoes({
+  requisitos: ITENS_1GRAU,
+  modulosDosRequisitos: MODULOS_1GRAU,
+  catalogo: CURRICULO_AZUL.itens,
+  equivalentes: equivalentesDe,
+})
 /** Fixado na carga do modulo: `new Date()` por render alimenta laco de render. */
 const HOJE = new Date()
 
@@ -82,7 +90,7 @@ function Amostra() {
   const programa = usePrograma({
     app,
     turma: 'RGI',
-    itensDoBolsao: ITENS_DO_BOLSAO,
+    secoesDoBolsao: SECOES_DO_BOLSAO,
     /**
      * AS DUAS INSTABILIDADES DE PROPOSITO, e esta e a razao de ser desta pagina.
      *

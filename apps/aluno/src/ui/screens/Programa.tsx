@@ -88,7 +88,6 @@ export function Programa({
         montarPlanner({
           turma,
           aulas: estado.aulas,
-          itensDoBolsao: CURRICULO_AZUL.itens,
           itensConhecidos: ITENS_CONHECIDOS,
         }).aulas,
       ),

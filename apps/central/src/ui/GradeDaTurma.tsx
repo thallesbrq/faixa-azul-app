@@ -58,7 +58,6 @@ export function GradeDaTurma({
   const programa = usePrograma({
     app,
     turma,
-    itensDoBolsao: CURRICULO_AZUL.itens,
     itensConhecidos: ITENS_CONHECIDOS,
     itensDo1Grau: ITENS_1GRAU,
   })

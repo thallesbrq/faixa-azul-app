@@ -20,6 +20,16 @@ import {
 } from './programa'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '../seed/primeiro-grau'
 import { CURRICULO_AZUL } from '../seed/curriculos'
+import { bolsaoEmSecoes } from './bolsao'
+import { equivalentesDe } from '../seed/equivalencia-1grau'
+
+/** O bolsao real que a Central passa: os 29 requisitos e o catalogo de azul. */
+const SECOES = bolsaoEmSecoes({
+  requisitos: ITENS_1GRAU,
+  modulosDosRequisitos: MODULOS_1GRAU,
+  catalogo: CURRICULO_AZUL.itens,
+  equivalentes: equivalentesDe,
+})
 
 describe('a forma do programa', () => {
   it('vai da aula 00 a 80: experimental + 35 do 1o grau + 45 seguintes', () => {
@@ -170,7 +180,7 @@ describe('sugestao do 1o grau', () => {
 describe('montarPlanner', () => {
   const base = {
     turma: 'RGI',
-    itensDoBolsao: CURRICULO_AZUL.itens,
+    secoesDoBolsao: SECOES,
     // Os 29 do 1o grau NAO estao no curriculo de azul: ids proprios (ADR-016).
     itensConhecidos: [...CURRICULO_AZUL.itens, ...ITENS_1GRAU],
   }
@@ -195,7 +205,7 @@ describe('montarPlanner', () => {
       ...base,
       aulas: [{ ...aulaVazia(4), itemIds: [um.id] }],
     })
-    const conta = (e: typeof vazio) => e.bolsao.reduce((n, g) => n + g.itens.length, 0)
+    const conta = (e: typeof vazio) => e.bolsao.reduce((n, s) => n + s.total, 0)
     expect(conta(usado)).toBe(conta(vazio))
   })
 
@@ -219,25 +229,59 @@ describe('montarPlanner', () => {
     expect(e.aulas.find((a) => a.numero === 3)?.desconhecidos).toEqual(['fantasma'])
   })
 
-  it('lista o que ficou FORA do programa, com nome e nao so contagem', () => {
-    // "faltam 6 itens" e um numero sem endereco. Para fechar um grau, o
-    // professor precisa da lista do que o aluno nunca vai ter visto.
+  it('lista o que ficou FORA do programa POR SECAO, com nome e nao so contagem', () => {
+    /**
+     * "faltam 6 itens" e um numero sem endereco. Para fechar um grau, o professor
+     * precisa da lista do que o aluno nunca vai ter visto.
+     *
+     * POR SECAO E NAO SOMADO, e o numero antigo era sobre a coisa errada: contava
+     * os 81 de azul menos os usados, e mostrava 57 na RGI. A pergunta dele e
+     * "falta algum dos 29 do 1o grau?", e a resposta estava diluida no catalogo.
+     */
     const e = montarPlanner({ ...base, aulas: [] })
-    expect(e.itensForaDoPrograma.length).toBe(
-      CURRICULO_AZUL.itens.filter((i) => i.ativo).length,
-    )
-    const um = e.itensForaDoPrograma[0]
+    const requisitos = e.bolsao.find((s) => s.id === 'requisitos')!
+    const catalogo = e.bolsao.find((s) => s.id === 'catalogo')!
+    expect(requisitos.fora).toHaveLength(29)
+    expect(catalogo.fora).toHaveLength(69)
+
+    const um = requisitos.fora[0]
     const depois = montarPlanner({ ...base, aulas: [{ ...aulaVazia(40), itemIds: [um.id] }] })
-    expect(depois.itensForaDoPrograma.map((i) => i.id)).not.toContain(um.id)
+    const foraDepois = depois.bolsao.find((s) => s.id === 'requisitos')!.fora
+    expect(foraDepois.map((i) => i.id)).not.toContain(um.id)
+    expect(foraDepois).toHaveLength(28)
   })
 
-  it('o bolsao cobre os 81 itens ativos — nenhum bloco fica sem grupo', () => {
-    // Mesmo alarme de `montagem`: item que nao cai em bloco nenhum desaparece da
-    // tela de escolha sem aviso.
+  it('o bolsao oferece os 29 requisitos E o catalogo — nenhum item desaparece', () => {
+    /**
+     * O DEFEITO QUE ESTE TESTE IMPEDE, e ele bloqueava a necessidade numero um.
+     *
+     * O bolsao recebia so `CURRICULO_AZUL.itens`, e os 29 do 1o grau nao estavam
+     * nele: o professor nao conseguia programar NENHUM deles. Pior, passar os 29
+     * pelo agrupamento por bloco descartaria 17 em SILENCIO — as posicoes deles
+     * (`Educativos`, `100 Kilos`, `Montada`, `Costas`) nao caem em bloco nenhum
+     * da taxonomia de azul. Ver `bolsaoEmSecoes`.
+     */
     const e = montarPlanner({ ...base, aulas: [] })
-    const noBolsao = e.bolsao.reduce((n, g) => n + g.itens.length, 0)
-    expect(noBolsao).toBe(CURRICULO_AZUL.itens.filter((i) => i.ativo).length)
-    expect(noBolsao).toBe(81)
+    expect(e.bolsao.map((s) => s.id)).toEqual(['requisitos', 'catalogo'])
+    expect(e.bolsao.find((s) => s.id === 'requisitos')!.total).toBe(29)
+    expect(e.bolsao.find((s) => s.id === 'catalogo')!.total).toBe(69)
+  })
+
+  it('SEM secoes o planner ainda resolve nomes — o caso da Grade e do app', () => {
+    /**
+     * `GradeDaTurma` e a tela `Programa` do app do aluno chamam `montarPlanner`
+     * so para resolver NOMES de item, e nao desenham bolsao. Antes passavam os 81
+     * itens de azul para serem agrupados por bloco a cada render e o resultado
+     * jogado fora.
+     */
+    const um = CURRICULO_AZUL.itens.find((i) => i.ativo)!
+    const e = montarPlanner({
+      turma: 'RGI',
+      aulas: [{ ...aulaVazia(4), itemIds: [um.id] }],
+      itensConhecidos: CURRICULO_AZUL.itens,
+    })
+    expect(e.bolsao).toEqual([])
+    expect(e.aulas.find((a) => a.numero === 4)?.itens.map((i) => i.id)).toEqual([um.id])
   })
 })
 
@@ -282,7 +326,7 @@ describe('o "+" — rotulo pontual', () => {
     const e = montarPlanner({
       turma: 'RGI',
       aulas: [com],
-      itensDoBolsao: CURRICULO_AZUL.itens,
+      secoesDoBolsao: SECOES,
       itensConhecidos: CURRICULO_AZUL.itens,
     })
     const aula = e.aulas.find((a) => a.numero === 4)!
@@ -290,7 +334,12 @@ describe('o "+" — rotulo pontual', () => {
     // Nao virou item:
     expect(aula.itens).toEqual([])
     // E nao entrou no catalogo:
-    expect(e.bolsao.flatMap((g) => g.itens).some((i) => i.nome === 'X')).toBe(false)
+    expect(
+      e.bolsao
+        .flatMap((s) => s.grupos)
+        .flatMap((g) => g.itens)
+        .some((i) => i.nome === 'X'),
+    ).toBe(false)
   })
 })
 
@@ -314,7 +363,7 @@ describe('edicoes da aula', () => {
     const e = montarPlanner({
       turma: 'RGI',
       aulas: [a4, a14],
-      itensDoBolsao: [],
+      secoesDoBolsao: [],
       itensConhecidos: [
         {
           id: 'i1', moduloId: 'm', posicao: 'Guarda Fechada', slot: 's', categoria: 'c',
@@ -352,7 +401,7 @@ describe('os modulos do 1o grau', () => {
 describe('resumoDasAulas', () => {
   const base = {
     turma: 'RGI',
-    itensDoBolsao: CURRICULO_AZUL.itens,
+    secoesDoBolsao: SECOES,
     itensConhecidos: [...CURRICULO_AZUL.itens, ...ITENS_1GRAU],
   }
 

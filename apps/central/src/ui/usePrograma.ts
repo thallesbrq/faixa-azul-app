@@ -58,6 +58,7 @@ import {
   tirarRotulo,
 } from '@faixa-azul/core/application/programa'
 import type { AulaDoPrograma, EstadoDoPlanner, RotuloDaAula } from '@faixa-azul/core/application/programa'
+import type { SecaoDoBolsao } from '@faixa-azul/core/application/bolsao'
 import type { TechniqueItem } from '@faixa-azul/core/domain/types'
 import { contar } from './diagnostico'
 
@@ -72,14 +73,21 @@ export interface EstadoDoProgramaNaTela {
 export function usePrograma({
   app,
   turma,
-  itensDoBolsao,
+  secoesDoBolsao = [],
   itensConhecidos,
   itensDo1Grau,
   abrir = abrirProgramas,
 }: {
   app: FirebaseApp
   turma: string
-  itensDoBolsao: readonly TechniqueItem[]
+  /**
+   * O bolsao ja em secoes — ver `bolsaoEmSecoes`.
+   *
+   * OPCIONAL: `GradeDaTurma` usa este hook so para resolver NOMES de item e nao
+   * desenha bolsao nenhum. Antes ela passava os 81 itens de azul para serem
+   * agrupados por bloco a cada render e o resultado jogado fora.
+   */
+  secoesDoBolsao?: readonly SecaoDoBolsao[]
   itensConhecidos: readonly TechniqueItem[]
   /** Os 29 do 1o grau, para o botao de aplicar a sugestao. */
   itensDo1Grau: readonly TechniqueItem[]
@@ -152,8 +160,8 @@ export function usePrograma({
    * na direcao errada.
    */
   const planner = useMemo(
-    () => montarPlanner({ turma, aulas, itensDoBolsao, itensConhecidos }),
-    [turma, aulas, itensDoBolsao, itensConhecidos],
+    () => montarPlanner({ turma, aulas, secoesDoBolsao, itensConhecidos }),
+    [turma, aulas, secoesDoBolsao, itensConhecidos],
   )
 
   /**

@@ -31,9 +31,8 @@
  */
 
 import type { TechniqueItem } from '../domain/types'
-import { ORDEM_BLOCO, blocoDaPosicao } from '../domain/taxonomia'
-import type { BlocoDoCurriculo } from '../domain/taxonomia'
 import { paresDoCirculo, tamanhosEquilibrados } from '../domain/circulo'
+import type { SecaoDoBolsao } from './bolsao'
 
 /** A aula experimental. Numero 0 para nao competir com a aula 1 do programa. */
 export const AULA_EXPERIMENTAL = 0
@@ -337,9 +336,9 @@ export function sugestaoDo1Grau(itens: readonly TechniqueItem[]): Map<number, st
 // O estado que a tela desenha
 // ---------------------------------------------------------------------------
 
-export interface GrupoDoBolsaoDoPrograma {
-  bloco: BlocoDoCurriculo
-  itens: TechniqueItem[]
+/** Uma secao do bolsao, com o que dela ficou FORA de todas as aulas. */
+export interface SecaoNoPlanner extends SecaoDoBolsao {
+  fora: TechniqueItem[]
 }
 
 export interface AulaNoPlanner {
@@ -358,32 +357,41 @@ export interface EstadoDoPlanner {
   turma: string
   aulas: AulaNoPlanner[]
   /**
-   * O bolsao, agrupado pelos blocos do curriculo, na ordem do exame.
+   * O bolsao EM SECOES: os requisitos da prova primeiro, o catalogo depois.
    *
    * NAO ENCOLHE conforme os itens sao usados, e essa e a diferenca central em
    * relacao a `montagem.ts`. La o bolsao e um estoque: cada item tem um lugar so
    * e sai da lista quando e posto numa aula. Aqui repeticao e o metodo, entao o
    * bolsao e um CATALOGO — a guarda fechada continua disponivel depois de
    * programada na aula 4, porque ela vai voltar na aula 14.
+   *
+   * DUAS SECOES porque so o catalogo de azul nao bastava: os 29 requisitos do 1o
+   * grau nao estavam no bolsao, e o professor nao conseguia programar nenhum
+   * deles — ver `bolsaoEmSecoes`, que monta isto.
    */
-  bolsao: GrupoDoBolsaoDoPrograma[]
+  bolsao: SecaoNoPlanner[]
   /** Quantas aulas tem pelo menos um item ou rotulo. */
   aulasComConteudo: number
-  /** Itens do curriculo que nao aparecem em NENHUMA aula. */
-  itensForaDoPrograma: TechniqueItem[]
 }
 
 export function montarPlanner({
   turma,
   aulas,
-  itensDoBolsao,
+  secoesDoBolsao = [],
   itensConhecidos,
 }: {
   turma: string
   /** O que esta guardado. Aula ausente vira aula vazia. */
   aulas: readonly AulaDoPrograma[]
-  /** O catalogo que a tela oferece — o curriculo de azul inteiro. */
-  itensDoBolsao: readonly TechniqueItem[]
+  /**
+   * O que a tela OFERECE, ja em secoes — vem de `bolsaoEmSecoes`.
+   *
+   * OPCIONAL, e o padrao vazio serve a quem chama `montarPlanner` so para
+   * resolver NOMES de item: `GradeDaTurma` e a tela `Programa` do app do aluno
+   * nao desenham bolsao nenhum, e antes passavam os 81 itens de azul para serem
+   * agrupados por bloco a cada render e o resultado jogado fora.
+   */
+  secoesDoBolsao?: readonly SecaoDoBolsao[]
   /**
    * TODOS os itens que podem ser referenciados, e nao so os do bolsao.
    *
@@ -418,33 +426,28 @@ export function montarPlanner({
     }
   })
 
-  const porBloco = new Map<BlocoDoCurriculo, TechniqueItem[]>()
-  for (const item of itensDoBolsao) {
-    if (!item.ativo) continue
-    const b = blocoDaPosicao(item.posicao)
-    if (!b) continue
-    const lista = porBloco.get(b)
-    if (lista) lista.push(item)
-    else porBloco.set(b, [item])
-  }
-  const bolsao = ORDEM_BLOCO.flatMap((bloco) => {
-    const itens = porBloco.get(bloco)
-    return itens?.length ? [{ bloco, itens }] : []
-  })
-
   const usados = new Set(noPlanner.flatMap((a) => a.itens.map((i) => i.id)))
+
+  /**
+   * O QUE O PROFESSOR NAO PROGRAMOU, POR SECAO — e isto e a informacao mais util
+   * da tela inteira para quem esta fechando um grau: a lista do que o aluno nunca
+   * vai ter visto. Sem ela, "faltam 6 itens" e um numero sem endereco.
+   *
+   * POR SECAO E NAO UMA LISTA SO, e o numero antigo era sobre a coisa errada:
+   * `itensForaDoPrograma` contava os 81 de azul menos os usados, e mostrava 57
+   * para a RGI. Cinquenta e sete o que? A pergunta do professor e "falta algum
+   * dos 29 do 1o grau?", e a resposta estava somada com o catalogo inteiro.
+   */
+  const bolsao: SecaoNoPlanner[] = secoesDoBolsao.map((s) => ({
+    ...s,
+    fora: s.grupos.flatMap((g) => g.itens).filter((i) => !usados.has(i.id)),
+  }))
 
   return {
     turma,
     aulas: noPlanner,
     bolsao,
     aulasComConteudo: noPlanner.filter((a) => a.itens.length > 0 || a.rotulos.length > 0).length,
-    /**
-     * O QUE O PROFESSOR NAO PROGRAMOU, e isto e a informacao mais util da tela
-     * inteira para quem esta fechando um grau: e a lista do que o aluno nunca
-     * vai ter visto. Sem ela, "faltam 6 itens" e um numero sem endereco.
-     */
-    itensForaDoPrograma: itensDoBolsao.filter((i) => i.ativo && !usados.has(i.id)),
   }
 }
 

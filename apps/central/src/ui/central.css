@@ -1252,7 +1252,12 @@
   margin-bottom: 14px;
 }
 
-.bolsao-grupo h3 {
+/* O GRUPO virou `h4` porque a SECAO passou a ser o `h3`: o bolsao tem dois
+   niveis agora (Exigido no 1o grau / Resto de azul, e dentro deles os modulos ou
+   blocos). Os dois seletores convivem para nao quebrar o `Montar` do app, que
+   usa a mesma classe com `h3`. */
+.bolsao-grupo h3,
+.bolsao-grupo h4 {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1260,6 +1265,48 @@
   margin: 0 0 6px;
   display: flex;
   justify-content: space-between;
+}
+
+/* A SECAO: o titulo mais forte do bolsao, com uma regra acima para separar
+   visualmente os dois corpos de conteudo. */
+.bolsao-secao {
+  margin-bottom: 20px;
+}
+
+.bolsao-secao + .bolsao-secao {
+  padding-top: 16px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.bolsao-secao-titulo {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--cor-texto);
+  margin: 0 0 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.bolsao-secao-titulo span {
+  font-weight: 600;
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+}
+
+/* O QUE FALTA. Laranja no catalogo (informacao), vermelho nos requisitos —
+   ali e a lista do que o aluno nunca vai ver, e e a unica coisa nesta tela que
+   pode custar o grau dele. */
+.bolsao-falta {
+  margin: 0 0 10px;
+  font-size: 0.7rem;
+  color: var(--laranja-texto);
+}
+
+.bolsao-falta--forte {
+  color: var(--vermelho-alerta);
+  font-weight: 700;
 }
 
 .bolsao-grupo ul,
