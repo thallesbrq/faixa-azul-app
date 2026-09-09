@@ -3,13 +3,14 @@ import { bolsaoEmSecoes } from './bolsao'
 import type { SecaoDoBolsao } from './bolsao'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '../seed/primeiro-grau'
 import { CURRICULO_AZUL } from '../seed/curriculos'
-import { equivalentesDe } from '../seed/equivalencia-1grau'
+import { ehUmMovimentoSo, equivalentesDe } from '../seed/equivalencia-1grau'
 
 const secoes = bolsaoEmSecoes({
   requisitos: ITENS_1GRAU,
   modulosDosRequisitos: MODULOS_1GRAU,
   catalogo: CURRICULO_AZUL.itens,
   equivalentes: equivalentesDe,
+  umMovimentoSo: ehUmMovimentoSo,
 })
 
 const secao = (id: SecaoDoBolsao['id']) => secoes.find((s) => s.id === id)!
@@ -35,10 +36,13 @@ describe('NADA DESAPARECE — a garantia que este arquivo existe para dar', () =
     expect(nosGrupos.size).toBe(29)
   })
 
-  it('TODO item ativo do catalogo esta em algum grupo, exceto os gemeos 1:1', () => {
+  it('TODO item ativo do catalogo esta em algum grupo, exceto os absorvidos', () => {
     const nosGrupos = new Set(itensDe('catalogo').map((i) => i.id))
     const gemeos = new Set(
-      ITENS_1GRAU.flatMap((r) => (equivalentesDe(r.id).length === 1 ? equivalentesDe(r.id) : [])),
+      ITENS_1GRAU.flatMap((r) => {
+        const e = equivalentesDe(r.id)
+        return e.length === 1 || ehUmMovimentoSo(r.id) ? e : []
+      }),
     )
     const faltando = CURRICULO_AZUL.itens.filter(
       (i) => i.ativo && !nosGrupos.has(i.id) && !gemeos.has(i.id),
@@ -47,7 +51,7 @@ describe('NADA DESAPARECE — a garantia que este arquivo existe para dar', () =
   })
 })
 
-describe('a deduplicacao remove 12 e nao 21', () => {
+describe('a deduplicacao remove 17 dos 21 equivalentes', () => {
   it('os 12 gemeos UM PARA UM saem do catalogo', () => {
     const noCatalogo = new Set(itensDe('catalogo').map((i) => i.id))
     // "Double leg" <-> "Baiana": duas linhas para a mesma tecnica e ruido, e foi
@@ -58,12 +62,37 @@ describe('a deduplicacao remove 12 e nao 21', () => {
     expect(noCatalogo.has('guarda-fechada--armlock')).toBe(false)
   })
 
-  it('os 9 gemeos UM PARA N FICAM — o rotulo de azul e mais fino', () => {
+  it('UM MOVIMENTO SO tambem sai: os tres ukemi e os dois rolamentos', () => {
     /**
-     * A diferenca entre limpar ruido e apagar conteudo. "Saida da montada" do 1o
-     * grau corresponde a "Upa / ponte" e "Cotovelo / reposicao de guarda" — duas
-     * fugas diferentes. Remover as duas faria o professor substituto ler "Saida
-     * da montada" na aula e nao saber qual dar.
+     * Decisao dele: "pode unificar ukemi em uma coisa so". A prova de azul lista
+     * "UKEMI - Frente/ costas/ lateral" separados, mas para PROGRAMAR uma aula
+     * sao tres direcoes do mesmo movimento — e o bolsao mostrava quatro entradas
+     * para o que ele chama de uma.
+     *
+     * Rolamentos entra pelo mesmo argumento, e o proprio nome do requisito ja
+     * dizia: "Rolamentos (frente e costas)".
+     */
+    const noCatalogo = new Set(itensDe('catalogo').map((i) => i.id))
+    for (const id of [
+      'base-movimentacao--ukemi-frente',
+      'base-movimentacao--ukemi-costas',
+      'base-movimentacao--ukemi-lateral',
+      'base-movimentacao--rolamento-para-frente',
+      'base-movimentacao--rolamento-para-tras',
+    ]) {
+      expect(noCatalogo.has(id), `${id} deveria ter sido absorvido`).toBe(false)
+    }
+  })
+
+  it('AS DUAS SAIDAS FICAM DIVIDIDAS — sao tecnicas diferentes, nao direcoes', () => {
+    /**
+     * A LINHA QUE SEPARA limpar ruido de apagar conteudo. "Saida da montada"
+     * corresponde a "Upa / ponte" e "Cotovelo / reposicao de guarda": duas fugas
+     * diferentes, e nao duas direcoes de uma. Unifica-las faria o professor
+     * substituto ler "Saida da montada" na aula e nao saber qual dar.
+     *
+     * Se um dia ele decidir que tambem sao uma coisa so, e uma linha em
+     * `UM_MOVIMENTO_SO` — e este teste quebra dizendo exatamente isso.
      */
     const noCatalogo = new Set(itensDe('catalogo').map((i) => i.id))
     for (const id of [
@@ -71,28 +100,23 @@ describe('a deduplicacao remove 12 e nao 21', () => {
       'saidas--saida-da-montada-2',
       'saidas--saida-dos-100-kg-1',
       'saidas--saida-dos-100-kg-2',
-      'base-movimentacao--ukemi-frente',
-      'base-movimentacao--ukemi-costas',
-      'base-movimentacao--ukemi-lateral',
-      'base-movimentacao--rolamento-para-frente',
-      'base-movimentacao--rolamento-para-tras',
     ]) {
       expect(noCatalogo.has(id), `${id} deveria ficar no catalogo`).toBe(true)
     }
   })
 
-  it('os totais: 29 requisitos e 69 no catalogo, sem uma linha repetida', () => {
+  it('os totais: 29 requisitos e 64 no catalogo, sem uma linha repetida', () => {
     /**
      * NUMEROS CRAVADOS DE PROPOSITO. Se alguem afrouxar a deduplicacao, o bolsao
      * volta a oferecer a mesma tecnica duas vezes; se apertar, o catalogo perde
      * conteudo de ensino. Os dois lados quebram este teste, e ele diz qual.
      */
     expect(secao('requisitos').total).toBe(29)
-    expect(secao('catalogo').total).toBe(69)
+    expect(secao('catalogo').total).toBe(64)
 
     const todos = [...itensDe('requisitos'), ...itensDe('catalogo')]
-    expect(todos).toHaveLength(98)
-    expect(new Set(todos.map((i) => i.id)).size).toBe(98)
+    expect(todos).toHaveLength(93)
+    expect(new Set(todos.map((i) => i.id)).size).toBe(93)
   })
 })
 
@@ -148,9 +172,18 @@ describe('o nome de azul vira alias do requisito', () => {
     expect(levantada.aliases).toEqual([])
   })
 
-  it('requisito 1:N nao ganha alias — o gemeo continua no catalogo', () => {
+  it('o UNIFICADO ganha os tres nomes como alias', () => {
+    /**
+     * Os tres ukemi sairam do catalogo, entao "ukemi lateral" sumiria do bolsao
+     * inteiro sem isto — e o professor pode procurar por ela.
+     */
     const ukemi = itensDe('requisitos').find((i) => i.id === 'g1-edu--ukemi')!
-    expect(ukemi.aliases).toEqual([])
+    expect(ukemi.aliases).toEqual(['Ukemi frente', 'Ukemi costas', 'Ukemi lateral'])
+  })
+
+  it('requisito que FICA dividido nao ganha alias — os gemeos seguem no catalogo', () => {
+    const saida = itensDe('requisitos').find((i) => i.id === 'g1-saida--montada')!
+    expect(saida.aliases).toEqual([])
   })
 
   it('NAO MUTA O SEED, e isso protege a folha e a matriz', () => {
@@ -185,6 +218,7 @@ describe('bordas', () => {
       modulosDosRequisitos: MODULOS_1GRAU,
       catalogo: CURRICULO_AZUL.itens,
       equivalentes: () => [],
+      umMovimentoSo: ehUmMovimentoSo,
     })
     expect(s.find((x) => x.id === 'catalogo')!.total).toBe(81)
     expect(s.find((x) => x.id === 'requisitos')!.total).toBe(29)

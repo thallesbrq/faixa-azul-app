@@ -42,7 +42,7 @@ import { GradeDaTurma } from './GradeDaTurma'
 import { AcompanhamentoDaTurma } from './AcompanhamentoDaTurma'
 import { usePrograma } from './usePrograma'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
-import { equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
+import { ehUmMovimentoSo, equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
 import { bolsaoEmSecoes } from '@faixa-azul/core/application/bolsao'
 import { horaCurta } from './formato'
 import {
@@ -640,6 +640,7 @@ const SECOES_DO_BOLSAO = bolsaoEmSecoes({
   modulosDosRequisitos: MODULOS_1GRAU,
   catalogo: CURRICULO_AZUL.itens,
   equivalentes: equivalentesDe,
+  umMovimentoSo: ehUmMovimentoSo,
 })
 
 /**

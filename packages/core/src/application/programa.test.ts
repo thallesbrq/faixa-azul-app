@@ -21,7 +21,7 @@ import {
 import { ITENS_1GRAU, MODULOS_1GRAU } from '../seed/primeiro-grau'
 import { CURRICULO_AZUL } from '../seed/curriculos'
 import { bolsaoEmSecoes } from './bolsao'
-import { equivalentesDe } from '../seed/equivalencia-1grau'
+import { ehUmMovimentoSo, equivalentesDe } from '../seed/equivalencia-1grau'
 
 /** O bolsao real que a Central passa: os 29 requisitos e o catalogo de azul. */
 const SECOES = bolsaoEmSecoes({
@@ -29,6 +29,7 @@ const SECOES = bolsaoEmSecoes({
   modulosDosRequisitos: MODULOS_1GRAU,
   catalogo: CURRICULO_AZUL.itens,
   equivalentes: equivalentesDe,
+  umMovimentoSo: ehUmMovimentoSo,
 })
 
 describe('a forma do programa', () => {
@@ -242,7 +243,7 @@ describe('montarPlanner', () => {
     const requisitos = e.bolsao.find((s) => s.id === 'requisitos')!
     const catalogo = e.bolsao.find((s) => s.id === 'catalogo')!
     expect(requisitos.fora).toHaveLength(29)
-    expect(catalogo.fora).toHaveLength(69)
+    expect(catalogo.fora).toHaveLength(64)
 
     const um = requisitos.fora[0]
     const depois = montarPlanner({ ...base, aulas: [{ ...aulaVazia(40), itemIds: [um.id] }] })
@@ -264,7 +265,7 @@ describe('montarPlanner', () => {
     const e = montarPlanner({ ...base, aulas: [] })
     expect(e.bolsao.map((s) => s.id)).toEqual(['requisitos', 'catalogo'])
     expect(e.bolsao.find((s) => s.id === 'requisitos')!.total).toBe(29)
-    expect(e.bolsao.find((s) => s.id === 'catalogo')!.total).toBe(69)
+    expect(e.bolsao.find((s) => s.id === 'catalogo')!.total).toBe(64)
   })
 
   it('SEM secoes o planner ainda resolve nomes — o caso da Grade e do app', () => {

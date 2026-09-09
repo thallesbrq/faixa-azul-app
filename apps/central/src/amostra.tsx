@@ -34,7 +34,7 @@ import type { Programas } from '@faixa-azul/core/nuvem/programas'
 import type { AulaDoPrograma } from '@faixa-azul/core/application/programa'
 import { CURRICULO_AZUL } from '@faixa-azul/core/seed/curriculos'
 import { ITENS_1GRAU, MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
-import { equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
+import { ehUmMovimentoSo, equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
 import { bolsaoEmSecoes } from '@faixa-azul/core/application/bolsao'
 import '@faixa-azul/core/tokens.css'
 import './ui/central.css'
@@ -45,6 +45,7 @@ const SECOES_DO_BOLSAO = bolsaoEmSecoes({
   modulosDosRequisitos: MODULOS_1GRAU,
   catalogo: CURRICULO_AZUL.itens,
   equivalentes: equivalentesDe,
+  umMovimentoSo: ehUmMovimentoSo,
 })
 /** Fixado na carga do modulo: `new Date()` por render alimenta laco de render. */
 const HOJE = new Date()

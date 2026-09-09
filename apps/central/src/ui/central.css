@@ -1306,7 +1306,62 @@
 
 .bolsao-falta--forte {
   color: var(--vermelho-alerta);
+}
+
+/* A LISTA DO QUE FALTA, e nao um tooltip. A pergunta que chegou foi "como que
+   sei as que estao fora do programa?" — os nomes estavam so no `title`, que
+   exige acertar o hover e nao existe no toque. */
+.bolsao-falta-titulo {
+  margin: 0 0 6px;
   font-weight: 700;
+}
+
+.bolsao-falta ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Vermelho de contorno: o chip continua clicavel (poe na aula selecionada), e a
+   cor diz que ele e o que falta — ler o que falta e resolver sao o mesmo gesto. */
+.chip-item--falta {
+  border-color: var(--vermelho-alerta);
+  color: var(--vermelho-alerta);
+  /* Coluna para o nome e a posicao empilharem dentro do chip. */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.25;
+  text-align: left;
+}
+
+/* A posicao, so na lista do que falta. Nos grupos o cabecalho do modulo ja diz
+   de onde o item e; aqui a lista e plana e "Estrangulamento cruzado" aparece
+   tres vezes. */
+.chip-posicao {
+  font-size: 0.62rem;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+/* O catalogo fica fechado: 64 nomes empurrariam o bolsao para fora da tela. */
+.bolsao-falta summary {
+  cursor: pointer;
+}
+
+.bolsao-falta-lista {
+  display: block;
+  margin-top: 6px;
+  padding-left: 16px;
+  list-style: disc;
+  color: var(--cor-texto-suave);
+}
+
+.bolsao-falta-lista li {
+  font-size: 0.7rem;
 }
 
 .bolsao-grupo ul,

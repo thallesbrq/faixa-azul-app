@@ -250,17 +250,66 @@ export function Planner({
                 usados. Cinquenta e sete o que? A pergunta e "falta algum dos 29?",
                 e ela estava diluida no catalogo inteiro.
               */}
-              {secao.fora.length > 0 && (
-                <p
-                  className={
-                    secao.id === 'requisitos' ? 'bolsao-falta bolsao-falta--forte' : 'bolsao-falta'
-                  }
-                  title={secao.fora.map((i) => i.nome || i.slot).join(', ')}
-                >
-                  {secao.fora.length} fora do programa
-                  {secao.id === 'requisitos' && ' — o aluno não vai ver'}
-                </p>
-              )}
+              {secao.fora.length > 0 &&
+                (secao.id === 'requisitos' ? (
+                  /*
+                    OS NOMES NA TELA, e nao num `title`.
+
+                    A primeira versao pos os nomes no atributo `title` do aviso, e
+                    a pergunta que chegou foi "como que sei as que estao fora do
+                    programa?". Um tooltip nao e uma lista: exige acertar o hover,
+                    nao existe no toque, nao se le nem se copia. Este arquivo ja
+                    dizia que "uma contagem sem nomes seria um numero sem
+                    endereco" — e eu tinha reduzido os nomes a um hover.
+
+                    A LISTA DOS REQUISITOS FICA ABERTA porque ela e curta (zero a
+                    cinco linhas na pratica) e e a unica coisa nesta tela que pode
+                    custar o grau do aluno. Clicar no nome poe na aula selecionada:
+                    ler o que falta e resolver passam a ser o mesmo gesto.
+                  */
+                  <div className="bolsao-falta bolsao-falta--forte">
+                    <p className="bolsao-falta-titulo">
+                      {secao.fora.length}{' '}
+                      {secao.fora.length === 1 ? 'requisito fora' : 'requisitos fora'} do programa —
+                      o aluno não vai ver
+                    </p>
+                    <ul>
+                      {secao.fora.map((i) => (
+                        <li key={i.id}>
+                          <button
+                            className="chip-item chip-item--falta"
+                            onClick={() => aoPorItem(selecionada, i.id)}
+                            disabled={aula === null || selecionada === AULA_EXPERIMENTAL}
+                            /* A POSICAO DESAMBIGUA nomes repetidos, e ela e
+                               necessaria SO AQUI: nos grupos, o cabecalho do
+                               modulo ja diz de onde o item e. "Estrangulamento
+                               cruzado" aparece TRES vezes nos 29 (fechada, 100 kg
+                               e montada), e nesta lista plana as tres linhas
+                               ficariam identicas. Mesmo problema que a matriz
+                               resolve com `ac-posicao`. */
+                            title={`${i.posicao} — põe na aula ${selecionada}`}
+                          >
+                            {i.nome || i.slot}
+                            <span className="chip-posicao">{i.posicao}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  /* O CATALOGO FICA FECHADO: sao 59 nomes hoje, e uma lista dessa
+                     altura empurraria o bolsao inteiro para fora da tela. Blocos
+                     inteiros de azul nao programados sao normais numa turma de
+                     iniciantes — nao e pendencia, e conteudo que vem depois. */
+                  <details className="bolsao-falta">
+                    <summary>{secao.fora.length} fora do programa</summary>
+                    <ul className="bolsao-falta-lista">
+                      {secao.fora.map((i) => (
+                        <li key={i.id}>{i.nome || i.slot}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ))}
 
               {secao.grupos.map((g) => (
                 <section key={g.id} className="bolsao-grupo">

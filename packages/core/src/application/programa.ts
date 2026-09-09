@@ -438,9 +438,28 @@ export function montarPlanner({
    * para a RGI. Cinquenta e sete o que? A pergunta do professor e "falta algum
    * dos 29 do 1o grau?", e a resposta estava somada com o catalogo inteiro.
    */
+  /**
+   * "ESTA NO PROGRAMA?" TEM DOIS CAMINHOS, e usar so o id proprio fazia esta tela
+   * discordar da matriz de acompanhamento.
+   *
+   * Medido no programa real da RGI: "Rolamentos (frente e costas)" nao aparece
+   * pelo id `g1-edu--rolamentos`, mas os dois rolamentos de azul estao na aula 1.
+   * O aviso acusava o requisito como fora e mandava o professor programar o que
+   * ja estava programado; a matriz, que aplica a equivalencia, mostrava aula 1.
+   *
+   * TODAS AS PARTES SAO NECESSARIAS, a mesma regra que ele escolheu para a
+   * matriz: "ukemi conta como todos frente, costas e lateral". Duas das tres
+   * programadas nao cobrem o requisito.
+   */
+  const estaNoPrograma = (i: TechniqueItem, cobertura: SecaoDoBolsao['cobertoPor']) => {
+    if (usados.has(i.id)) return true
+    const partes = cobertura.get(i.id) ?? []
+    return partes.length > 0 && partes.every((p) => usados.has(p))
+  }
+
   const bolsao: SecaoNoPlanner[] = secoesDoBolsao.map((s) => ({
     ...s,
-    fora: s.grupos.flatMap((g) => g.itens).filter((i) => !usados.has(i.id)),
+    fora: s.grupos.flatMap((g) => g.itens).filter((i) => !estaNoPrograma(i, s.cobertoPor)),
   }))
 
   return {

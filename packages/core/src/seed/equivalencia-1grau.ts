@@ -144,6 +144,42 @@ export const EQUIVALENTES_DO_1GRAU: Readonly<Record<string, readonly string[]>> 
 }
 
 /**
+ * Requisitos que sao UMA COISA SO, mesmo tendo varios equivalentes em azul.
+ *
+ * ---------------------------------------------------------------------------
+ * DECISAO DELE em 09/09/2026: "pode unificar ukemi em uma coisa so".
+ *
+ * O bolsao mostrava quatro entradas para o que ele chama de uma: "Ukemi" na
+ * secao dos requisitos e "Ukemi frente", "Ukemi costas" e "Ukemi lateral" no
+ * catalogo. A prova de azul lista as tres (a folha diz "UKEMI - Frente/ costas/
+ * lateral"), e por isso elas existem no curriculo — mas para PROGRAMAR uma aula
+ * elas sao o mesmo movimento em tres direcoes.
+ *
+ * A LINHA E "VARIACAO x TECNICA DIFERENTE", e ela decide quem entra aqui:
+ *
+ *   ukemi frente/costas/lateral   -> tres direcoes de um movimento   ENTRA
+ *   rolamento frente/tras         -> duas direcoes de um movimento   ENTRA
+ *   Upa / ponte  x  Cotovelo      -> duas fugas da montada DIFERENTES  fica fora
+ *   Reposicao de guarda x Barrigada -> duas saidas dos 100kg DIFERENTES fica fora
+ *
+ * As duas ultimas ficam divididas porque unifica-las apagaria conteudo de
+ * ensino: o professor substituto leria "Saida da montada" na aula e nao saberia
+ * se da o upa ou a fuga de cotovelo.
+ *
+ * ISTO SO AFETA O BOLSAO. `EQUIVALENTES_DO_1GRAU` continua listando os tres
+ * ukemi, e a matriz continua lendo por eles — precisa, porque o programa da RGI
+ * tem os dois rolamentos de azul na aula 1, gravados antes desta decisao. O que
+ * muda e o que a tela OFERECE para programar.
+ * ---------------------------------------------------------------------------
+ */
+export const UM_MOVIMENTO_SO: readonly string[] = ['g1-edu--ukemi', 'g1-edu--rolamentos']
+
+/** Este requisito absorve os equivalentes dele no bolsao? */
+export function ehUmMovimentoSo(requisitoId: string): boolean {
+  return UM_MOVIMENTO_SO.includes(requisitoId)
+}
+
+/**
  * Os itens de azul que satisfazem um requisito. Lista vazia = sem equivalente.
  *
  * Funcao e nao acesso direto ao objeto para que o resto do codigo nao precise
