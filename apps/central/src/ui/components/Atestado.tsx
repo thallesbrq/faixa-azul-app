@@ -26,9 +26,11 @@
  *
  * Entao o selo verde e sobre as COMPETENCIAS, calculado por `aptidaoAoGrau` —
  * uma funcao so, que a tabela da Central tambem usa, para as duas telas nao
- * poderem discordar. E a contagem de aulas continua na folha, agora com um
- * numero real, mas rotulada como sendo DA TURMA: o app sabe quantas aulas a RGI
- * deu e nao sabe a quantas este aluno foi.
+ * poderem discordar. E a contagem de aulas continua na folha com DOIS numeros
+ * desde 10/09: as aulas DO ALUNO (`aulasDoGrau`, que o professor mantem no
+ * cadastro e que pre-preenche o campo de conceder) e as DA TURMA, como contexto.
+ * Os dois divergem quando o aluno para: "o Henrique ja tem 12 aulas mas teve um
+ * problema de saude e ficou varios meses parado".
  * ---------------------------------------------------------------------------
  */
 
@@ -201,11 +203,14 @@ function Linha({
 function Conceder({
   folha,
   meta,
+  aulasDoGrau,
   gravando,
   aoConceder,
 }: {
   folha: FolhaDeAtestado
   meta: string
+  /** Aulas que ESTE ALUNO fez — o numero que pre-preenche o campo. */
+  aulasDoGrau: number
   gravando: boolean
   aoConceder: (e: { meta: string; texto: string; aulasConfirmadas: number | null }) => void
 }) {
@@ -221,7 +226,15 @@ function Conceder({
   const [tocado, setTocado] = useState<string | null>(null)
   const exigidas = folha.aulas.exigidas
   const daTurma = folha.aulas.cumpridas
-  const aulas = tocado ?? (daTurma === null ? '' : String(daTurma))
+  /**
+   * O CAMPO VEM COM O NUMERO DO ALUNO, e nao com o da turma.
+   *
+   * Era `daTurma`, e isso convidava a gravar no registro de graduacao um numero
+   * que o aluno talvez nao tenha: "o Henrique ja tem 12 aulas mas ficou varios
+   * meses parado" — a RGI seguiu dando aula sem ele. A contagem da turma
+   * continua visivel na linha de contexto, rotulada como da turma.
+   */
+  const aulas = tocado ?? String(aulasDoGrau)
 
   const numeroDeAulas = aulas.trim() === '' ? null : Number(aulas)
   /**
@@ -250,14 +263,10 @@ function Conceder({
           <>
             {' '}
             A regra pede <strong>{exigidas} aulas</strong>.{' '}
-            {daTurma === null ? (
-              <>Não consegui ler o programa da turma — o número abaixo é seu.</>
-            ) : (
-              <>
-                O campo vem com as <strong>{daTurma}</strong> que a turma já deu; sem
-                presença, o app não sabe a quantas <em>ele</em> foi. Corrija se souber.
-              </>
-            )}
+            O campo vem com as <strong>{aulasDoGrau}</strong> que você registrou no
+            cadastro dele
+            {daTurma !== null && <> — a turma já deu {daTurma}</>}. Corrija aqui se
+            precisar; o registro guarda o que você confirmar.
           </>
         )}
       </p>
@@ -341,7 +350,14 @@ export interface AtestadoProps {
   /** O id do currículo em uso, para nomear qual lista está na folha. */
   idDoCurriculo: string
   /** `null` enquanto o app não contar presença (fatia 3 do ADR-016). */
-  aulasCumpridas: number | null
+  /**
+   * Aulas que A TURMA ja deu — CONTEXTO, e nao a conta do aluno.
+   *
+   * `null` quando nao consegui ler o programa da turma.
+   */
+  aulasDaTurma: number | null
+  /** Aulas que ESTE ALUNO fez, mantidas pelo professor. Vai no campo de conceder. */
+  aulasDoGrau: number
   fase: FaseDoAtestado
   mensagem: string | null
   aoAtestar: (e: { itemId: string; competente: boolean; texto: string; origem: OrigemDaCompetencia }) => void
@@ -357,7 +373,8 @@ export function Atestado({
   turma,
   origemDoCurriculo,
   idDoCurriculo,
-  aulasCumpridas,
+  aulasDaTurma,
+  aulasDoGrau,
   fase,
   mensagem,
   aoAtestar,
@@ -365,7 +382,7 @@ export function Atestado({
 }: AtestadoProps) {
   if (fase === 'carregando') return <p className="apoio">Lendo as competências…</p>
 
-  const folha = montarAtestado({ curriculo, modulos, registros, meta, aulasCumpridas })
+  const folha = montarAtestado({ curriculo, modulos, registros, meta, aulasCumpridas: aulasDaTurma })
   /**
    * A procedencia e calculada UMA VEZ e passada para as linhas.
    *
@@ -441,11 +458,14 @@ export function Atestado({
         {/*
           AS AULAS SAO REQUISITO SEPARADO, E O NUMERO E DA TURMA.
 
-          O rotulo diz "a turma já deu" e nao "cumpridas", e a diferenca nao e
-          estilo: sem presenca, o app sabe quantas aulas a RGI DEU e nao sabe a
-          quantas ESTE aluno foi. Chamar de "cumpridas" faria a folha afirmar
-          presenca — a mesma coisa que a matriz de acompanhamento ja avisa que
-          nao sabe.
+          DOIS NUMEROS, E CADA UM DIZ DE QUEM E. "a turma já deu" e o que o app
+          calcula do programa; ao lado, quando divergem, as aulas DO ALUNO que o
+          professor registrou no cadastro. Divergem exatamente no caso que criou
+          o campo: "o Henrique ja tem 12 aulas mas ficou varios meses parado" — a
+          RGI seguiu dando aula sem ele.
+
+          Chamar qualquer um dos dois de "cumpridas" faria a folha afirmar
+          presenca, que o app nao tem.
 
           E o numero nao condiciona o selo "apto": "pode acontecer de um aluno se
           destacar e conseguir estar apto ao grau antes do tempo" (palavras dele).
@@ -467,7 +487,13 @@ export function Atestado({
                 {faltamAulas !== null && faltamAulas > 0
                   ? ` · faltam ${faltamAulas} à turma`
                   : ' · a turma fechou as aulas'}
-                . Quantas <em>ele</em> assistiu, o app não sabe.
+                {aulasDoGrau !== folha.aulas.cumpridas && (
+                  <>
+                    {' '}
+                    · <strong>ele fez {aulasDoGrau}</strong>
+                  </>
+                )}
+                .
               </>
             )}
           </p>
@@ -492,7 +518,13 @@ export function Atestado({
       </section>
 
       {folha.aptidao === 'apto' && !jaConcedida && (
-        <Conceder folha={folha} meta={meta} gravando={gravando} aoConceder={aoConceder} />
+        <Conceder
+          folha={folha}
+          meta={meta}
+          aulasDoGrau={aulasDoGrau}
+          gravando={gravando}
+          aoConceder={aoConceder}
+        />
       )}
 
       {folha.grupos.map((g) => {

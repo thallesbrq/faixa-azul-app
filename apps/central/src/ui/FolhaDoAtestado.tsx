@@ -24,6 +24,7 @@ export function FolhaDoAtestado({
   turma,
   origemDoCurriculo,
   idDoCurriculo,
+  aulasDoGrau,
   aoConceder,
 }: {
   app: FirebaseApp
@@ -48,6 +49,18 @@ export function FolhaDoAtestado({
   origemDoCurriculo: 'prova' | 'estudo'
   /** O id do curriculo em uso, para a folha nomear qual lista e. */
   idDoCurriculo: string
+  /**
+   * Aulas que ESTE ALUNO fez, mantidas pelo professor no cadastro.
+   *
+   * SUBSTITUI A CONTAGEM DA TURMA no campo de conceder, e a troca importa: o
+   * campo grava um numero no registro de graduacao, para sempre. Pre-preenche-lo
+   * com as aulas DA TURMA convidava a gravar um numero que o aluno talvez nao
+   * tenha — "o Henrique ja tem 12 aulas mas ficou varios meses parado" e o caso
+   * exato: a RGI seguiu dando aula sem ele.
+   *
+   * A contagem da turma continua na linha de contexto acima, rotulada como tal.
+   */
+  aulasDoGrau: number
   /** Chamado DEPOIS de gravar a graduacao, para a meta do aluno avancar. */
   aoConceder: (metaConcedida: string) => Promise<void>
 }) {
@@ -73,7 +86,8 @@ export function FolhaDoAtestado({
       turma={turma}
       origemDoCurriculo={origemDoCurriculo}
       idDoCurriculo={idDoCurriculo}
-      aulasCumpridas={aulasDaTurma}
+      aulasDaTurma={aulasDaTurma}
+      aulasDoGrau={aulasDoGrau}
       fase={a.fase}
       mensagem={a.mensagem}
       aoAtestar={(e) => void a.atestar(e)}

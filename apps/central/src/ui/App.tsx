@@ -382,6 +382,7 @@ export function Central({
                 turma={linha.turma}
                 origemDoCurriculo={curriculoDoAtestado.origem}
                 idDoCurriculo={curriculoDoAtestado.id}
+                aulasDoGrau={linha.aulasDoGrau}
                 aoConceder={async (metaConcedida) => {
                   const proxima = metaSeguinte(metaConcedida)
                   // `null` no fim da fila: o que vem depois do azul e outra
@@ -410,6 +411,10 @@ export function Central({
           }}
           aoTrocarParticulares={async (tem) => {
             await sessao.dados.atualizarParticulares(linha.uid, tem)
+            await recarregar()
+          }}
+          aoTrocarAulasDoGrau={async (aulas) => {
+            await sessao.dados.atualizarAulasDoGrau(linha.uid, aulas)
             await recarregar()
           }}
           aoTrocarTurma={async (turma) => {

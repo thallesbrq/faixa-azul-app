@@ -193,8 +193,19 @@ export interface LinhaDaCentral {
    */
   diasSemEstudar: number | null
   duvidasAbertas: number
+  /** Aulas PARTICULARES feitas, do pacote de dez. Coisa contratada. */
   aulasFeitas: number
+  /** O tamanho do pacote de particulares. NAO e o gate da graduacao. */
   totalDeAulas: number
+  /**
+   * Aulas feitas rumo a graduacao ATUAL, mantidas pelo professor.
+   *
+   * SEPARADO DE `aulasFeitas`, e a confusao entre os dois era o defeito: a
+   * pagina do aluno mostrava "0 / 10 aulas do pacote" onde o professor esperava
+   * as aulas do 1o grau. Sao duas contas — uma e o pacote de particulares
+   * contratado, a outra e o caminho da graduacao. Ver `Cadastro.aulasDoGrau`.
+   */
+  aulasDoGrau: number
   /** `null` quando nunca sincronizou: nem "parado" nem "em dia" seria verdade. */
   situacao: Situacao | null
   /**
@@ -281,6 +292,7 @@ function linhaVazia(
     estuda: string
     demo?: boolean
     temParticulares?: boolean
+    aulasDoGrau?: number
   },
   motivo: MotivoSemProgresso,
 ): LinhaDaCentral {
@@ -288,6 +300,7 @@ function linhaVazia(
     ...entrada,
     demo: entrada.demo ?? false,
     temParticulares: entrada.temParticulares ?? false,
+    aulasDoGrau: entrada.aulasDoGrau ?? 0,
     progresso: null,
     medidaUsada: null,
     aptidao: 'nao-se-aplica',
@@ -313,6 +326,14 @@ export function linhaSemDados(entrada: {
   estuda: string
   demo?: boolean
   temParticulares?: boolean
+  /**
+   * Aulas do grau: VALE MESMO SEM DADO SINCRONIZADO.
+   *
+   * As outras medidas desta linha vem do estado do aparelho do aluno, e sem
+   * sincronizacao nao existem. Esta nao: e o professor que a mantem, e ela
+   * continua verdadeira para quem nunca abriu o app.
+   */
+  aulasDoGrau?: number
 }): LinhaDaCentral {
   return linhaVazia(entrada, 'sem-dados')
 }
@@ -348,6 +369,7 @@ export function linhaDoAluno({
   estuda,
   demo = false,
   temParticulares = false,
+  aulasDoGrau = 0,
   estado,
   competentes = null,
   curriculo,
@@ -363,6 +385,8 @@ export function linhaDoAluno({
   estuda: string
   demo?: boolean
   temParticulares?: boolean
+  /** Aulas feitas rumo a graduacao atual, mantidas pelo professor. */
+  aulasDoGrau?: number
   estado: EstadoPersistido
   /** O curriculo DE `estuda` — o conteudo que ele treina, medido por cartao. */
   curriculo: Curriculo | null
@@ -431,6 +455,8 @@ export function linhaDoAluno({
     diasSemEstudar: resumo.diasSemEstudar,
     duvidasAbertas: resumo.duvidasAbertas,
     aulasFeitas: resumo.aulasFeitas,
+    // Do CADASTRO e nao do resumo: e o professor que mantem esta conta.
+    aulasDoGrau,
     totalDeAulas: resumo.totalDeAulas,
     situacao: situacaoDoAluno(resumo),
   }
@@ -643,6 +669,8 @@ export interface CadastroNaLista {
   ativo: boolean
   demo?: boolean
   temParticulares?: boolean
+  /** Aulas feitas rumo a graduacao atual. Ausente = zero. */
+  aulasDoGrau?: number
 }
 
 /** O minimo que esta funcao precisa saber de um convite pendente. */
@@ -731,6 +759,7 @@ export function linhasDaAcademia({
         estuda: p.estuda,
         demo: p.demo ?? false,
         temParticulares: p.temParticulares ?? false,
+        aulasDoGrau: p.aulasDoGrau ?? 0,
       }
       // Ausente do mapa = nunca sincronizou. NAO e zero, e nao sabemos.
       if (!e) return linhaSemDados(base)

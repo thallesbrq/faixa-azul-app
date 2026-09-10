@@ -91,6 +91,37 @@ export interface Cadastro {
    * comecar a treinar de verdade como Floki, o campo vira mentira ao contrario.
    */
   demo: boolean
+  /**
+   * Quantas aulas ele ja fez rumo a graduacao ATUAL.
+   *
+   * ---------------------------------------------------------------------------
+   * POR QUE E UM CAMPO E NAO UM CALCULO, e o caso que provou isso tem nome. Em
+   * 10/09/2026 o professor disse: "o Henrique ja tem 12 aulas mas teve um
+   * problema de saude e ficou varios meses parado, agora vai voltar".
+   *
+   * As duas fontes que poderiam derivar este numero falham nele:
+   *   - as aulas da TURMA (aulas do programa com data no passado) o
+   *     superestimariam muito: a RGI seguiu dando aula durante os meses em que
+   *     ele esteve fora;
+   *   - a PRESENCA resolveria, e foi descartada em 09/09 ("o sistema que temos de
+   *     validar se o aluno tem a competencia ja resolve").
+   *
+   * Entao o unico que sabe que sao doze e o professor — e a folha do atestado ja
+   * afirmava isso: "o professor conta as aulas e atesta as tecnicas". Faltava o
+   * lugar de guardar a conta.
+   *
+   * ZERO QUANDO AUSENTE, e essa e uma excecao deliberada ao "ausencia nao e
+   * zero" que este projeto segue em toda parte. A razao: o campo e EDITAVEL na
+   * pagina do aluno, o professor e a fonte, e um `0 / 35` visivelmente errado
+   * para quem treina ha um ano se conserta num clique. Um travessao nao daria
+   * ancora nenhuma e ninguem saberia que ha o que preencher. E nada grave se
+   * apoia nele: conceder a graduacao pede o numero de novo, no ato.
+   *
+   * NAO CONFUNDIR com `aulasFeitas` do resumo, que sao as aulas PARTICULARES do
+   * pacote de dez — coisa contratada, e outra conta.
+   * ---------------------------------------------------------------------------
+   */
+  aulasDoGrau: number
 }
 
 export interface Convite {
@@ -160,6 +191,14 @@ export interface Dados {
   atualizarEstuda(uid: string, estuda: string): Promise<void>
   /** Liga ou desliga as aulas particulares de alguem. */
   atualizarParticulares(uid: string, tem: boolean): Promise<void>
+  /**
+   * Quantas aulas o aluno ja fez rumo a graduacao atual.
+   *
+   * `Math.max(0, ...)` e `Math.round` no cliente: o campo e um `<input
+   * type="number">` e o navegador aceita `-3` e `2.5` sem reclamar. Guardar isso
+   * poria fracao no numerador de "12 / 35" e negativo numa barra de progresso.
+   */
+  atualizarAulasDoGrau(uid: string, aulas: number): Promise<void>
 }
 
 /** Normaliza o e-mail: ele e o ID do documento, e caixa diferente viraria dois. */
@@ -196,6 +235,9 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
     // Ausente = nao contratou. O default certo e o que a maioria da turma e.
     temParticulares: d.temParticulares === true,
     demo: d.demo === true,
+    // `Number.isFinite` e nao `?? 0`: um campo gravado como texto por um script
+    // viraria `NaN` no denominador da tela.
+    aulasDoGrau: typeof d.aulasDoGrau === 'number' && Number.isFinite(d.aulasDoGrau) ? d.aulasDoGrau : 0,
   })
 
   return {
@@ -228,6 +270,8 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
               : SEM_META,
         temParticulares: c.temParticulares === true,
         demo: c.demo === true,
+        // Nasce em zero: quem entra pelo convite esta comecando.
+        aulasDoGrau: 0,
       }
 
       // Papel, academia, TURMA e META vem DO CONVITE. As regras recusam outra coisa.
@@ -317,6 +361,11 @@ export async function abrirDados(app: FirebaseApp, minhaAcademia: string): Promi
 
     async atualizarParticulares(uid, tem) {
       await fs.updateDoc(fs.doc(db, 'pessoas', uid), { temParticulares: tem })
+    },
+
+    async atualizarAulasDoGrau(uid, aulas) {
+      const limpo = Math.max(0, Math.round(Number.isFinite(aulas) ? aulas : 0))
+      await fs.updateDoc(fs.doc(db, 'pessoas', uid), { aulasDoGrau: limpo })
     },
   }
 }

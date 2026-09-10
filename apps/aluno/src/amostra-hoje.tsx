@@ -55,6 +55,7 @@ function Amostra() {
           diasAteProva={44}
           metaProvisoria
           meta={meta}
+          aulasDoGrau={12}
           fila={FILA}
           revisadosHoje={0}
           taxaSemDica={undefined}

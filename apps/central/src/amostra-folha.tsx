@@ -60,9 +60,10 @@ function Amostra() {
         turma="RGI"
         origemDoCurriculo="prova"
         idDoCurriculo="1grau"
-        /* 12 de 35: o caso que a linha das aulas existe para mostrar — apto pelas
-           competencias com a turma no meio do caminho. */
-        aulasCumpridas={12}
+        /* A turma no meio do caminho, e o ALUNO com 12 — o caso do Henrique:
+           ficou meses parado, entao os dois numeros divergem. */
+        aulasDaTurma={20}
+        aulasDoGrau={12}
         fase="pronta"
         mensagem={null}
         aoAtestar={(e: { itemId: string; competente: boolean; texto: string; origem: OrigemDaCompetencia }) =>

@@ -47,6 +47,7 @@ const base: LinhaDaCentral = {
   duvidasAbertas: 0,
   aulasFeitas: 0,
   totalDeAulas: 0,
+  aulasDoGrau: 0,
   situacao: null,
   demo: false,
   temParticulares: false,

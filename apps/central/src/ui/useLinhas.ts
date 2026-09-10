@@ -112,6 +112,7 @@ export function useLinhas({
               meta: p.meta,
               estuda: p.estuda,
               demo: p.demo,
+              aulasDoGrau: p.aulasDoGrau,
             }),
           ),
           ...convitesDeAluno.map((c) =>

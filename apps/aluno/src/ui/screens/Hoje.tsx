@@ -30,6 +30,14 @@ export interface HojeProps {
    * ---------------------------------------------------------------------------
    */
   meta: string
+  /**
+   * Quantas aulas ele ja fez rumo a graduacao atual, do cadastro na nuvem.
+   *
+   * `null` sem cadastro (o app funciona sem conta): ai a tela mostra so a
+   * exigencia, porque nao ha de quem tirar a conta. Nunca ZERO por padrao — "0 de
+   * 35" para quem treina ha um ano e pior que nao mostrar numero.
+   */
+  aulasDoGrau: number | null
   fila: FilaDoDia
   revisadosHoje: number
   taxaSemDica: number | undefined
@@ -46,6 +54,7 @@ export function Hoje({
   diasAteProva,
   metaProvisoria,
   meta,
+  aulasDoGrau,
   fila,
   revisadosHoje,
   taxaSemDica,
@@ -107,7 +116,15 @@ export function Hoje({
           </>
         ) : (
           <>
-            <div className="contagem">{porAulas} aulas</div>
+            <div className="contagem">
+              {aulasDoGrau === null ? (
+                `${porAulas} aulas`
+              ) : (
+                <>
+                  {aulasDoGrau} <small>de {porAulas} aulas</small>
+                </>
+              )}
+            </div>
             {/*
               NAO E CONTAGEM REGRESSIVA, e a frase diz por que: o app nao sabe a
               quantas aulas ele foi. Sem presenca, quem conta e o professor — e
@@ -115,8 +132,17 @@ export function Hoje({
               falso. O que o app pode afirmar e a EXIGENCIA.
             */}
             <div className="contagem-rotulo">
-              é o que o <strong>{nomeDaMeta(meta)}</strong> pede. O professor conta as aulas e
-              atesta as técnicas — não há data marcada.
+              {aulasDoGrau === null ? (
+                <>
+                  é o que o <strong>{nomeDaMeta(meta)}</strong> pede. O professor conta as aulas e
+                  atesta as técnicas — não há data marcada.
+                </>
+              ) : (
+                <>
+                  rumo ao <strong>{nomeDaMeta(meta)}</strong>. Quem conta é o professor, e ele
+                  também atesta as técnicas — não há data marcada.
+                </>
+              )}
             </div>
           </>
         )}

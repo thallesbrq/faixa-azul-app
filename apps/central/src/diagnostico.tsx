@@ -50,6 +50,7 @@ const CADASTRO: Cadastro = {
   estuda: '',
   temParticulares: false,
   demo: false,
+  aulasDoGrau: 0,
 }
 
 /** Camada de dados de mentira, com a interface `Dados` inteira. */
@@ -73,6 +74,7 @@ const DADOS: Dados = {
   async atualizarMeta() {},
   async atualizarEstuda() {},
   async atualizarParticulares() {},
+  async atualizarAulasDoGrau() {},
 }
 
 /**

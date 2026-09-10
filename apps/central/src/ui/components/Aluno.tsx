@@ -30,7 +30,7 @@ import {
   SEM_TURMA,
   TURMAS,
 } from '@faixa-azul/core/domain/turmas'
-import { METAS, metaPorId, nomeDaMeta, ROTULO_SEM_META, SEM_META } from '@faixa-azul/core/domain/metas'
+import { aulasExigidas, METAS, metaPorId, nomeDaMeta, ROTULO_SEM_META, SEM_META } from '@faixa-azul/core/domain/metas'
 import { curriculoPorId } from '@faixa-azul/core/seed/curriculos'
 import type { EstadoPersistido } from '@faixa-azul/core/persistence/repositorio'
 import { atividade, corDaFaixa, porcento } from '../formato'
@@ -108,6 +108,8 @@ export interface AlunoProps {
   aoTrocarEstuda: (estuda: string) => Promise<void>
   /** Ligar ou desligar as aulas particulares deste aluno. */
   aoTrocarParticulares: (tem: boolean) => Promise<void>
+  /** Grava quantas aulas ele ja fez rumo a graduacao atual. */
+  aoTrocarAulasDoGrau: (aulas: number) => Promise<void>
   /**
    * A aba Aulas. Chega como no filho pronto e nao como dados: a montagem tem
    * estado proprio (`useGrade`), e ele so deve existir quando a aba esta aberta
@@ -130,6 +132,7 @@ export function Aluno({
   aoTrocarMeta,
   aoTrocarEstuda,
   aoTrocarParticulares,
+  aoTrocarAulasDoGrau,
   aulas,
   atestado,
 }: AlunoProps) {
@@ -147,6 +150,12 @@ export function Aluno({
   const [avisoDoEstuda, setAvisoDoEstuda] = useState<string | null>(null)
   const [trocandoParticulares, setTrocandoParticulares] = useState(false)
   const [avisoDaMeta, setAvisoDaMeta] = useState<string | null>(null)
+  const [gravandoAulas, setGravandoAulas] = useState(false)
+  /**
+   * `null` = a meta nao conta aulas (o azul: a prova e a prova) ou nao ha meta.
+   * Nesse caso o fato e o campo somem — nao ha denominador para mostrar.
+   */
+  const aulasExigidasDaMeta = aulasExigidas(linha.meta)
   const detalhe = useMemo(
     () => (estado ? detalheDoAluno({ estado, curriculo, agora }) : null),
     [estado, curriculo, agora],
@@ -360,6 +369,42 @@ export function Aluno({
               <option value="sim">Contratou</option>
             </select>
           </label>
+
+          {/*
+            AS AULAS SAO DIGITADAS, e nao contadas pelo sistema.
+
+            Sem presenca o app nao sabe a quantas aulas o aluno foi, e a contagem
+            da turma nao serve: "o Henrique ja tem 12 aulas mas teve um problema
+            de saude e ficou varios meses parado" — a RGI seguiu dando aula sem
+            ele. Quem sabe e o professor, e este e o lugar de guardar.
+
+            `onBlur` E NAO `onChange`: gravar a cada tecla mandaria uma escrita
+            para o Firestore por digito ("1", "12"), e um numero de dois digitos
+            passaria pelo estado 1 no caminho.
+          */}
+          {aulasExigidasDaMeta !== null && (
+            <label className="troca-turma">
+              <span>Aulas feitas</span>
+              <input
+                type="number"
+                min={0}
+                max={999}
+                defaultValue={linha.aulasDoGrau}
+                disabled={gravandoAulas}
+                title={`Quantas aulas ele já fez rumo ao ${nomeDaMeta(linha.meta)}. A regra pede ${aulasExigidasDaMeta}.`}
+                onBlur={async (e) => {
+                  const n = Math.max(0, Math.round(Number(e.target.value)))
+                  if (!Number.isFinite(n) || n === linha.aulasDoGrau) return
+                  setGravandoAulas(true)
+                  try {
+                    await aoTrocarAulasDoGrau(n)
+                  } finally {
+                    setGravandoAulas(false)
+                  }
+                }}
+              />
+            </label>
+          )}
         </div>
 
         {avisoDoEstuda && (
@@ -390,13 +435,43 @@ export function Aluno({
           uma fileira com dois cartoes.
         */}
         <div className="fatos">
-          <div className="fato">
-            <div className="fato-valor">
-              {linha.aulasFeitas}
-              <small> / {linha.totalDeAulas}</small>
+          {/*
+            AS AULAS DA GRADUACAO, e nao as do pacote de particulares.
+
+            Era `aulasFeitas / totalDeAulas` com o rotulo "aulas do pacote" — as
+            dez aulas CONTRATADAS. Pedido dele em 10/09/2026: 'troque "0/10 aula
+            do pacote" por "0/35 aulas para seu 1 Grau"'. Trocar so o rotulo
+            seria pior: poria a contagem de particulares sob um rotulo de
+            graduacao, um numero errado embaixo de um rotulo certo.
+
+            O denominador vem da META (`aulasExigidas`), e o numerador do
+            CADASTRO, mantido pelo professor. O caso que provou que nao pode ser
+            derivado: "o Henrique ja tem 12 aulas mas teve um problema de saude e
+            ficou varios meses parado". A turma seguiu dando aula sem ele.
+
+            SEM DENOMINADOR (meta `azul`, cuja prova nao conta aulas, ou meta sem
+            definir) o fato SOME em vez de mostrar "12 / —": um fato que nao se
+            aplica gasta espaco para nao dizer nada. Quem contratou particulares
+            volta a ver o pacote, que ali e a conta que importa.
+          */}
+          {aulasExigidasDaMeta !== null && (
+            <div className="fato">
+              <div className="fato-valor">
+                {linha.aulasDoGrau}
+                <small> / {aulasExigidasDaMeta}</small>
+              </div>
+              <div className="fato-rotulo">aulas para o {nomeDaMeta(linha.meta)}</div>
             </div>
-            <div className="fato-rotulo">aulas do pacote</div>
-          </div>
+          )}
+          {linha.temParticulares && (
+            <div className="fato">
+              <div className="fato-valor">
+                {linha.aulasFeitas}
+                <small> / {linha.totalDeAulas}</small>
+              </div>
+              <div className="fato-rotulo">aulas do pacote</div>
+            </div>
+          )}
           <div className="fato">
             <div className="fato-valor">{linha.duvidasAbertas}</div>
             <div className="fato-rotulo">

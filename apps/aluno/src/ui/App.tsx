@@ -236,6 +236,9 @@ export function App() {
                  com cadastro, ele decide; sem cadastro (offline ou sem conta),
                  fica sem meta e a contagem por data continua servindo. */
               meta={naNuvem?.cadastro.meta ?? SEM_META}
+              /* `null` sem cadastro: nao ha de quem tirar a conta, e zero seria
+                 uma afirmacao sobre quem talvez treine ha um ano. */
+              aulasDoGrau={naNuvem?.cadastro.aulasDoGrau ?? null}
               fila={app.fila}
               revisadosHoje={app.revisadosHoje}
               taxaSemDica={app.taxaSemDica}
