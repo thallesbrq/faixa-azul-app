@@ -15,6 +15,7 @@ import { Perfil } from './screens/Perfil'
 import { Academia } from './screens/Academia'
 import { abasDoPapel } from './components/Navegacao'
 import { Programa } from './screens/Programa'
+import { SEM_META } from '@faixa-azul/core/domain/metas'
 
 /**
  * "Hoje", fixado na CARGA DO MODULO e nao a cada render.
@@ -110,6 +111,20 @@ export function App() {
    * qualquer login.
    */
   const papel = naNuvemPapel ?? app.estado.perfil.papel
+
+  /**
+   * A turma cujo PROGRAMA substitui a tela de particulares, ou `null`.
+   *
+   * `null` cobre tres casos que a tela trata igual e de proposito: sem cadastro
+   * na nuvem, com particulares contratadas, e cadastro sem turma. Nos tres a tela
+   * de aulas particulares e a resposta certa (ou a unica que existe).
+   */
+  const soOProgramaDaTurma =
+    naNuvem !== null &&
+    naNuvem.cadastro.temParticulares === false &&
+    naNuvem.cadastro.turma.trim() !== ''
+      ? naNuvem.cadastro.turma
+      : null
 
   /**
    * Trocar de papel troca as abas — e a aba aberta pode deixar de existir.
@@ -217,6 +232,10 @@ export function App() {
             <Hoje
               diasAteProva={app.diasAteProva}
               metaProvisoria={app.estado.planoExame.provisoria}
+              /* A META VEM DO CADASTRO NA NUVEM, mesmo padrao do `papel` acima:
+                 com cadastro, ele decide; sem cadastro (offline ou sem conta),
+                 fica sem meta e a contagem por data continua servindo. */
+              meta={naNuvem?.cadastro.meta ?? SEM_META}
               fila={app.fila}
               revisadosHoje={app.revisadosHoje}
               taxaSemDica={app.taxaSemDica}
@@ -242,7 +261,34 @@ export function App() {
             />
           )}
 
-          {tela === 'aulas' && (
+          {/*
+            A ABA "AULAS" RESPONDE "quais sao as minhas proximas aulas?", e a
+            resposta DEPENDE DO QUE O ALUNO CONTRATOU.
+
+            O defeito, relatado em 10/09/2026: o Henrique entrou, foi em "Aulas"
+            procurando o programa da RGI de hoje e encontrou o pacote de aulas
+            PARTICULARES marcado como "Aula 1". O cadastro dele diz
+            `temParticulares: false` — ele nao tem particulares nenhuma — e a tela
+            nunca consultava. As visoes Planner e Montar sao inteiras sobre esse
+            pacote (saldo, auloes, pauta da proxima particular): para ele nao eram
+            um numero errado, eram uma tela inteira sobre algo que nao existe.
+
+            `temParticulares === false` E NAO `!temParticulares`: sem cadastro na
+            nuvem o campo e `undefined`, e aí a tela de particulares CONTINUA — o
+            app funciona sem conta, e quem o usa assim (o dono, antes de haver
+            academia no sistema) nao pode perder a tela dele. Mesmo cuidado do
+            `papel` acima: com cadastro, ele decide; sem cadastro, o local vale.
+
+            LIMITE CONHECIDO: quem TEM particulares nao ve o programa da turma.
+            Ele se beneficiaria, e a razao de nao ver e que a aba e uma so — a
+            proxima candidata a mudar isto e um terceiro alternador aqui dentro,
+            ao lado de Planner e Montar.
+          */}
+          {tela === 'aulas' && soOProgramaDaTurma !== null && (
+            <Programa logado hoje={HOJE} turmaFixa={soOProgramaDaTurma} />
+          )}
+
+          {tela === 'aulas' && soOProgramaDaTurma === null && (
             <Aulas
               itens={app.itens}
               baralho={app.baralho}

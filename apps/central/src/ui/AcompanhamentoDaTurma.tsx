@@ -24,7 +24,7 @@ import type { Competencias } from '@faixa-azul/core/nuvem/competencias'
 import { abrirProgramas } from '@faixa-azul/core/nuvem/programas'
 import type { Programas } from '@faixa-azul/core/nuvem/programas'
 import type { AulaDoPrograma } from '@faixa-azul/core/application/programa'
-import { CURRICULO_1GRAU } from '@faixa-azul/core/seed/curriculos'
+import { CURRICULO_1GRAU, curriculoPorId } from '@faixa-azul/core/seed/curriculos'
 import { MODULOS_1GRAU } from '@faixa-azul/core/seed/primeiro-grau'
 import { equivalentesDe } from '@faixa-azul/core/seed/equivalencia-1grau'
 import { Acompanhamento } from './components/Acompanhamento'
@@ -35,8 +35,9 @@ const SEM_AULAS: readonly AulaDoPrograma[] = []
 export interface AlunoDaTurma {
   uid: string
   nome: string
-  /** O curriculo que ele estuda — decide se ele entra na matriz. */
+  /** O curriculo que ele estuda — decide o que o app ensina, e nao a matriz. */
   estuda: string
+  /** A PROVA que ele persegue — e ela que decide se ele entra na matriz. */
   meta: string
 }
 
@@ -67,16 +68,44 @@ export function AcompanhamentoDaTurma({
   /**
    * OS ALUNOS QUE ENTRAM NA MATRIZ, e nao todos os da turma.
    *
-   * A matriz mede os 29 itens do 1o grau. Quem estuda outro curriculo (o Floki
-   * estuda azul) nao tem esses itens no caminho dele, e po-lo numa coluna daria
-   * 29 traços — uma coluna inteira dizendo "nao se aplica".
+   * ---------------------------------------------------------------------------
+   * A CHAVE E `meta` E NAO `estuda`, e eu tinha escrito o contrario aqui.
    *
-   * A CHAVE E `estuda` E NAO `meta`: e o curriculo que decide o que ele treina.
-   * Um aluno com `meta: '1grau'` e `estuda: '1grau'` (o caso do Willian e do
-   * Henrique) entra; o Floki, com `estuda: 'azul'`, fica fora — e isso e o certo,
-   * ele nao esta aprendendo os 29.
+   * O comentario antigo dizia: "e o curriculo que decide o que ele treina. Um
+   * aluno com `meta: '1grau'` e `estuda: '1grau'` entra; o Floki, com `estuda:
+   * 'azul'`, fica fora — ele nao esta aprendendo os 29". Isso confundia duas
+   * perguntas diferentes:
+   *
+   *   `estuda` -> QUAL CONTEUDO o app ensina, e como medir o progresso dele
+   *   `meta`   -> QUAL PROVA ele persegue, e portanto qual e o PORTAO
+   *
+   * Esta matriz e sobre o PORTAO. Quem persegue o 1o grau precisa das 29
+   * atestacoes, e isso vale independentemente de estudar a lista dos 29 ou o
+   * curriculo de azul — o conteudo das 35 aulas esta dentro do de azul.
+   *
+   * O ERRO FICOU VISIVEL EM 10/09/2026, quando o Henrique entrou de verdade.
+   * Com `estuda: '1grau'` o app nao tinha o que ensinar a ele (os 29 itens vem
+   * sem passo a passo, entao geram ~18 cartoes de classificacao e nenhum de
+   * execucao). A correcao foi po-lo em `estuda: 'azul'` como o Floki — e com o
+   * filtro antigo ele SAIRIA desta matriz no mesmo instante, deixando o professor
+   * sem a tela de acompanhamento do aluno que ela existe para acompanhar.
+   *
+   * `curriculoPorId(meta)?.medida === 'atestado'` E NAO `meta === '1grau'`: e a
+   * mesma forma que `useLinhas` usa para decidir a medida do progresso, e pelo
+   * mesmo motivo — cravar a meta funcionaria hoje e erraria em silencio no dia em
+   * que o 2o grau chegasse.
+   *
+   * LIMITE CONHECIDO: a matriz mede contra `CURRICULO_1GRAU` fixo. Hoje ele e o
+   * unico curriculo medido por atestado, entao o filtro e a medida coincidem. No
+   * dia em que a lista do 2o grau chegar, uma turma com alunos dos dois graus
+   * precisara de uma matriz por meta — e este filtro passaria a juntar gente
+   * medida contra a lista errada.
+   * ---------------------------------------------------------------------------
    */
-  const daMatriz = useMemo(() => alunos.filter((a) => a.estuda === '1grau'), [alunos])
+  const daMatriz = useMemo(
+    () => alunos.filter((a) => curriculoPorId(a.meta)?.medida === 'atestado'),
+    [alunos],
+  )
   const uids = useMemo(() => daMatriz.map((a) => a.uid).join('|'), [daMatriz])
 
   const carregar = useCallback(async () => {

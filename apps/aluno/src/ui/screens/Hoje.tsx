@@ -6,10 +6,30 @@
 
 import type { Modulo } from '@faixa-azul/core/domain/types'
 import type { FilaDoDia } from '@faixa-azul/core/application/fila'
+import { aulasExigidas, nomeDaMeta } from '@faixa-azul/core/domain/metas'
 
 export interface HojeProps {
   diasAteProva: number
   metaProvisoria: boolean
+  /**
+   * A PROVA que este aluno persegue, vinda do cadastro na nuvem.
+   *
+   * ---------------------------------------------------------------------------
+   * POR QUE ISTO EXISTE. Em 10/09/2026 o Henrique entrou pela primeira vez e viu
+   * "44 dias" na contagem grande desta tela. Os 44 dias eram
+   * `META_PROVISORIA_PADRAO = 2026-10-24` — a data provisoria de exame de AZUL do
+   * dono do app, cravada em `estadoInicial`. Todo aluno novo nascia com ela.
+   *
+   * A meta do Henrique e o 1o GRAU, e o 1o grau NAO TEM DATA: ele tem 35 aulas e
+   * 29 competencias atestadas (`domain/metas` ja registrava isso — `aulasExigidas`
+   * devolve 35 para os graus e `null` para o azul, "porque a prova de azul e a
+   * prova, e nao tem contagem de aulas").
+   *
+   * Uma contagem regressiva para uma prova que ele nao vai fazer nao e um numero
+   * imperfeito: e informacao errada no lugar mais visivel do app.
+   * ---------------------------------------------------------------------------
+   */
+  meta: string
   fila: FilaDoDia
   revisadosHoje: number
   taxaSemDica: number | undefined
@@ -25,6 +45,7 @@ export interface HojeProps {
 export function Hoje({
   diasAteProva,
   metaProvisoria,
+  meta,
   fila,
   revisadosHoje,
   taxaSemDica,
@@ -36,6 +57,8 @@ export function Hoje({
   aoRegistrarTreino,
 }: HojeProps) {
   const nomeDoModuloEmRisco = risco ? modulos.find((m) => m.id === risco.moduloId)?.nome : undefined
+  /** `null` = a meta e por PROVA COM DATA (o azul), ou nao ha meta definida. */
+  const porAulas = aulasExigidas(meta)
   const temFila = fila.cartoes.length > 0
 
   /**
@@ -58,16 +81,45 @@ export function Hoje({
       )}
 
       <div className="card">
-        <div className="contagem">{diasAteProva} dias</div>
-        <div className="contagem-rotulo">
-          {metaProvisoria ? (
-            <>
-              até a meta <strong>provisória</strong> — o professor ainda não marcou a data
-            </>
-          ) : (
-            <>até a prova</>
-          )}
-        </div>
+        {/*
+          A CONTAGEM GRANDE SEGUE A META, e nao uma data cravada.
+
+          `aulasExigidas(meta)` responde qual dos dois mundos e este:
+            um NUMERO (35 para os graus)  -> a graduacao se conquista por AULAS
+            `null` (o azul)               -> a graduacao tem prova com DATA
+
+          O `??` do lado de fora e o caso "sem meta definida" e o de quem abriu o
+          app sem conta: aí a data provisoria local e o unico horizonte que
+          existe, e ela continua servindo — o app funciona sem cadastro.
+        */}
+        {porAulas === null ? (
+          <>
+            <div className="contagem">{diasAteProva} dias</div>
+            <div className="contagem-rotulo">
+              {metaProvisoria ? (
+                <>
+                  até a meta <strong>provisória</strong> — o professor ainda não marcou a data
+                </>
+              ) : (
+                <>até a prova</>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="contagem">{porAulas} aulas</div>
+            {/*
+              NAO E CONTAGEM REGRESSIVA, e a frase diz por que: o app nao sabe a
+              quantas aulas ele foi. Sem presenca, quem conta e o professor — e
+              inventar "faltam 23" aqui seria trocar uma data falsa por um saldo
+              falso. O que o app pode afirmar e a EXIGENCIA.
+            */}
+            <div className="contagem-rotulo">
+              é o que o <strong>{nomeDaMeta(meta)}</strong> pede. O professor conta as aulas e
+              atesta as técnicas — não há data marcada.
+            </div>
+          </>
+        )}
 
         <div className="linha-metricas">
           <div className="metrica">

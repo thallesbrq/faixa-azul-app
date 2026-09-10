@@ -50,10 +50,28 @@ const QUANTAS = 8
 export function Programa({
   logado,
   hoje,
+  turmaFixa,
   aulasDeTeste,
 }: {
   logado: boolean
   hoje: Date
+  /**
+   * A turma DO ALUNO, quando quem olha e um aluno e nao um substituto.
+   *
+   * ---------------------------------------------------------------------------
+   * DUAS PLATEIAS, UMA TELA. Esta tela nasceu para o professor substituto: quem
+   * cobre a RGI pode nao ser da RGI, e prender na turma do cadastro faria a tela
+   * nao servir — por isso o seletor.
+   *
+   * Em 10/09/2026 o Henrique entrou e procurou o programa da RGI na aba "Aulas",
+   * onde encontrou o pacote de aulas PARTICULARES (que ele nao tem) marcado como
+   * "Aula 1". Para ele o seletor e ruido e pior que ruido: oferecer a RGA a um
+   * aluno da RGI convida a ler o programa da turma errada.
+   *
+   * `undefined` mantem o seletor — o caso do substituto, que e o original.
+   * ---------------------------------------------------------------------------
+   */
+  turmaFixa?: string
   /**
    * Aulas injetadas pela pagina de amostra, para conferir o layout em 375px sem
    * rede e sem login.
@@ -65,7 +83,8 @@ export function Programa({
    */
   aulasDeTeste?: readonly AulaDoPrograma[]
 }) {
-  const [turma, setTurma] = useState<string>(TURMAS[0].id)
+  const [escolhida, setEscolhida] = useState<string>(TURMAS[0].id)
+  const turma = turmaFixa ?? escolhida
   const daNuvem = useProgramaDaTurma({ logado: logado && !aulasDeTeste, turma })
   const estado = aulasDeTeste
     ? { fase: 'pronto' as const, aulas: aulasDeTeste, mensagem: null }
@@ -115,26 +134,40 @@ export function Programa({
           </button>
         )}
       </div>
-      <p className="instrucao">
-        O que está programado para cada aula. Serve para quem for dar a aula — inclusive
-        quem estiver cobrindo.
-      </p>
+      {/* A FRASE SEGUE QUEM ESTA LENDO. A original foi escrita para o substituto
+          ("serve para quem for dar a aula"), e para um aluno ela e sobre outra
+          pessoa — ele nao vai dar a aula, vai fazer. Uma tela com duas plateias
+          precisa de duas frases; a mesma para as duas serve mal a uma. */}
+      {turmaFixa === undefined ? (
+        <p className="instrucao">
+          O que está programado para cada aula. Serve para quem for dar a aula — inclusive
+          quem estiver cobrindo.
+        </p>
+      ) : (
+        <p className="instrucao">
+          O que o professor programou para as suas próximas aulas. Chegar sabendo o que
+          vem rende mais que descobrir na hora.
+        </p>
+      )}
 
-      {/* O SELETOR DE TURMA E O PONTO DA TELA: quem cobre a RGI pode nao ser da
-          RGI. Prender na turma do cadastro faria a tela nao servir. */}
-      <div className="programa-turmas" role="tablist" aria-label="Turmas">
-        {TURMAS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={turma === t.id}
-            className={turma === t.id ? 'botao botao--principal' : 'botao botao--secundario'}
-            onClick={() => setTurma(t.id)}
-          >
-            {t.nome}
-          </button>
-        ))}
-      </div>
+      {/* O SELETOR DE TURMA E O PONTO DA TELA PARA O SUBSTITUTO: quem cobre a RGI
+          pode nao ser da RGI. Para o ALUNO ele sai — a turma dele e uma so, e
+          oferecer as outras convida a ler o programa errado. */}
+      {turmaFixa === undefined && (
+        <div className="programa-turmas" role="tablist" aria-label="Turmas">
+          {TURMAS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={turma === t.id}
+              className={turma === t.id ? 'botao botao--principal' : 'botao botao--secundario'}
+              onClick={() => setEscolhida(t.id)}
+            >
+              {t.nome}
+            </button>
+          ))}
+        </div>
+      )}
 
       <p className="instrucao">
         {horarios.length === 0 ? (

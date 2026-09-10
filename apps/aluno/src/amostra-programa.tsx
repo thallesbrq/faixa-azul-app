@@ -46,7 +46,41 @@ function agendadas(): AulaDoPrograma[] {
 
 function Amostra() {
   const [aulas] = useState(agendadas)
-  return <Programa logado hoje={HOJE} aulasDeTeste={aulas} />
+  /**
+   * AS DUAS PLATEIAS, alternaveis. O `aluno` e o modo novo (10/09/2026): sem
+   * seletor de turma, porque a turma dele e uma so e oferecer as outras convida a
+   * ler o programa errado. O `substituto` e o original: quem cobre a RGI pode nao
+   * ser da RGI.
+   */
+  const [comoAluno, setComoAluno] = useState(true)
+  return (
+    <>
+      <div className="alternador" role="tablist" aria-label="Quem esta olhando">
+        <button
+          role="tab"
+          aria-selected={comoAluno}
+          className={comoAluno ? 'alternador-item alternador-item--ativo' : 'alternador-item'}
+          onClick={() => setComoAluno(true)}
+        >
+          aluno da RGI
+        </button>
+        <button
+          role="tab"
+          aria-selected={!comoAluno}
+          className={!comoAluno ? 'alternador-item alternador-item--ativo' : 'alternador-item'}
+          onClick={() => setComoAluno(false)}
+        >
+          substituto
+        </button>
+      </div>
+      <Programa
+        logado
+        hoje={HOJE}
+        turmaFixa={comoAluno ? 'RGI' : undefined}
+        aulasDeTeste={aulas}
+      />
+    </>
+  )
 }
 
 createRoot(document.getElementById('root')!).render(
