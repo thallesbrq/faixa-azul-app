@@ -142,15 +142,31 @@ export function useLinhas({
        * `estuda === '1grau'` funcionaria hoje e erraria no dia em que o 2o grau
        * chegasse — silenciosamente, com a coluna voltando a `—`.
        */
-      const porAtestado = alunos.filter((p) => curriculoPorId(p.estuda)?.medida === 'atestado')
-      const competentes = new Map<string, number>()
+      /**
+       * QUEM PRECISA DAS ATESTACOES LIDAS: quem e medido por atestado por
+       * qualquer um dos dois lados.
+       *
+       * ERA SO `estuda`, e isso deixou o Henrique sem numero em 10/09/2026: ele
+       * persegue o 1o grau (medido por atestado) e estuda azul (medido por
+       * cartao), entao este filtro nao o incluia — e as dez competencias que o
+       * professor tinha acabado de atestar nunca chegavam a linha dele.
+       */
+      const porAtestado = alunos.filter(
+        (p) =>
+          curriculoPorId(p.estuda)?.medida === 'atestado' ||
+          curriculoPorId(p.meta)?.medida === 'atestado',
+      )
+      const competentes = new Map<string, ReadonlySet<string>>()
       if (porAtestado.length > 0) {
         if (!comps.current) comps.current = await abrirCompetencias(app)
         await Promise.all(
           porAtestado.map(async (p) => {
             try {
               const registros = await comps.current!.registrosDe(p.uid)
-              competentes.set(p.uid, itensCompetentes(registros).size)
+              /* O CONJUNTO e nao o tamanho: quem intersecciona com o
+                 curriculo medido e `linhaDoAluno`. Mandar so a contagem dava
+                 51/29 = 176% a quem tem atestacao fora da lista da prova. */
+              competentes.set(p.uid, itensCompetentes(registros))
             } catch {
               /**
                * FALHA FICA FORA DO MAPA, e nao entra como zero.

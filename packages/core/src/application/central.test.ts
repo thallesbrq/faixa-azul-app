@@ -118,6 +118,8 @@ describe('o CURRICULO decide a medida', () => {
     estuda?: string
     turma?: string
     curriculo?: Curriculo | null
+    /** O curriculo da PROVA. `undefined` = a meta nao tem lista (o caso comum). */
+    curriculoDaProva?: Curriculo | null
   }) =>
     linhaDoAluno({
       uid: 'u1',
@@ -125,6 +127,7 @@ describe('o CURRICULO decide a medida', () => {
       turma: over.turma ?? 'RGI',
       meta: over.meta ?? 'azul',
       estuda: over.estuda ?? 'azul',
+      curriculoDaProva: over.curriculoDaProva ?? null,
       estado: estado(),
       curriculo: over.curriculo === undefined ? porCartoes : over.curriculo,
       agora: AGORA,
@@ -159,12 +162,14 @@ describe('o CURRICULO decide a medida', () => {
      * Havia dado (as atestacoes) e havia denominador (os itens do curriculo). A
      * coluna vazia nao distinguia "nao e medido aqui" de "zero de 29 atestados".
      */
-    const com = (competentes: number | null) =>
+    /** `quantos` itens atestados, dos quatro (a, b, c, d). `null` = nao lido. */
+    const com = (quantos: number | null) =>
       linhaDoAluno({
         uid: 'u1', nome: 'Floki', turma: 'RGI', meta: '1grau', estuda: '1grau',
         estado: estado(),
         curriculo: curriculo([item({ id: 'a' }), item({ id: 'b' }), item({ id: 'c' }), item({ id: 'd' })], 'atestado'),
-        competentes,
+        curriculoDaProva: null,
+        competentes: quantos === null ? null : new Set(['a', 'b', 'c', 'd'].slice(0, quantos)),
         agora: AGORA,
       })
 
@@ -422,7 +427,7 @@ describe('mesma derivacao do app do aluno', () => {
     const c = curriculo(itens)
     const l = linhaDoAluno({
       uid: 'u', nome: 'A', turma: 'RGI', meta: 'azul', estuda: 'azul',
-      estado: estado(), curriculo: c, agora: AGORA,
+      estado: estado(), curriculo: c, curriculoDaProva: null, agora: AGORA,
     })
     // Sem revisao nenhuma o dominio e zero — e zero, nao null: sincronizou.
     expect(l.progresso).toBe(0)
@@ -434,7 +439,7 @@ describe('mesma derivacao do app do aluno', () => {
     const l = linhaDoAluno({
       uid: 'u', nome: 'Floki', turma: 'RGI', meta: 'azul', estuda: 'azul',
       estado: estado({ perfil: { id: 'x', nome: 'apelido local', papel: 'aluno', academiaId: 'a' } }),
-      curriculo: curriculo([item()]), agora: AGORA,
+      curriculo: curriculo([item()]), curriculoDaProva: null, agora: AGORA,
     })
     expect(l.nome).toBe('Floki')
   })
@@ -444,7 +449,7 @@ describe('mesma derivacao do app do aluno', () => {
     const l = linhaDoAluno({
       uid: 'u', nome: '  ', turma: 'RGI', meta: 'azul', estuda: 'azul',
       estado: estado({ perfil: { id: 'x', nome: 'Thalles', papel: 'aluno', academiaId: 'a' } }),
-      curriculo: curriculo([item()]), agora: AGORA,
+      curriculo: curriculo([item()]), curriculoDaProva: null, agora: AGORA,
     })
     expect(l.nome).toBe('Thalles')
   })
@@ -534,7 +539,8 @@ describe('detalheDoAluno', () => {
     // decisao 1 e sobre esse numero. Com meta `1grau` o progresso e `null` por
     // desenho, e o teste passaria comparando dois nulos — verde sem provar nada.
     const linha = linhaDoAluno({
-      uid: 'u', nome: 'A', turma: 'RGI', meta: 'azul', estuda: 'azul', estado: est, curriculo: c, agora: AGORA,
+      uid: 'u', nome: 'A', turma: 'RGI', meta: 'azul', estuda: 'azul', estado: est, curriculo: c,
+      curriculoDaProva: null, agora: AGORA,
     })
     const d = detalheDoAluno({ estado: est, curriculo: c, agora: AGORA })
     expect(d.dominio).toBe(linha.progresso)
@@ -616,12 +622,25 @@ describe('linhasDaAcademia', () => {
     expect(linhas[0].turma).toBe('RG2')
   })
 
-  it('resolve o curriculo por `estuda`, e nao por `meta`', () => {
-    // ADR-017, decisao 6. `curriculoPorId` recebe o que a pessoa ESTUDA. Se
-    // recebesse a meta, quem persegue o 3o grau e estuda azul cairia em `null` —
-    // e este teste passa a chave errada de proposito para provar qual chega.
+  it('resolve OS DOIS curriculos — o que ele estuda e o da prova', () => {
+    /**
+     * ADR-017, decisao 6, com um acrescimo de 10/09/2026.
+     *
+     * A decisao 6 dizia que `curriculoPorId` recebe o que a pessoa ESTUDA: com a
+     * meta, quem persegue o 3o grau e estuda azul cairia em `null` e apareceria
+     * sem progresso com 81 itens em estudo. Isso continua valendo.
+     *
+     * O QUE MUDOU: a linha resolve TAMBEM o curriculo da PROVA, porque ele decide
+     * o numero quando e medido por atestado. O caso que forcou isso: o Henrique
+     * persegue o 1o grau (atestado) e estuda azul (cartao) — com uma resolucao so,
+     * as competencias que o professor atestou nao chegavam a linha dele.
+     *
+     * Este cadastro tem `meta: '3grau'`, cuja lista nao chegou: `curriculoDaProva`
+     * vem `null` e a medida cai no que ele estuda, exatamente como a decisao 6
+     * pedia. Ou seja: as duas regras convivem.
+     */
     const vistos: string[] = []
-    linhasDaAcademia({
+    const linhas = linhasDaAcademia({
       cadastros: [cad({ uid: 'a1', nome: 'Floki', meta: '3grau', estuda: 'azul' })],
       estados: new Map([['a1', estado()]]),
       curriculoPorId: (id) => {
@@ -630,7 +649,9 @@ describe('linhasDaAcademia', () => {
       },
       agora: AGORA,
     })
-    expect(vistos).toEqual(['azul'])
+    expect(new Set(vistos)).toEqual(new Set(['azul', '3grau']))
+    // E a medida veio do que ele ESTUDA, porque a meta nao tem lista.
+    expect(linhas[0].medidaUsada).toBe('cartoes')
   })
 
   it('o CONVIDADO entra na lista, sem medida e com motivo proprio', () => {
@@ -698,5 +719,103 @@ describe('linhasDaAcademia', () => {
     expect(m.total).toBe(4)
     expect(m.considerados).toBe(1)
     expect(m.fora.convidado).toBe(3)
+  })
+})
+
+/**
+ * O CASO DO HENRIQUE — 10/09/2026, relatado por ele.
+ *
+ * "Atualizei os dados do Henrique no atestado, pode atualizar para refletir no
+ * progresso por aluno?"
+ *
+ * O Henrique persegue o 1o GRAU (medido por atestado) e estuda AZUL (medido por
+ * cartao). Eu mesmo o pus nessa configuracao no mesmo dia — com `estuda: '1grau'`
+ * o app nao tinha o que ensinar a ele. A consequencia nao prevista: a coluna
+ * Progresso passou a medir dominio de cartao, e as dez competencias que o
+ * professor acabara de atestar sairam do numero.
+ */
+describe('quem persegue uma prova de ATESTADO e estuda outro curriculo', () => {
+  const osQuatro = [item({ id: 'a' }), item({ id: 'b' }), item({ id: 'c' }), item({ id: 'd' })]
+  const prova = curriculo(osQuatro, 'atestado')
+  const estudo = curriculo([item({ id: 'x', kind: 'raspagem' })], 'cartoes')
+
+  const oHenrique = (competentes: ReadonlySet<string> | null) =>
+    linhaDoAluno({
+      uid: 'u', nome: 'Henrique', turma: 'RGI', meta: '1grau', estuda: 'azul',
+      estado: estado(),
+      curriculo: estudo,
+      curriculoDaProva: prova,
+      competentes,
+      agora: AGORA,
+    })
+
+  it('O NUMERO VEM DA PROVA, e nao do que ele estuda', () => {
+    const l = oHenrique(new Set(['a']))
+    expect(l.progresso).toBe(0.25)
+    expect(l.medidaUsada).toBe('atestado')
+  })
+
+  it('atestar mais MOVE o numero — era isso que nao acontecia', () => {
+    expect(oHenrique(new Set(['a'])).progresso).toBe(0.25)
+    expect(oHenrique(new Set(['a', 'b'])).progresso).toBe(0.5)
+    expect(oHenrique(new Set(['a', 'b', 'c', 'd'])).progresso).toBe(1)
+  })
+
+  it('INTERSECCIONA com a lista da prova — o bug dos 176%', () => {
+    /**
+     * O Floki tem 51 atestacoes em producao: a folha mostra a lista de azul
+     * quando a da meta nao serve, entao ele tem competencia de item que nao esta
+     * nos 29. A versao anterior recebia a CONTAGEM crua (51) e o denominador da
+     * prova (29): 176%, uma barra estourando a tabela.
+     */
+    const l = oHenrique(new Set(['a', 'b', 'fora-1', 'fora-2', 'fora-3']))
+    expect(l.progresso).toBe(0.5)
+  })
+
+  it('OS DADOS DE CARTAO SOBREVIVEM — consertar uma coluna nao quebra as outras', () => {
+    /**
+     * O ramo antigo devolvia `porGrupo: {}` e `validado: null` porque assumia que
+     * quem e medido por atestado nao tem cartao. Verdade para `estuda: '1grau'`;
+     * falso para quem estuda azul perseguindo o grau.
+     */
+    const l = oHenrique(new Set(['a']))
+    expect(l.validado).not.toBeNull()
+    expect(Object.keys(l.porGrupo).length).toBeGreaterThan(0)
+  })
+
+  it('falha de leitura continua `nao-lido`, e nao zero', () => {
+    // Zero diria ao professor que ele nao atestou nada; ele pode ter atestado os 29.
+    const l = oHenrique(null)
+    expect(l.progresso).toBeNull()
+    expect(l.motivo).toBe('atestado-nao-lido')
+  })
+
+  it('a APTIDAO tambem sai da prova: os quatro atestados = apto', () => {
+    expect(oHenrique(new Set(['a', 'b', 'c', 'd'])).aptidao).toBe('apto')
+    expect(oHenrique(new Set(['a'])).aptidao).toBe('faltam-competencias')
+  })
+
+  it('META SEM LISTA cai no que ele estuda — a decisao 6 do ADR-017 intacta', () => {
+    /**
+     * O caso do dono do app: `meta: '3grau'`, cuja lista nao chegou. Sem esta
+     * guarda ele ficaria sem medida nenhuma, que foi exatamente o defeito que a
+     * decisao 6 consertou.
+     */
+    const l = linhaDoAluno({
+      uid: 'u', nome: 'Thalles', turma: 'RGI', meta: '3grau', estuda: 'azul',
+      estado: estado(), curriculo: estudo, curriculoDaProva: null,
+      competentes: new Set(['a']), agora: AGORA,
+    })
+    expect(l.medidaUsada).toBe('cartoes')
+  })
+
+  it('prova medida por CARTOES nao rouba o numero de quem estuda por cartao', () => {
+    // Quem persegue o azul e estuda azul: um caminho so, e ele e de cartao.
+    const l = linhaDoAluno({
+      uid: 'u', nome: 'A', turma: 'RGI', meta: 'azul', estuda: 'azul',
+      estado: estado(), curriculo: estudo, curriculoDaProva: estudo,
+      competentes: new Set(['a']), agora: AGORA,
+    })
+    expect(l.medidaUsada).toBe('cartoes')
   })
 })

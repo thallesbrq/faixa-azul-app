@@ -244,6 +244,33 @@ function derivarPorItem(estado: EstadoPersistido, curriculo: Curriculo, agora: D
   return progressoPorItem(itens, baralho, estado.revisoes, agora)
 }
 
+/**
+ * Tudo o que sai dos CARTOES de um aluno, num lugar so.
+ *
+ * EXTRAIDO PORQUE PASSOU A TER DOIS CHAMADORES. O ramo de atestado apagava
+ * `porGrupo`, `validado` e `aguardandoValidacao` — assumindo que quem e medido
+ * por atestado nao tem cartao. Deixou de ser verdade quando o Henrique e o Floki
+ * passaram a estudar AZUL perseguindo o 1o grau: o numero do cabecalho vem da
+ * prova, e as seis colunas de grupo continuam vindo do cartao.
+ *
+ * Sem esta funcao, os dois ramos repetiriam as quatro linhas de derivacao — e o
+ * cabecalho deste arquivo existe justamente para nao haver dois calculos.
+ */
+function cartoes(estado: EstadoPersistido, curriculo: Curriculo, agora: Date) {
+  const porItem = derivarPorItem(estado, curriculo, agora)
+  const geral = prontidao(porItem)
+  const porGrupo: Partial<Record<GrupoTecnico, number>> = {}
+  for (const g of progressoPorGrupoTecnico(porItem)) {
+    porGrupo[g.chave as GrupoTecnico] = g.pontuacao
+  }
+  return {
+    porGrupo,
+    geral,
+    validado: geral.validado,
+    aguardandoValidacao: geral.dominadoSemValidacao,
+  }
+}
+
 /** O esqueleto de uma linha sem nenhuma medida. Base dos dois casos abaixo. */
 function linhaVazia(
   entrada: {
@@ -324,6 +351,7 @@ export function linhaDoAluno({
   estado,
   competentes = null,
   curriculo,
+  curriculoDaProva,
   agora,
 }: {
   uid: string
@@ -336,18 +364,52 @@ export function linhaDoAluno({
   demo?: boolean
   temParticulares?: boolean
   estado: EstadoPersistido
-  /** O curriculo DE `estuda`. `null` quando nao existe lista para ele. */
+  /** O curriculo DE `estuda` — o conteudo que ele treina, medido por cartao. */
   curriculo: Curriculo | null
   /**
-   * Quantos itens do curriculo o PROFESSOR atestou. Só é usado quando
-   * `curriculo.medida === 'atestado'`.
+   * O curriculo DA PROVA que ele persegue (`meta`). `null` quando nao ha lista.
    *
-   * `null` significa "nao conseguimos ler as atestacoes", e NAO "zero
-   * atestadas" — a distincao e a razao de o parametro nao ter default 0. Com
-   * default, uma falha de leitura viraria 0% e o professor concluiria que nao
-   * atestou nada.
+   * ---------------------------------------------------------------------------
+   * ELE DECIDE O NUMERO QUANDO E MEDIDO POR ATESTADO, e essa precedencia conserta
+   * um defeito que eu criei em 10/09/2026.
+   *
+   * Naquele dia eu troquei o `estuda` do Henrique de `1grau` para `azul` — com
+   * `1grau` o app nao tinha o que ensinar a ele. Consequencia imediata e nao
+   * prevista pelo professor: a coluna Progresso passou a medir DOMINIO DE CARTAO,
+   * e as dez competencias que ele acabara de atestar sairam do numero. Ele
+   * perguntou: "atualizei os dados do Henrique no atestado, pode atualizar para
+   * refletir no progresso por aluno?".
+   *
+   * A pergunta que a coluna responde e "quao perto ele esta do que persegue?", e
+   * quem responde isso e a PROVA. Dominio de cartao responde outra ("o que ele
+   * decorou sozinho no app") e e o mais fraco dos tres eixos — a regra dele:
+   * dominio != validado != funciona sob resistencia.
+   *
+   * MESMA PRECEDENCIA DE `curriculoParaAtestar`: a lista da prova primeiro, a do
+   * que ele treina como reserva. Aquela funcao existe porque esta regra ja esteve
+   * errada duas vezes escrita como ternario em JSX.
+   * ---------------------------------------------------------------------------
    */
-  competentes?: number | null
+  curriculoDaProva: Curriculo | null
+  /**
+   * OS ITENS que o PROFESSOR atestou — o conjunto de ids, e nao uma contagem.
+   *
+   * ERA UMA CONTAGEM, E ISSO ESCONDIA UM BUG QUE NUNCA DISPAROU. O numero vinha
+   * de `itensCompetentes(registros).size`: TODAS as atestacoes do aluno, sem
+   * interseccao com o curriculo medido. O Floki tem 51 registros de competencia
+   * — a folha mostra a lista de azul quando a da meta nao serve —, e medi-lo
+   * contra os 29 do 1o grau daria 51/29 = 176%. So nao disparou porque a medida
+   * vinha do `estuda`, e ninguem com `estuda: '1grau'` tinha atestacao de fora.
+   *
+   * Com o conjunto, a interseccao acontece aqui e o denominador e sempre o
+   * curriculo que esta sendo medido.
+   *
+   * `null` significa "nao conseguimos ler as atestacoes", e NAO "zero atestadas"
+   * — a distincao e a razao de o parametro nao ter default vazio. Com default,
+   * uma falha de leitura viraria 0% e o professor concluiria que nao atestou
+   * nada.
+   */
+  competentes?: ReadonlySet<string> | null
   agora: Date
 }): LinhaDaCentral {
   // O resumo ja resolve atividade, duvidas e aulas — e ja tem teste. As datas de
@@ -397,50 +459,90 @@ export function linhaDoAluno({
   }
 
   /**
-   * Curriculo medido por ATESTADO do professor (o 1o grau).
+   * QUAL CURRICULO DA O NUMERO: a PROVA, quando ela e medida por atestado.
    *
-   * ELE TEM NUMERO, e antes nao tinha — a versao anterior devolvia
-   * `progresso: null` com motivo `medido-por-atestado`, e a coluna mostrava `—`
-   * para sempre. Havia dado (as atestacoes), havia denominador (os itens do
-   * curriculo) e a tela nao mostrava nenhum dos dois.
+   * A prova primeiro e o que ele treina como reserva — a mesma precedencia de
+   * `curriculoParaAtestar`. Ver o comentario de `curriculoDaProva` para o
+   * defeito que isto conserta e a data.
    *
-   * MEDIR POR CARTOES AQUI CONTINUA ERRADO, e por isso o ramo existe: 11 dos 29
-   * itens do 1o grau nao tem cartao nenhum, entao dominio de cartao daria zero
-   * eterno. A medida certa e quantos itens o professor confirmou no tatame.
-   *
-   * A MEDIDA VEM DO CURRICULO, E NAO DA META (ADR-017, decisao 6). Enquanto vinha
-   * da meta, o meu caso era medido errado: persigo o 3o grau (medida de atestado)
-   * e estudo o curriculo de azul (medida de cartoes) — a medida de uma prova
-   * aplicada ao conteudo de outra.
+   * NAO E "meta sempre": com `meta: '3grau'` (lista que nao chegou)
+   * `curriculoDaProva` e `null`, e a medida cai no que ele estuda — que era
+   * exatamente o caso que a decisao 6 do ADR-017 protegeu.
    */
-  if (curriculo.medida === 'atestado') {
-    const total = curriculo.itens.length
+  const daProvaPorAtestado = curriculoDaProva?.medida === 'atestado' ? curriculoDaProva : null
+
+  /**
+   * Os itens do curriculo medido que o professor atestou.
+   *
+   * INTERSECCAO E NAO A CONTAGEM CRUA: o Floki tem 51 atestacoes (a folha mostra
+   * a lista de azul quando a da meta nao serve) e medi-lo contra os 29 do 1o grau
+   * daria 51/29 = 176%. Ver `competentes`.
+   */
+  const atestadosDe = (c: Curriculo): number | null =>
+    competentes === null ? null : c.itens.filter((i) => i.ativo && competentes.has(i.id)).length
+
+  if (daProvaPorAtestado !== null) {
+    const total = daProvaPorAtestado.itens.filter((i) => i.ativo).length
+    const atestados = atestadosDe(daProvaPorAtestado)
+    const semNumero = atestados === null || total === 0
+    const fracao = semNumero ? null : atestados! / total
+
+    /**
+     * OS DADOS DE CARTAO SOBREVIVEM, e antes nao sobreviviam.
+     *
+     * O ramo antigo devolvia `porGrupo: {}` e `validado: null` porque assumia que
+     * quem e medido por atestado nao tem cartao — verdade para `estuda: '1grau'`,
+     * onde os 29 itens vem sem passo a passo. Mas o Henrique e o Floki estudam
+     * AZUL e perseguem o 1o grau: eles tem as duas coisas, e apagar o lado do
+     * cartao para trocar o numero do cabecalho seria consertar uma coluna
+     * quebrando as outras seis.
+     *
+     * `null` quando o que ele estuda nao e medido por cartao — ai nao ha o que
+     * preservar.
+     */
+    const doCartao =
+      curriculo.medida === 'cartoes' ? cartoes(estado, curriculo, agora) : null
+
     return {
       ...base,
       // `null` so quando NAO CONSEGUIMOS LER as atestacoes. Zero atestadas e um
       // numero, e ele precisa aparecer: e o primeiro dia de todo aluno novo.
-      progresso: competentes === null || total === 0 ? null : competentes / total,
+      progresso: fracao,
       medidaUsada: 'atestado',
-      aptidao: aptidaoAoGrau({ curriculo, competentes }),
-      motivo: competentes === null || total === 0 ? 'atestado-nao-lido' : null,
-      faixa: competentes === null || total === 0 ? null : faixaDaPontuacao(competentes / total),
-      // POR GRUPO FICA VAZIO DE PROPOSITO. As colunas da tabela sao dominio de
-      // CARTAO por grupo tecnico, e atestacao nao se divide assim sem um segundo
-      // agrupamento que ainda nao existe. Inventar valor por coluna aqui poria
-      // numero de atestado sob um cabecalho que promete cartao.
+      aptidao: aptidaoAoGrau({ curriculo: daProvaPorAtestado, competentes: atestados }),
+      motivo: semNumero ? 'atestado-nao-lido' : null,
+      faixa: fracao === null ? null : faixaDaPontuacao(fracao),
+      porGrupo: doCartao?.porGrupo ?? {},
+      validado: doCartao?.validado ?? null,
+      aguardandoValidacao: doCartao?.aguardandoValidacao ?? null,
+    }
+  }
+
+  /**
+   * Sem prova medida por atestado, o curriculo que ele ESTUDA decide — inclusive
+   * quando ele proprio e medido por atestado (o caso `estuda: '1grau'`).
+   */
+  if (curriculo.medida === 'atestado') {
+    const total = curriculo.itens.filter((i) => i.ativo).length
+    const atestados = atestadosDe(curriculo)
+    const semNumero = atestados === null || total === 0
+    const fracao = semNumero ? null : atestados! / total
+    return {
+      ...base,
+      progresso: fracao,
+      medidaUsada: 'atestado',
+      aptidao: aptidaoAoGrau({ curriculo, competentes: atestados }),
+      motivo: semNumero ? 'atestado-nao-lido' : null,
+      faixa: fracao === null ? null : faixaDaPontuacao(fracao),
+      // POR GRUPO FICA VAZIO: as colunas da tabela sao dominio de CARTAO por
+      // grupo tecnico, e um curriculo de atestado nao tem cartao para derivar.
       porGrupo: {},
       validado: null,
       aguardandoValidacao: null,
     }
   }
 
-  const porItem = derivarPorItem(estado, curriculo, agora)
-  const geral = prontidao(porItem)
-
-  const porGrupo: Partial<Record<GrupoTecnico, number>> = {}
-  for (const g of progressoPorGrupoTecnico(porItem)) {
-    porGrupo[g.chave as GrupoTecnico] = g.pontuacao
-  }
+  const { porGrupo, geral } = cartoes(estado, curriculo, agora)
 
   return {
     ...base,
@@ -591,13 +693,17 @@ export function linhasDaAcademia({
   convites?: readonly ConviteNaLista[]
   estados: ReadonlyMap<string, EstadoPersistido>
   /**
-   * Quantos itens o professor atestou, por uid. Ausente do mapa = nao lido.
+   * OS ITENS que o professor atestou, por uid. Ausente do mapa = nao lido.
    *
-   * OPCIONAL PORQUE SO IMPORTA A QUEM E MEDIDO POR ATESTADO, e quem busca o azul
-   * nunca consulta este mapa. Passar sempre obrigaria a Central a ler
-   * `competencias` de vinte alunos para usar em dois.
+   * CONJUNTO DE IDS E NAO CONTAGEM: quem faz a interseccao com o curriculo
+   * medido e `linhaDoAluno`, porque so ele sabe qual curriculo esta medindo. Uma
+   * contagem crua produzia 51/29 = 176% para quem tem atestacao fora da lista da
+   * prova — ver `competentes` em `linhaDoAluno`.
+   *
+   * OPCIONAL PORQUE SO IMPORTA A QUEM E MEDIDO POR ATESTADO. Passar sempre
+   * obrigaria a Central a ler `competencias` de vinte alunos para usar em dois.
    */
-  competentes?: ReadonlyMap<string, number>
+  competentes?: ReadonlyMap<string, ReadonlySet<string>>
   /**
    * O curriculo de um id de curriculo. `null` quando nao existe lista para ele.
    *
@@ -632,8 +738,11 @@ export function linhasDaAcademia({
         ...base,
         estado: e,
         curriculo: curriculoPorId(p.estuda),
-        // `?? null` e nao `?? 0`: fora do mapa significa "nao lido", e virar zero
-        // faria falha de leitura parecer professor que nao atestou nada.
+        /* O curriculo da PROVA, alem do que ele estuda: ele decide o numero
+           quando e medido por atestado. Ver `curriculoDaProva`. */
+        curriculoDaProva: curriculoPorId(p.meta),
+        // `?? null` e nao um Set vazio: fora do mapa significa "nao lido", e virar
+        // vazio faria falha de leitura parecer professor que nao atestou nada.
         competentes: competentes?.get(p.uid) ?? null,
         agora,
       })
