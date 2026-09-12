@@ -10,7 +10,7 @@
  * em `itensConhecidos`, que serve para EXIBIR o que ja esta programado. Efeito
  * pratico: dos 29 itens que o aluno precisa ver nas 35 aulas, o professor nao
  * conseguia programar NENHUM — so podia tirar os que a sugestao automatica pos
- * la, e os 13 sem equivalente em azul nao tinham como voltar.
+ * la, e os 14 sem equivalente em azul nao tinham como voltar.
  * ---------------------------------------------------------------------------
  *
  * DUAS SECOES COM AGRUPAMENTOS DIFERENTES, e isso nao e inconsistencia — e o
@@ -32,33 +32,33 @@
  * nao suposto.
  *
  * ---------------------------------------------------------------------------
- * A DEDUPLICACAO REMOVE 17 DOS 21, e cada grupo sai por um motivo diferente.
+ * A DEDUPLICACAO REMOVE OS 19, e eles saem por dois motivos diferentes.
  *
- * 21 itens de azul sao equivalentes de algum requisito.
+ * 19 itens de azul sao equivalentes de algum requisito — o mesmo numero de
+ * marcas `[Azul, 1o]` no `curriculo-compilado.md` do professor.
  *
  * DOZE sao gemeos UM PARA UM e o rotulo de azul nao diz nada a mais:
  *
- *     "Double leg"  <->  "Baiana"
- *     "Armlock"     <->  "Armlock (chave de braco) da guarda fechada"
+ *     "Raspagem de tesoura"  <->  "Raspagem de tesoura (scissor sweep)"
+ *     "Armlock"              <->  "Armlock (chave de braco) da guarda fechada"
  *
  * Duas linhas para a mesma tecnica e ruido, e foi essa duplicacao que pos
  * "Levantada tecnica" duas vezes na aula 02 do programa real.
  *
- * CINCO sao variacoes de UM MOVIMENTO SO, por decisao dele ("pode unificar
- * ukemi em uma coisa so"): os tres ukemi e os dois rolamentos. A prova de azul
- * lista as direcoes separadas, mas para PROGRAMAR uma aula elas sao o mesmo
- * movimento. Ver `UM_MOVIMENTO_SO` no seed.
+ * SETE sao variacoes de UM MOVIMENTO SO, por decisao dele ("pode unificar ukemi
+ * em uma coisa so"): os tres ukemi, os dois rolamentos e as duas fugas de
+ * quadril. A prova de azul lista as direcoes separadas, mas para PROGRAMAR uma
+ * aula elas sao o mesmo movimento. Sao exatamente os tres requisitos cujo
+ * PROPRIO NOME lista as variacoes. Ver `UM_MOVIMENTO_SO` no seed.
  *
- * OS QUATRO RESTANTES FICAM, porque o lado de azul e MAIS FINO:
+ * O CATALOGO NAO PERDE NADA ALEM DISSO. Ate 12/09 eu absorvia tambem as duas
+ * entradas de cada saida, tratando-as como partes de um requisito; o documento
+ * do professor marca `[1o]` so na variacao "1", entao a "2" — "Cotovelo /
+ * reposicao de guarda", "Barrigada e esgrima" — voltou ao catalogo, onde e
+ * conteudo de azul que ele pode programar. E a "Baiana" e a "Raspagem tripe"
+ * voltaram junto, porque o documento as separa dos requisitos do 1o grau.
  *
- *     "Saida da montada"  ->  "Upa / ponte (trap and roll)"
- *                             "Cotovelo / reposicao de guarda (elbow escape)"
- *
- * Sao duas fugas DIFERENTES, nao duas direcoes de uma. Unifica-las apagaria
- * conteudo de ensino: o substituto leria "Saida da montada" e nao saberia qual
- * dar. Idem "Saida dos 100 kg".
- *
- * O catalogo fica com 81 - 17 = 64, e o bolsao com 29 + 64 = 93 entradas.
+ * O catalogo fica com 81 - 19 = 62, e o bolsao com 29 + 62 = 91 entradas.
  * ---------------------------------------------------------------------------
  *
  * O NOME DE AZUL VIRA ALIAS DO REQUISITO quando o gemeo sai. Sem isso, buscar

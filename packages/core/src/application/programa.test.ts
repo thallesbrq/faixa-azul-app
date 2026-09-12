@@ -243,7 +243,7 @@ describe('montarPlanner', () => {
     const requisitos = e.bolsao.find((s) => s.id === 'requisitos')!
     const catalogo = e.bolsao.find((s) => s.id === 'catalogo')!
     expect(requisitos.fora).toHaveLength(29)
-    expect(catalogo.fora).toHaveLength(64)
+    expect(catalogo.fora).toHaveLength(62)
 
     const um = requisitos.fora[0]
     const depois = montarPlanner({ ...base, aulas: [{ ...aulaVazia(40), itemIds: [um.id] }] })
@@ -265,7 +265,7 @@ describe('montarPlanner', () => {
     const e = montarPlanner({ ...base, aulas: [] })
     expect(e.bolsao.map((s) => s.id)).toEqual(['requisitos', 'catalogo'])
     expect(e.bolsao.find((s) => s.id === 'requisitos')!.total).toBe(29)
-    expect(e.bolsao.find((s) => s.id === 'catalogo')!.total).toBe(64)
+    expect(e.bolsao.find((s) => s.id === 'catalogo')!.total).toBe(62)
   })
 
   it('SEM secoes o planner ainda resolve nomes — o caso da Grade e do app', () => {

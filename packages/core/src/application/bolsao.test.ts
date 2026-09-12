@@ -51,18 +51,35 @@ describe('NADA DESAPARECE — a garantia que este arquivo existe para dar', () =
   })
 })
 
-describe('a deduplicacao remove 17 dos 21 equivalentes', () => {
+describe('a deduplicacao remove 19 dos 19 equivalentes', () => {
   it('os 12 gemeos UM PARA UM saem do catalogo', () => {
     const noCatalogo = new Set(itensDe('catalogo').map((i) => i.id))
-    // "Double leg" <-> "Baiana": duas linhas para a mesma tecnica e ruido, e foi
-    // isso que pos "Levantada tecnica" duas vezes na aula 02 do programa real.
-    expect(noCatalogo.has('quedas--baiana')).toBe(false)
+    // Duas linhas para a mesma tecnica e ruido, e foi isso que pos "Levantada
+    // tecnica" duas vezes na aula 02 do programa real.
     expect(noCatalogo.has('quedas--single-leg')).toBe(false)
     expect(noCatalogo.has('base-movimentacao--levantada-tecnica')).toBe(false)
     expect(noCatalogo.has('guarda-fechada--armlock')).toBe(false)
+    // As saidas viraram 1-para-1 em 12/09: so a variacao "1" e `[1o]`.
+    expect(noCatalogo.has('saidas--saida-da-montada-1')).toBe(false)
+    expect(noCatalogo.has('saidas--saida-dos-100-kg-1')).toBe(false)
   })
 
-  it('UM MOVIMENTO SO tambem sai: os tres ukemi e os dois rolamentos', () => {
+  it('BAIANA E A RASPADA DA ABERTA VOLTARAM ao catalogo', () => {
+    /**
+     * Eu as havia absorvido: "Double leg" <-> "Baiana" e "Raspagem tripe" <->
+     * "Tripe / pe no quadril" me pareciam a mesma tecnica. O documento do
+     * professor separa as duas (Double Leg e #85, Raspagem tripe e #87 — ambos
+     * exclusivos do 1o grau), e ele decidiu que o documento vence.
+     *
+     * Consequencia na tela: as duas voltam a aparecer no catalogo de azul, e os
+     * requisitos correspondentes perdem o alias.
+     */
+    const noCatalogo = new Set(itensDe('catalogo').map((i) => i.id))
+    expect(noCatalogo.has('quedas--baiana')).toBe(true)
+    expect(noCatalogo.has('guarda-aberta--raspada-1')).toBe(true)
+  })
+
+  it('UM MOVIMENTO SO tambem sai: ukemi, rolamentos e fuga de quadril', () => {
     /**
      * Decisao dele: "pode unificar ukemi em uma coisa so". A prova de azul lista
      * "UKEMI - Frente/ costas/ lateral" separados, mas para PROGRAMAR uma aula
@@ -79,44 +96,43 @@ describe('a deduplicacao remove 17 dos 21 equivalentes', () => {
       'base-movimentacao--ukemi-lateral',
       'base-movimentacao--rolamento-para-frente',
       'base-movimentacao--rolamento-para-tras',
+      // A fuga de quadril entrou em 12/09: ganhou a segunda parte (a avancada) e
+      // cai no mesmo teste — o proprio nome do requisito lista as variacoes.
+      'base-movimentacao--fuga-de-quadril-tradicional',
+      'base-movimentacao--fuga-de-quadril-avancada',
     ]) {
       expect(noCatalogo.has(id), `${id} deveria ter sido absorvido`).toBe(false)
     }
   })
 
-  it('AS DUAS SAIDAS FICAM DIVIDIDAS — sao tecnicas diferentes, nao direcoes', () => {
+  it('A VARIACAO "2" DE CADA SAIDA fica no catalogo — ela e conteudo de azul', () => {
     /**
-     * A LINHA QUE SEPARA limpar ruido de apagar conteudo. "Saida da montada"
-     * corresponde a "Upa / ponte" e "Cotovelo / reposicao de guarda": duas fugas
-     * diferentes, e nao duas direcoes de uma. Unifica-las faria o professor
-     * substituto ler "Saida da montada" na aula e nao saber qual dar.
+     * Eu tratava as duas entradas de cada saida como partes de um requisito ("o
+     * aluno mostra a saida, e mostrar so um caminho e meia saida"). O compilado
+     * marca `[Azul, 1o]` apenas na "1"; a "2" e `[Azul]` puro.
      *
-     * Se um dia ele decidir que tambem sao uma coisa so, e uma linha em
-     * `UM_MOVIMENTO_SO` — e este teste quebra dizendo exatamente isso.
+     * Entao a "1" foi absorvida (virou 1-para-1) e a "2" FICA — ela continua
+     * sendo conteudo que o professor pode programar, so nao conta para o 1o grau.
+     * Apagar as duas do catalogo esconderia a "Cotovelo / reposicao de guarda" e
+     * a "Barrigada", que sao tecnicas de verdade.
      */
     const noCatalogo = new Set(itensDe('catalogo').map((i) => i.id))
-    for (const id of [
-      'saidas--saida-da-montada-1',
-      'saidas--saida-da-montada-2',
-      'saidas--saida-dos-100-kg-1',
-      'saidas--saida-dos-100-kg-2',
-    ]) {
-      expect(noCatalogo.has(id), `${id} deveria ficar no catalogo`).toBe(true)
-    }
+    expect(noCatalogo.has('saidas--saida-da-montada-2')).toBe(true)
+    expect(noCatalogo.has('saidas--saida-dos-100-kg-2')).toBe(true)
   })
 
-  it('os totais: 29 requisitos e 64 no catalogo, sem uma linha repetida', () => {
+  it('os totais: 29 requisitos e 62 no catalogo, sem uma linha repetida', () => {
     /**
      * NUMEROS CRAVADOS DE PROPOSITO. Se alguem afrouxar a deduplicacao, o bolsao
      * volta a oferecer a mesma tecnica duas vezes; se apertar, o catalogo perde
      * conteudo de ensino. Os dois lados quebram este teste, e ele diz qual.
      */
     expect(secao('requisitos').total).toBe(29)
-    expect(secao('catalogo').total).toBe(64)
+    expect(secao('catalogo').total).toBe(62)
 
     const todos = [...itensDe('requisitos'), ...itensDe('catalogo')]
-    expect(todos).toHaveLength(93)
-    expect(new Set(todos.map((i) => i.id)).size).toBe(93)
+    expect(todos).toHaveLength(91)
+    expect(new Set(todos.map((i) => i.id)).size).toBe(91)
   })
 })
 
@@ -154,15 +170,25 @@ describe('o agrupamento de cada secao segue a fonte certa', () => {
 })
 
 describe('o nome de azul vira alias do requisito', () => {
-  it('buscar "baiana" acha o "Double leg" do 1o grau', () => {
+  it('buscar "scissor sweep" acha a "Raspagem de tesoura" do 1o grau', () => {
     /**
-     * Sem o alias, tirar `quedas--baiana` do catalogo tiraria a palavra "baiana"
-     * do bolsao inteiro — e o professor pode procurar por ela, que e o nome
-     * brasileiro da tecnica. A busca do Planner filtra por nome, slot e posicao;
-     * os aliases entram para os dois vocabularios serem achaveis.
+     * Sem o alias, tirar `guarda-fechada--raspada-1` do catalogo tiraria a
+     * expressao "scissor sweep" do bolsao inteiro — e o professor pode procurar
+     * por ela. A busca do Planner filtra por nome, slot e posicao; os aliases
+     * entram para os dois vocabularios serem achaveis.
+     *
+     * ERA O "BAIANA" AQUI, e o caso mudou em 12/09: o documento separa Double Leg
+     * da Baiana, entao ela voltou ao catalogo e o requisito perdeu o alias.
      */
+    const tesoura = itensDe('requisitos').find((i) => i.id === 'g1-gf--raspagem-tesoura')!
+    expect(tesoura.aliases).toContain('Raspagem de tesoura (scissor sweep)')
+  })
+
+  it('quem DEIXOU de ter equivalente perdeu o alias junto', () => {
     const doubleLeg = itensDe('requisitos').find((i) => i.id === 'g1-quedas--double-leg')!
-    expect(doubleLeg.aliases).toContain('Baiana')
+    const tripe = itensDe('requisitos').find((i) => i.id === 'g1-gf--raspagem-tripe')!
+    expect(doubleLeg.aliases).toEqual([])
+    expect(tripe.aliases).toEqual([])
   })
 
   it('alias NAO repete o proprio nome', () => {
@@ -181,9 +207,12 @@ describe('o nome de azul vira alias do requisito', () => {
     expect(ukemi.aliases).toEqual(['Ukemi frente', 'Ukemi costas', 'Ukemi lateral'])
   })
 
-  it('requisito que FICA dividido nao ganha alias — os gemeos seguem no catalogo', () => {
+  it('a saida virou 1-para-1 e GANHOU o alias da variacao "1"', () => {
+    // Era o contrario ate 12/09: as duas entradas ficavam no catalogo e o
+    // requisito nao tinha alias. Com so a "1" sendo `[1o]`, ela foi absorvida e
+    // "Upa / ponte" passou a ser achavel pela busca.
     const saida = itensDe('requisitos').find((i) => i.id === 'g1-saida--montada')!
-    expect(saida.aliases).toEqual([])
+    expect(saida.aliases).toEqual(['Upa / ponte (trap and roll)'])
   })
 
   it('NAO MUTA O SEED, e isso protege a folha e a matriz', () => {

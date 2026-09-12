@@ -39,10 +39,30 @@
  * matriz: uma lacuna VISIVEL, que ele corrige. Errado e invisivel; ausente e
  * visivel.
  *
- * 13 DOS 29 NAO TEM EQUIVALENTE, e nao e omissao — e o desenho dos dois
+ * ---------------------------------------------------------------------------
+ * A TABELA FOI CORRIGIDA CONTRA O DOCUMENTO DO PROFESSOR em 12/09/2026.
+ *
+ * Ela tinha 16 mapeados e 13 exclusivos, montados por mim item a item e com
+ * quatro duvidas em aberto. O estudo que ele fez em separado
+ * (`curriculo-compilado.md`) marca a origem de cada tecnica, e os numeros dele
+ * fecham na unha:
+ *
+ *     94 tecnicas = 80 de azul + 14 exclusivas do 1o grau
+ *     29 do 1o grau = 15 que existem em azul + 14 exclusivas
+ *
+ * (19 itens de azul levam a marca `[1o]`, e colapsam em 15 requisitos porque
+ * Ukemi vale 3, Rolamentos 2 e Fuga de quadril 2.)
+ *
+ * Ele decidiu: "o documento vence". Cinco entradas mudaram — duas corrigindo
+ * respostas que ele proprio me dera em 09/09 (fuga de quadril e a ida as costas)
+ * e tres corrigindo decisoes minhas (double leg, raspagem tripe, e as saidas).
+ * Cada uma esta comentada onde mudou.
+ * ---------------------------------------------------------------------------
+ *
+ * 14 DOS 29 NAO TEM EQUIVALENTE, e nao e omissao — e o desenho dos dois
  * curriculos. O azul se organiza em torno de GUARDAS E PASSAGENS e nao enumera
  * "dominar a montada" nem ataque a partir dos 100 kg; o 1o grau cobra as duas
- * coisas. Esses 13 estao no programa com o proprio id `g1-*` (a sugestao do 1o
+ * coisas. Esses 14 estao no programa com o proprio id `g1-*` (a sugestao do 1o
  * grau os pos la) e a regra 1 acima ja os le.
  */
 
@@ -54,15 +74,9 @@
  */
 export const EQUIVALENTES_DO_1GRAU: Readonly<Record<string, readonly string[]>> = {
   // -- Quedas ---------------------------------------------------------------
-  /**
-   * "Baiana" e o nome brasileiro do double leg. O azul nao tem entrada chamada
-   * "double leg" entre as quedas (`o-soto-gari`, `baiana`, `single-leg`,
-   * `uchi-mata`, `arm-drag`), e `baiana` e a unica que e a mesma tecnica.
-   *
-   * NAO confundir com `guarda-aberta--raspada-2` ("Xicara / double leg sentado"):
-   * aquela e raspagem da guarda aberta, nao queda em pe.
-   */
-  'g1-quedas--double-leg': ['quedas--baiana'],
+  // "Double leg" NAO entra: e exclusivo do 1o grau (#85 do compilado). Eu o havia
+  // mapeado para `quedas--baiana` por serem a mesma tecnica; o documento do
+  // professor separa os dois, e a Baiana fica marcada so `[Azul]`.
   'g1-quedas--single-leg': ['quedas--single-leg'],
   'g1-quedas--osoto-gari': ['quedas--o-soto-gari'],
 
@@ -70,14 +84,10 @@ export const EQUIVALENTES_DO_1GRAU: Readonly<Record<string, readonly string[]>> 
   'g1-gf--passagem-simples': ['guarda-fechada--passagem-simples'],
   'g1-gf--raspagem-tesoura': ['guarda-fechada--raspada-1'],
   'g1-gf--raspagem-pendulo': ['guarda-fechada--raspada-2'],
-  /**
-   * O 1o grau arquiva a raspagem tripe sob "Guarda fechada"; o azul a arquiva sob
-   * "Guarda Aberta" (`guarda-aberta--raspada-1`, "Tripe / pe no quadril"). A
-   * TECNICA e a mesma — pe no quadril, desequilibrio para tras — e e a tecnica que
-   * decide, nao a gaveta. Tripod sweep vem da guarda aberta de fato; a gaveta do
-   * 1o grau e do exame da academia.
-   */
-  'g1-gf--raspagem-tripe': ['guarda-aberta--raspada-1'],
+  // "Raspagem tripe" NAO entra: e exclusiva do 1o grau (#87 do compilado). Eu a
+  // havia mapeado para `guarda-aberta--raspada-1` ("Tripe / pe no quadril") por
+  // serem a mesma tecnica; o documento separa.
+  'g1-gf--costas-do-pendulo': ['guarda-fechada--esgrima-com-ida-para-as-costas'],
 
   // -- Educativos -----------------------------------------------------------
   /** Um requisito, tres itens de azul. Com a regra 2, os tres sao necessarios. */
@@ -93,12 +103,17 @@ export const EQUIVALENTES_DO_1GRAU: Readonly<Record<string, readonly string[]>> 
     'base-movimentacao--rolamento-para-tras',
   ],
   /**
-   * SO A TRADICIONAL. O azul tem `fuga-de-quadril-tradicional` e
-   * `fuga-de-quadril-avancada`; o 1o grau pede "Fuga de quadril", que e a basica.
-   * Exigir a avancada faria o requisito depender de conteudo que a prova nao
-   * cobra — e com a regra 2, ele ficaria pendente para sempre.
+   * AS DUAS, e isto corrige uma resposta minha e uma dele.
+   *
+   * Eu havia mapeado so a tradicional, e ao perguntar em 09/09 ele confirmou "so
+   * a tradicional". O `curriculo-1grau.md` do estudo dele chama o requisito de
+   * "Fuga de quadril (tradicional e avancada)" e o compilado marca `[Azul, 1o]`
+   * NAS DUAS (#6 e #7). Em 12/09 ele decidiu: "o documento vence".
    */
-  'g1-edu--fuga-de-quadril': ['base-movimentacao--fuga-de-quadril-tradicional'],
+  'g1-edu--fuga-de-quadril': [
+    'base-movimentacao--fuga-de-quadril-tradicional',
+    'base-movimentacao--fuga-de-quadril-avancada',
+  ],
 
   // -- Finalizacoes da guarda fechada ---------------------------------------
   'g1-fin-gf--cruzado': ['guarda-fechada--estrangulamento-1'],
@@ -107,39 +122,51 @@ export const EQUIVALENTES_DO_1GRAU: Readonly<Record<string, readonly string[]>> 
 
   // -- Saidas ---------------------------------------------------------------
   /**
-   * O azul ensina cada saida em DUAS entradas (dois caminhos da mesma saida), e o
-   * 1o grau cobra "a saida". Com a regra 2 as duas sao necessarias — o que casa
-   * com o exame: o aluno mostra a saida, e mostrar so um caminho e meia saida.
+   * SO A VARIACAO "1" de cada saida, e isto tambem corrige uma decisao anterior.
+   *
+   * Eu exigia AS DUAS entradas de azul ("mostrar so um caminho e meia saida"), e
+   * ele aprovou a regra do "todos os equivalentes" com esse exemplo em mente. O
+   * compilado marca `[Azul, 1o]` apenas em "Saida de montada 1" (#71) e "Saida de
+   * 100 kg 1" (#75); as variacoes "2" ficam `[Azul]` puro — sao conteudo de azul,
+   * nao do 1o grau.
+   *
+   * Efeito colateral bom: as duas viram 1-para-1, e a regra do "todos" passa a
+   * valer so para os tres requisitos cujo PROPRIO NOME lista as variacoes (ukemi,
+   * rolamentos, fuga de quadril).
    */
-  'g1-saida--100kg': ['saidas--saida-dos-100-kg-1', 'saidas--saida-dos-100-kg-2'],
-  'g1-saida--montada': ['saidas--saida-da-montada-1', 'saidas--saida-da-montada-2'],
+  'g1-saida--100kg': ['saidas--saida-dos-100-kg-1'],
+  'g1-saida--montada': ['saidas--saida-da-montada-1'],
 
   // -------------------------------------------------------------------------
-  // A CONFERIR COM O PROFESSOR — quatro casos em que eu NAO tenho certeza de que
-  // a tecnica e a mesma, e por isso ficaram FORA. Enquanto estiverem fora, a
-  // matriz os mostra como "fora do programa" quando o `g1-*` nao estiver
-  // programado, o que e visivel e corrigivel. Os candidatos que eu considerei:
+  // OS 14 EXCLUSIVOS DO 1o GRAU ficam fora desta tabela, e agora isso e uma
+  // AFIRMACAO do professor e nao uma duvida minha.
   //
-  //   g1-gf--passagem-emborcando  "Passagem emborcando"
-  //       candidato: guarda-fechada--passagem-quebrando-o-joelho
-  //                  ("Abertura com joelho no coccix / log split")
-  //       duvida: "emborcando" e empilhar o adversario; log split e abrir a
-  //       guarda com o joelho. Podem ser fases da mesma passagem ou duas
-  //       passagens diferentes.
+  // O `curriculo-compilado.md` do estudo dele lista 94 tecnicas: 80 de azul mais
+  // 14 exclusivas do 1o grau (itens 81 a 94). Sao exatamente as que nao aparecem
+  // aqui:
   //
-  //   g1-gf--costas-do-pendulo  "Ida para as costas a partir da raspagem pendulo"
-  //       candidato: guarda-fechada--esgrima-com-ida-para-as-costas
-  //                  ("Esgrimada com ida para as costas / arm drag")
-  //       duvida: as duas chegam as costas da guarda fechada, mas por caminhos
-  //       diferentes (pendulo x arm drag).
+  //   100 kg lateral · 100 kg norte-sul · Montada · Dominio de costas com gancho
+  //   Double Leg · Passagem emborcando (guarda fechada) · Raspagem tripe
+  //   Estrangulamento cruzado dos 100 kg · Americana dos 100 kg
+  //   Estrangulamento de lapela das costas · Mata-leao das costas
+  //   Estrangulamento cruzado da montada · Americana da montada
+  //   Armlock da montada
   //
-  //   g1-fin-costas--mata-leao   "Mata-leao"
-  //   g1-fin-costas--lapela      "Estrangulamento de lapela" (das costas)
-  //       candidato para os dois: guarda-de-la-riva--finalizacao-2
-  //                  ("Mata-leao / estrangulamento das costas")
-  //       duvida: a tecnica bate, mas o azul a arquiva como finalizacao da Dela
-  //       Riva. Mapear faria "programei a finalizacao da Dela Riva" contar como
-  //       "ensinei os ataques das costas".
+  // E ELES COINCIDEM COM OS 14 "[Manual]" do `curriculo-1grau.md`, item por
+  // item. Nao e coincidencia — e a regra por tras dos dois documentos:
+  //
+  //     existe em azul  -> [Auto]    o aluno estuda por cartao, o app mede
+  //     nao existe      -> [Manual]  nao ha cartao, so o professor pode dizer
+  //
+  // Ou seja: `[Manual]` E DERIVAVEL desta tabela (`equivalentesDe(id).length ===
+  // 0`), e nao precisa ser um campo. O modelo de dados do estudo guarda
+  // `"manual": false` em cada tecnica; um campo guardado diverge da regra que o
+  // gerou no primeiro item que alguem acrescentar.
+  //
+  // O COMPORTAMENTO do [Auto] — "estar numa aula agendada basta, sem check do
+  // professor" — NAO foi adotado aqui. Continua valendo a atestacao para os 29.
+  // Ver a conversa de 12/09: adota-lo corta o trabalho do professor de 29 para 14
+  // por aluno, e enfraquece o portao. Decisao ainda em aberto.
   // -------------------------------------------------------------------------
 }
 
@@ -172,7 +199,20 @@ export const EQUIVALENTES_DO_1GRAU: Readonly<Record<string, readonly string[]>> 
  * muda e o que a tela OFERECE para programar.
  * ---------------------------------------------------------------------------
  */
-export const UM_MOVIMENTO_SO: readonly string[] = ['g1-edu--ukemi', 'g1-edu--rolamentos']
+export const UM_MOVIMENTO_SO: readonly string[] = [
+  'g1-edu--ukemi',
+  'g1-edu--rolamentos',
+  /**
+   * FUGA DE QUADRIL ENTROU EM 12/09, junto com a correcao contra o documento.
+   *
+   * Ela passou a ter duas partes (tradicional e avancada) e cai no mesmo teste
+   * dos outros dois: o PROPRIO NOME do requisito lista as variacoes — "Fuga de
+   * quadril (tradicional e avancada)", no `curriculo-1grau.md` dele. Deixa-la
+   * dividida no bolsao enquanto ukemi e rolamentos estao unificados seria a
+   * inconsistencia que a lista existe para evitar.
+   */
+  'g1-edu--fuga-de-quadril',
+]
 
 /** Este requisito absorve os equivalentes dele no bolsao? */
 export function ehUmMovimentoSo(requisitoId: string): boolean {

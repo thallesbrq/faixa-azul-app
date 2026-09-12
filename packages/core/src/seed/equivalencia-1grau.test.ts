@@ -80,34 +80,113 @@ describe('equivalentesDe', () => {
 })
 
 describe('quanto da sobreposicao a tabela cobre', () => {
-  it('cobre 16 dos 29 requisitos, e os outros 13 sao por desenho', () => {
+  it('15 E 14 — os numeros do documento do professor', () => {
     /**
-     * NUMERO CRAVADO DE PROPOSITO, e o que ele protege e a REDUCAO. Se alguem
-     * remover uma linha da tabela, a matriz volta a subnotificar em silencio; o
-     * teste quebra e diz qual foi.
+     * NUMEROS CRAVADOS DE PROPOSITO, e agora eles vem de uma FONTE e nao do meu
+     * julgamento item a item. O `curriculo-compilado.md` do estudo dele lista 94
+     * tecnicas: 80 de azul mais 14 exclusivas do 1o grau. Dos 29 requisitos, 15
+     * existem em azul e 14 nao.
      *
-     * Os 13 sem equivalente nao sao lacuna: o azul se organiza em torno de
-     * guardas e passagens e nao enumera dominio de posicao (montada, 100 kg,
-     * norte-sul, costas) nem ataque a partir delas. Eles entram no programa com o
-     * proprio id `g1-*` e a matriz os le direto.
+     * A tabela ja esteve em 16/13, montada por mim com quatro duvidas em aberto.
+     * Em 12/09 ele decidiu que o documento vence, e cinco entradas mudaram.
+     * Se alguem afrouxar ou apertar a tabela, este teste quebra dizendo em qual
+     * direcao ela saiu do documento.
      */
     const cobertos = ITENS_1GRAU.filter((i) => equivalentesDe(i.id).length > 0)
-    expect(cobertos).toHaveLength(16)
+    expect(cobertos).toHaveLength(15)
+    expect(ITENS_1GRAU.length - cobertos.length).toBe(14)
   })
 
-  it('os quatro casos em duvida ficaram FORA — errado e invisivel, ausente e visivel', () => {
+  it('19 ITENS DE AZUL levam a marca `[1o]`, e colapsam em 15 requisitos', () => {
     /**
-     * Documenta a decisao, para que "faltou mapear" nao se confunda com "decidi
-     * nao mapear". Quando o professor confirmar, este teste muda junto.
+     * A outra metade da aritmetica do documento, e ela e o que prova que 15 e o
+     * numero certo: 19 marcas `[Azul, 1o]` viram 15 requisitos porque Ukemi vale
+     * 3, Rolamentos 2 e Fuga de quadril 2. 19 - 4 = 15.
+     *
+     * Contar so os requisitos esconderia um erro de granularidade; contar os dois
+     * lados nao.
      */
+    const doLadoDeAzul = new Set(ITENS_1GRAU.flatMap((i) => equivalentesDe(i.id)))
+    expect(doLadoDeAzul.size).toBe(19)
+  })
+
+  it('OS 14 SEM EQUIVALENTE sao os 14 "[Manual]" do curriculo do 1o grau', () => {
+    /**
+     * A REGRA POR TRAS DOS DOIS DOCUMENTOS, e ela e o achado do estudo:
+     *
+     *     existe em azul  -> [Auto]    o aluno estuda por cartao, o app mede
+     *     nao existe      -> [Manual]  nao ha cartao, so o professor pode dizer
+     *
+     * `curriculo-1grau.md` marca 15 [Auto] e 14 [Manual], e os 14 [Manual] sao
+     * exatamente estes. Isso torna `manual` DERIVAVEL desta tabela em vez de um
+     * campo guardado — um campo divergiria da regra no primeiro item que alguem
+     * acrescentasse.
+     *
+     * A lista abaixo esta na ordem do documento (itens 81 a 94 do compilado).
+     */
+    const semEquivalente = ITENS_1GRAU.filter((i) => equivalentesDe(i.id).length === 0).map(
+      (i) => i.nome,
+    )
+    expect(new Set(semEquivalente)).toEqual(
+      new Set([
+        '100 kg lateral',
+        '100 kg norte-sul',
+        'Montada',
+        'Domínio de costas com gancho',
+        'Double leg',
+        'Passagem emborcando',
+        'Raspagem tripé',
+        'Estrangulamento cruzado', // dos 100 kg e da montada, mesmo nome
+        'Americana', // dos 100 kg e da montada
+        'Estrangulamento de lapela',
+        'Mata-leão',
+        'Armlock', // da montada
+      ]),
+    )
+    expect(semEquivalente).toHaveLength(14)
+  })
+
+  it('AS QUATRO DUVIDAS FORAM RESOLVIDAS pelo documento, e nao por mim', () => {
+    /**
+     * Eu havia deixado quatro casos fora por nao saber se a tecnica era a mesma.
+     * O compilado responde os quatro, e em direcoes diferentes — o que e a melhor
+     * evidencia de que ele nao foi escrito para confirmar o que eu tinha feito.
+     */
+    // ENTROU: "Ida para as costas a partir da raspagem pendulo" e a esgrimada.
+    // Eu perguntei em 09/09 e ele respondeu "nao sao a mesma"; o compilado marca
+    // #39 como `[Azul, 1o]`, e em 12/09 ele decidiu que o documento vence.
+    expect(equivalentesDe('g1-gf--costas-do-pendulo')).toEqual([
+      'guarda-fechada--esgrima-com-ida-para-as-costas',
+    ])
+
+    // FICARAM FORA, agora por afirmacao dele e nao por duvida minha: os tres sao
+    // exclusivos do 1o grau no compilado (#86, #90, #91).
     for (const id of [
       'g1-gf--passagem-emborcando',
-      'g1-gf--costas-do-pendulo',
       'g1-fin-costas--mata-leao',
       'g1-fin-costas--lapela',
     ]) {
       expect(do1grau.has(id), `${id} nao existe mais: reveja a tabela`).toBe(true)
       expect(equivalentesDe(id)).toEqual([])
     }
+  })
+
+  it('as cinco correcoes de 12/09 estao na tabela', () => {
+    /**
+     * Uma asercao por mudanca, para que reverter qualquer uma quebre aqui com o
+     * nome do caso. Duas corrigem respostas VERBAIS dele; tres corrigem decisoes
+     * minhas.
+     */
+    // 1. Fuga de quadril: as duas (ele dissera "so a tradicional").
+    expect(equivalentesDe('g1-edu--fuga-de-quadril')).toHaveLength(2)
+    // 2. Ida as costas: mapeada (ele dissera "nao sao a mesma").
+    expect(equivalentesDe('g1-gf--costas-do-pendulo')).toHaveLength(1)
+    // 3. Double leg: exclusivo (eu mapeara para a Baiana).
+    expect(equivalentesDe('g1-quedas--double-leg')).toEqual([])
+    // 4. Raspagem tripe: exclusiva (eu mapeara para a raspada 1 da aberta).
+    expect(equivalentesDe('g1-gf--raspagem-tripe')).toEqual([])
+    // 5. Saidas: so a variacao "1" (eu exigia as duas).
+    expect(equivalentesDe('g1-saida--montada')).toEqual(['saidas--saida-da-montada-1'])
+    expect(equivalentesDe('g1-saida--100kg')).toEqual(['saidas--saida-dos-100-kg-1'])
   })
 })
