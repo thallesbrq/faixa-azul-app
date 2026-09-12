@@ -337,12 +337,34 @@ export function Central({
           linha={linha}
           estado={estado.estados.get(linha.uid) ?? null}
           aulas={
-            <MontarGrade
-              app={sessao.app}
-              alunoUid={linha.uid}
-              estadoDoAluno={estado.estados.get(linha.uid) ?? null}
-              itens={CURRICULO_DAS_COLUNAS.itens}
-            />
+            /**
+             * A ABA "AULAS" E O PACOTE DE PARTICULARES, e ela SO existe para quem
+             * contratou.
+             *
+             * Pedido dele em 12/09/2026: "na pagina do aluno regular, na aba de
+             * aulas aparece uma grade de 10 aulas... retire essa aba pois ela so
+             * faz sentido ser vista se o aluno contratar as aulas particulares".
+             *
+             * As dez aulas sao COISA CONTRATADA, e a turma inicial da RGI nao
+             * contratou nenhuma: o que essa turma persegue sao as 35 aulas e os 29
+             * itens do 1o grau. Uma grade de dez caixas vazias na pagina de quem
+             * nao tem particulares nao e so ruido — ela sugere um pacote que nao
+             * existe, e ja confundiu o professor uma vez do outro lado (a mesma
+             * tela no app do aluno, consertada em 11/09).
+             *
+             * `null` E NAO UM AVISO DENTRO DA ABA: uma aba que abre para dizer
+             * "isto nao se aplica a voce" e pior que uma aba que nao existe — e o
+             * proprio comentario de `AlunoProps.aulas` ja registrava isso sobre o
+             * atestado. Mesma forma para as duas.
+             */
+            linha.temParticulares ? (
+              <MontarGrade
+                app={sessao.app}
+                alunoUid={linha.uid}
+                estadoDoAluno={estado.estados.get(linha.uid) ?? null}
+                itens={CURRICULO_DAS_COLUNAS.itens}
+              />
+            ) : null
           }
           curriculo={curriculoPorId(linha.estuda) ?? CURRICULO_DAS_COLUNAS}
           atestado={

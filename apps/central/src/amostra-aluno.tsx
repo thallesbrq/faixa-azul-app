@@ -88,7 +88,11 @@ function Amostra() {
         linha={{ ...HENRIQUE, meta, temParticulares: particulares, aulasDoGrau: aulas }}
         estado={estadoInicial(AGORA)}
         curriculo={CURRICULO_AZUL}
-        aulas={<p className="apoio">(as aulas particulares entram aqui)</p>}
+        /* `null` sem particulares — e o que o `App` faz. Passar o no sempre aqui
+           esconderia justamente o comportamento que esta amostra verifica. */
+        aulas={
+          particulares ? <p className="apoio">(as aulas particulares entram aqui)</p> : null
+        }
         atestado={<p className="apoio">(a folha do atestado entra aqui)</p>}
         aoVoltar={() => undefined}
         aoTrocarTurma={async () => undefined}

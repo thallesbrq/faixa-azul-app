@@ -115,7 +115,7 @@ export interface AlunoProps {
    * estado proprio (`useGrade`), e ele so deve existir quando a aba esta aberta
    * — carregar a grade de um aluno que ninguem abriu seria leitura desperdicada.
    */
-  aulas: ReactNode
+  aulas: ReactNode | null
   /**
    * A folha do atestado. `null` quando a meta nao e medida por atestado — uma
    * aba que abre vazia e pior que uma aba que nao existe.
@@ -142,6 +142,23 @@ export function Aluno({
    * vazia e pior que uma aba que nao existe.
    */
   const [aba, setAba] = useState<'progresso' | 'aulas' | 'atestado'>('progresso')
+  /**
+   * A ABA EFETIVAMENTE ABERTA, e nao a ultima clicada.
+   *
+   * Uma aba pode DEIXAR DE EXISTIR com a tela aberta: basta o professor pôr
+   * "Particulares: nao contratou" no seletor logo acima estando na aba Aulas. Com
+   * `aba` cru, o botao some e o conteudo tambem — a pagina fica com o cabecalho e
+   * nada embaixo, sem erro nenhum.
+   *
+   * DERIVADO E NAO `useEffect` com `setAba`: efeito que escreve estado a partir de
+   * prop e a familia exata de laco que fez a Central piscar em producao. O mesmo
+   * problema ja foi tratado assim na barra de abas do app do aluno, quando trocar
+   * de papel troca as abas.
+   */
+  const abaAtual =
+    (aba === 'aulas' && aulas === null) || (aba === 'atestado' && atestado === null)
+      ? 'progresso'
+      : aba
   const agora = useMemo(() => new Date(), [])
   const [trocando, setTrocando] = useState(false)
   const [avisoDaTurma, setAvisoDaTurma] = useState<string | null>(null)
@@ -484,27 +501,33 @@ export function Aluno({
       <div className="abas-aluno" role="tablist" aria-label="Progresso ou aulas">
         <button
           role="tab"
-          aria-selected={aba === 'progresso'}
-          className={aba === 'progresso' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
+          aria-selected={abaAtual === 'progresso'}
+          className={abaAtual === 'progresso' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
           onClick={() => setAba('progresso')}
         >
           Progresso
         </button>
-        <button
-          role="tab"
-          aria-selected={aba === 'aulas'}
-          className={aba === 'aulas' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
-          onClick={() => setAba('aulas')}
-        >
-          Aulas
-        </button>
+        {/* A aba de aulas so existe para quem CONTRATOU particulares — as dez
+            aulas sao coisa contratada, e a turma inicial nao tem nenhuma. Mesma
+            forma da aba do atestado logo abaixo: quem decide e o pai, mandando
+            `null`. */}
+        {aulas !== null && (
+          <button
+            role="tab"
+            aria-selected={abaAtual === 'aulas'}
+            className={abaAtual === 'aulas' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
+            onClick={() => setAba('aulas')}
+          >
+            Aulas
+          </button>
+        )}
         {/* A aba do atestado so existe quando ha o que atestar: meta medida por
             atestado. Para quem busca o azul, ela nao aparece. */}
         {atestado !== null && (
           <button
             role="tab"
-            aria-selected={aba === 'atestado'}
-            className={aba === 'atestado' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
+            aria-selected={abaAtual === 'atestado'}
+            className={abaAtual === 'atestado' ? 'aba-aluno aba-aluno--ativa' : 'aba-aluno'}
             onClick={() => setAba('atestado')}
           >
             Atestado
@@ -512,12 +535,12 @@ export function Aluno({
         )}
       </div>
 
-      {aba === 'aulas' && aulas}
-      {aba === 'atestado' && atestado}
+      {abaAtual === 'aulas' && aulas}
+      {abaAtual === 'atestado' && atestado}
 
       {/* Nunca sincronizou: nao ha progresso porque nao ha dado. Dizer isso e
           diferente de mostrar zeros, que seriam um fato inventado. */}
-      {aba === 'progresso' && estado === null && (
+      {abaAtual === 'progresso' && estado === null && (
         <section className="cartao">
           <h3>Sem dados ainda</h3>
           <p className="apoio" style={{ marginBottom: 0 }}>
@@ -528,7 +551,7 @@ export function Aluno({
         </section>
       )}
 
-      {aba === 'progresso' && detalhe && linha.motivo !== null && linha.motivo !== 'sem-dados' && (
+      {abaAtual === 'progresso' && detalhe && linha.motivo !== null && linha.motivo !== 'sem-dados' && (
         <section className="cartao">
           <h3>Turma sem currículo próprio</h3>
           <p className="apoio" style={{ marginBottom: 0 }}>
@@ -539,7 +562,7 @@ export function Aluno({
         </section>
       )}
 
-      {aba === 'progresso' && detalhe && linha.motivo === null && (
+      {abaAtual === 'progresso' && detalhe && linha.motivo === null && (
         <>
           <section className="cartao">
             <h3>Prontidão</h3>
