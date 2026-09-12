@@ -225,7 +225,27 @@ export const ITENS_1GRAU: TechniqueItem[] = [
     posicao: 'Educativos',
     slot: 'Educativo 4',
     categoria: 'Educativos',
-    nome: 'Fuga de quadril',
+    /**
+     * O NOME DIZ AS DUAS, e o item continua sendo UM SO.
+     *
+     * Era "Fuga de quadril". Em 12/09/2026 a tabela de equivalencia passou a
+     * exigir a tradicional E a avancada (o `curriculo-compilado.md` dele marca
+     * `[Azul, 1o]` nas duas), e o nome curto virou uma meia-verdade na tela: o
+     * professor lia "Fuga de quadril · falta parte · 1 de 2" sem ter como saber
+     * qual metade faltava.
+     *
+     * DECISAO DELE, com as duas partes: "renomeie o item para 'Fuga de quadril
+     * (tradicional e avancada)' mas mantenha como 1 item so". Entao o REQUISITO
+     * continua um — uma linha na matriz, uma atestacao, um chip no bolsao — e o
+     * nome e que passa a carregar a composicao.
+     *
+     * E A FORMA QUE "Rolamentos (frente e costas)" ja tinha. O terceiro composto,
+     * `g1-edu--ukemi`, continua chamando-se so "Ukemi" — o documento dele o chama
+     * de "Ukemi (frente, costas e lateral)", e o mesmo argumento valeria ali
+     * ("2 de 3 partes" sem dizer quais). Nao foi renomeado porque ele pediu este
+     * item, nominalmente. Fica registrado para quando a pergunta voltar.
+     */
+    nome: 'Fuga de quadril (tradicional e avançada)',
     kind: 'movimentacao',
     safetyLevel: 'baixo',
   },
